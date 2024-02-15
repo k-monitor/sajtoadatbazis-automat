@@ -1,0 +1,6 @@
+Flask==3.0.0
+transformers==4.34.0
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.1.0
+uvicorn[standard]==0.24.0
+gunicorn
