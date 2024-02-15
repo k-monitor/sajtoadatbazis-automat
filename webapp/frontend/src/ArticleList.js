@@ -31,7 +31,7 @@ var ArticleList = {
     oninit: Article.loadList,
     isOpen: false,
     view: function() {
-        return m("[style=padding:30px]", [Article.list.map(function(article) {
+        return m("[style=padding:30px;position: absolute;left: 50%;transform: translate(-50%)]", [Article.list.map(function(article) {
             return m(Card, [
                 m("h4", article.title),
                 m("div", article.lead),
