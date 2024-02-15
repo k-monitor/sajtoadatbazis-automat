@@ -7,7 +7,7 @@ var Article = {
     loadList: function() {
         return m.request({
             method: "GET",
-            url: "http://kmonitordemo.duckdns.org/api/articles?page="+Article.page,
+            url: "http:/"+window.location.host+"/api/articles?page="+Article.page,
         })
         .then(function(result) {
             console.log(result)
