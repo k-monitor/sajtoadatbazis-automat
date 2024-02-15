@@ -8,6 +8,7 @@ RUN apt-get update && \
 WORKDIR /app
 
 RUN git clone https://github.com/ggerganov/llama.cpp .
+RUN git reset --hard e9c13ff
 
 RUN make server
 
