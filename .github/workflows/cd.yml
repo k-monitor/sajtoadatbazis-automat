@@ -1,0 +1,33 @@
+# FROM: https://gist.github.com/danielwetan/4f4db933531db5dd1af2e69ec8d54d8a
+# Ez a workflow frissíti a webappot a szerveren
+
+name: Webapp CD
+
+# Controls when the action will run. 
+on:
+  # Triggers the workflow on push or pull request events but only for the main branch
+  push:
+    branches: [ main ]
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  # This workflow contains a single job called "build"
+  build:
+    # The type of runner that the job will run on
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+    - name: Deploy using ssh
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.PRIVATE_KEY }}
+        port: 22
+        script: |
+          cd ~/sajtoadatbazis-automat/webapp
+          git pull
+          git status
+          podman-compose down
+          podman-compose up -d
