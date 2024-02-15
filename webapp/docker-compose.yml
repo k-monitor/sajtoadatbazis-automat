@@ -1,6 +1,11 @@
 version: '3.8'
 
 services:
+  frontend:
+    build: './frontend'
+    ports:
+      - "127.0.0.1:8082:80"
+
   auto_kmdb:
     build: './auto_kmdb'
     volumes:
