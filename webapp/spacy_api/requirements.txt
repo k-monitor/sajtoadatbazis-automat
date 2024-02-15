@@ -1,0 +1,5 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.1.0+cpu
+https://huggingface.co/huspacy/hu_core_news_trf/resolve/v3.5.4/hu_core_news_trf-any-py3-none-any.whl
+uvicorn[standard]==0.24.0
+fastapi==0.104.1
