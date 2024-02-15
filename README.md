@@ -1,0 +1,1 @@
+# Sajtóadatbázis automatizáló projekt
