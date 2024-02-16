@@ -49,16 +49,16 @@ services:
       - MODEL_URL=https://huggingface.co/boapps/kmdb-keyword-extraction/resolve/main/keyword-extraction_q4_k_m.gguf?download\=true
       - MODEL_FILE=/models/keyword-extraction.gguf
 
-  relation_extraction:
-    build: './llama_cpp_docker'
-    hostname: relation_extraction
-    volumes:
-      - shared-models:/models
-    ports:
-      - "8084:8000"
-    environment:
-      - MODEL_URL=https://huggingface.co/boapps/kmdb-relation-extraction/resolve/main/relation-extraction_q4_k_m.gguf?download\=true
-      - MODEL_FILE=/models/relation-extraction.gguf
+#  relation_extraction:
+#    build: './llama_cpp_docker'
+#    hostname: relation_extraction
+#    volumes:
+#      - shared-models:/models
+#    ports:
+#      - "8084:8000"
+#    environment:
+#      - MODEL_URL=https://huggingface.co/boapps/kmdb-relation-extraction/resolve/main/relation-extraction_q4_k_m.gguf?download\=true
+#      - MODEL_FILE=/models/relation-extraction.gguf
 
 volumes:
   shared-models:

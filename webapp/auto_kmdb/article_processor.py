@@ -79,7 +79,7 @@ def article_processor(appcontext):
             process(article, do_classification)
             db.session.commit()
             if article.is_classified_corruption:
-                for fun in [do_keyword_generation, do_spacy_entities, do_people_classification, do_institution_classification, do_relation_extraction]:
+                for fun in [do_keyword_generation, do_spacy_entities, do_people_classification, do_institution_classification]:
                     process(article, fun)
                     db.session.commit()
         time.sleep(1*60)
