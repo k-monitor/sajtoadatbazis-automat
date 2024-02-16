@@ -30,4 +30,6 @@ jobs:
           git pull
           git status
           podman-compose down
+          # podman rm -a
+          # podman rmi $(podman images -qa) -f
           podman-compose up -d
