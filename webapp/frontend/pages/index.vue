@@ -1,6 +1,8 @@
 <script setup>
+    const runtimeConfig = useRuntimeConfig()
+
     const articles = await $fetch(
-    `/api/articles?page=1`
+    'http://'+runtimeConfig.baseUrl+`/api/articles?page=1`
     );
 </script>
 
