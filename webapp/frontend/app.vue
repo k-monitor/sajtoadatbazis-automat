@@ -1,4 +1,5 @@
 <script setup lang="ts">
+    const runtimeConfig = useRuntimeConfig()
 
     const items = [{
         label: 'Tab1',
@@ -13,13 +14,13 @@
     }]
 
     const page = ref(1)
-    const response = await $fetch('/api/articles.json?page='+page.value);
+    const response = await $fetch('http://'+runtimeConfig.baseUrl+'/api/articles.json?page='+page.value);
     let articles = response.articles;
     let pages = response.pages;
     let itemsCount = ref(pages*10)
 
     async function update() {
-        const response = await $fetch('/api/articles.json?page='+page.value);
+        const response = await $fetch('http://'+runtimeConfig.baseUrl+'/api/articles.json?page='+page.value);
         articles = response.articles;
         pages = response.pages;
         itemsCount = ref(pages*10)
