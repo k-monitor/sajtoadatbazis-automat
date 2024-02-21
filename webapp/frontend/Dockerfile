@@ -6,4 +6,8 @@ WORKDIR /app
 
 COPY . .
 
-RUN yarn build && node .output/server/index.mjs
+RUN yarn install && yarn build
+
+EXPOSE 3000
+
+CMD ["node", ".output/server/index.mjs"]
