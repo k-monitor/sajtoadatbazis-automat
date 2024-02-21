@@ -28,7 +28,6 @@
 </template>
 
 <script setup lang="ts">
-    const runtimeConfig = useRuntimeConfig()
     function openModal() {
         isOpen.value = true
     }
@@ -36,13 +35,13 @@
         isOpen.value = false
     }
     async function deleteArticle() {
-        await $fetch('http://'+runtimeConfig.baseUrl+'/api/update?id='+article.id, {
+        await $fetch('http://kmonitordemo.duckdns.org/api/update?id='+article.id, {
             method: 'POST',
             body: {'id': article.id}
         });
     }
     async function submitArticle() {
-        await $fetch('http://'+runtimeConfig.baseUrl+'/api/annote'+article.id, {
+        await $fetch('http://kmonitordemo.duckdns.org/api/annote'+article.id, {
             method: 'POST',
             body: {
                 'id': article.id,

@@ -1,8 +1,6 @@
 <script setup>
-    const runtimeConfig = useRuntimeConfig()
-
     const articles = await $fetch(
-    'http://'+runtimeConfig.baseUrl+`/api/articles?page=1`
+    'http://kmonitordemo.duckdns.org/api/articles?page=1'
     );
 </script>
 
