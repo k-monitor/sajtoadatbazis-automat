@@ -1,14 +1,13 @@
-FROM alpine as build
+FROM alpine
 
-RUN apk add --update nodejs npm
+RUN apk add --update nodejs yarn
 
 WORKDIR /app
 
 COPY . .
 
-RUN npm install && npm run build
+RUN yarn install && yarn build
 
+EXPOSE 3000
 
-FROM nginx as runtime
-
-COPY --from=build /app /usr/share/nginx/html
+CMD ["node", ".output/server/index.mjs"]
