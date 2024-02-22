@@ -12,7 +12,7 @@
 
     var hostUrl = 'kmonitordemo.duckdns.org'
 
-    const page = ref(1)
+    const page = ref(0)
     let response = await $fetch('http://'+hostUrl+'/api/articles?page='+page.value);
     let articles = response.articles;
     let pages = response.pages;
