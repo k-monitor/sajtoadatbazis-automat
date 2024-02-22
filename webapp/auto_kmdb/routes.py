@@ -29,7 +29,10 @@ def not_corruption():
 
 @api.route('/annote', methods=["POST"])
 def annote():
-    print(request.json)
+    id = request.json['id']
+    Article.query.filter_by(id=id).first().is_annoted = True
+    Article.query.filter_by(id=id).first().is_annoted_corruption = True
+    db.session.commit()
     return jsonify({}), 200
 
 @api.route('/add_url', methods=["POST"])
