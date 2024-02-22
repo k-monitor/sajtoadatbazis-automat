@@ -31,7 +31,7 @@
 
 <script setup lang="ts">
     async function postUrl(url, data) {
-        //return await $fetch(url)
+        return await $fetch(url, data)
         return await $fetch('https://corsproxy.io/?' + encodeURIComponent(url), data);
     }
 
