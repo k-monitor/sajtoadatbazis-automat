@@ -13,7 +13,7 @@
     var hostUrl = 'kmonitordemo.duckdns.org'
 
     async function getUrl(url) {
-        //return await $fetch(url)
+        return await $fetch(url)
         return await $fetch('https://corsproxy.io/?' + encodeURIComponent(url))
     }
 
