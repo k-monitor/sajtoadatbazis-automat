@@ -12,9 +12,15 @@
 
     var hostUrl = 'kmonitordemo.duckdns.org'
 
+    async function getUrl(url) {
+        return await $fetch(url)
+        return await $fetch('https://corsproxy.io/?' + encodeURIComponent(url))
+    }
+
     const page = ref(1)
-    let response = await $fetch('http://'+hostUrl+'/api/articles?page='+page.value);
-    let articles = response.articles;
+    let status = 'mixed'
+    let response = await getUrl('http://'+hostUrl+'/api/articles?page='+(page.value+1)+'&status='+status);
+    var articles = response.articles;
     let pages = response.pages;
     let itemsCount = ref(pages*10)
 
@@ -22,7 +28,7 @@
     let isOpen = ref(false)
 
     async function update() {
-        const response = await $fetch('http://'+hostUrl+'/api/articles?page='+page.value);
+        const response = await getUrl('http://'+hostUrl+'/api/articles?page='+(page.value+1)+'&status='+status);
         articles = response.articles;
         pages = response.pages;
         itemsCount = ref(pages*10)
@@ -37,8 +43,15 @@
         isOpen.value = false
         await $fetch('http://kmonitordemo.duckdns.org/api/add_url', {
             method: 'POST',
-            body: {'url': newUrl}
+            body: {'url': newUrl},
         });
+    }
+
+    function onChange (index) {
+        const item = items[index]
+        status = item.key
+        console.log(status)
+        update()
     }
 </script>
 
@@ -52,10 +65,10 @@
         </div>
     </UModal>
 
-    <UTabs :items="items" class="w-full">
+    <UTabs :items="items" @change="onChange" class="w-full">
         <template #item="{ item }">
-            <Card class="flex justify-center" v-if="item.key === 'mixed'" v-for="article in articles" :key="article.id" :article=article />
-            <UPagination class="p-4 justify-center" v-if="item.key === 'mixed'" v-model="page" :page-count="10" :total="itemsCount" @click="update" />
+            <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article=article />
+            <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="update" />
         </template>
     </UTabs>
 </template>
