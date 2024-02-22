@@ -15,7 +15,7 @@ def api_articles():
     elif status == 'positive':
         query = Article.query.filter_by(is_classified=True, is_annoted_corruption=True, is_annoted=True)
     else:
-        query = Article.query.filter_by(is_classified=True, is_classified_corruption=False, is_annoted=True)
+        query = Article.query.filter_by(is_classified=True, is_annoted_corruption=False, is_annoted=True)
     pagination = query.order_by(Article.date.desc()).paginate(page=page, per_page=10)
     return jsonify({'pages': pagination.pages, 'articles': [a.dict() for a in pagination]}), 200
 
