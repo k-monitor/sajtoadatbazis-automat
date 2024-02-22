@@ -2,13 +2,13 @@
     <div class="p-4">
         <div class="max-w-sm rounded overflow-hidden shadow-lg mb-4 p-4">
             <div class="font-bold text-xl mb-2">{{ article.title }}</div>
-                <p class="text-base">{{ article.description }}</p>
-                <p class="text-base">{{ article.date }}</p>
-                <UContainer class="flex justify-between px-0 sm:px-0 lg:px-0">
-                    <UButton color="red">Töröl</UButton>
-                    <UButton @click="openModal">Tovább</UButton>
-                </UContainer>
-            </div>
+            <p class="text-base">{{ article.description }}</p>
+            <p class="text-base">{{ article.date }}</p>
+            <UContainer class="flex justify-between px-0 sm:px-0 lg:px-0">
+                <UButton color="red">Töröl</UButton>
+                <UButton @click="openModal">Tovább</UButton>
+            </UContainer>
+        </div>
         <UModal v-model="isOpen">
             <div class="p-4">
                 <UInput class="my-2" v-model="article.title"/>
