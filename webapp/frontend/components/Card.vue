@@ -35,13 +35,13 @@
         isOpen.value = false
     }
     async function deleteArticle() {
-        await $fetch('http://kmonitordemo.duckdns.org/api/update?id='+article.id, {
+        await $fetch('http://kmonitordemo.duckdns.org/api/not_corruption', {
             method: 'POST',
             body: {'id': article.id}
         });
     }
     async function submitArticle() {
-        await $fetch('http://kmonitordemo.duckdns.org/api/annote'+article.id, {
+        await $fetch('http://kmonitordemo.duckdns.org/api/annote', {
             method: 'POST',
             body: {
                 'id': article.id,
