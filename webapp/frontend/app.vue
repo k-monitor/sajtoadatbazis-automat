@@ -13,25 +13,25 @@
     var hostUrl = 'kmonitordemo.duckdns.org'
 
     async function getUrl(url) {
-        return await $fetch(url)
+        //return await $fetch(url)
         return await $fetch('https://corsproxy.io/?' + encodeURIComponent(url))
     }
 
     const page = ref(1)
     let status = 'mixed'
-    let response = await getUrl('http://'+hostUrl+'/api/articles?page='+(page.value+1)+'&status='+status);
+    let response = await getUrl('http://'+hostUrl+'/api/articles?page='+(page.value)+'&status='+status);
     var articles = response.articles;
     let pages = response.pages;
-    let itemsCount = ref(pages*10)
+    let itemsCount = ref(pages*10);
 
-    let newUrl = ''
-    let isOpen = ref(false)
+    let newUrl = '';
+    let isOpen = ref(false);
 
     async function update() {
-        const response = await getUrl('http://'+hostUrl+'/api/articles?page='+(page.value+1)+'&status='+status);
+        const response = await getUrl('http://'+hostUrl+'/api/articles?page='+(page.value)+'&status='+status);
         articles = response.articles;
         pages = response.pages;
-        itemsCount = ref(pages*10)
+        itemsCount.value = pages;
     }
 
     function openNewUrl () {
@@ -47,11 +47,11 @@
         });
     }
 
-    function onChange (index) {
+    async function onChange (index) {
         const item = items[index]
         status = item.key
         console.log(status)
-        update()
+        await update()
     }
 </script>
 
