@@ -8,7 +8,15 @@ api = Blueprint('api', __name__, url_prefix='/api')
 @api.route('/articles', methods=["GET"])
 def api_articles():
     page = request.args.get('page', 1, type=int)
-    pagination = Article.query.filter_by(is_classified=True, is_classified_corruption=True, is_annoted=False).order_by(Article.date.desc()).paginate(page=page, per_page=10)
+    page = request.args.get('status', 'mixed', type=str)
+    query = None
+    if status == 'mixed':
+        query = Article.query.filter_by(is_classified=True, is_classified_corruption=True, is_annoted=False)
+    elif status == 'positive':
+        query = Article.query.filter_by(is_classified=True, is_annoted_corruption=True, is_annoted=True)
+    elif status == 'negative':
+        query = Article.query.filter_by(is_classified=True, is_classified_corruption=False, is_annoted=True)
+    pagination = query.order_by(Article.date.desc()).paginate(page=page, per_page=10)
     return jsonify({'pages': pagination.pages, 'articles': [a.dict() for a in pagination]}), 200
 
 @api.route('/not_corruption', methods=["POST"])
@@ -22,4 +30,9 @@ def not_corruption():
 @api.route('/annote', methods=["POST"])
 def annote():
     print(request.json)
+    return jsonify({}), 200
+
+@api.route('/add_url', methods=["POST"])
+def annote():
+    print(request.json['url'])
     return jsonify({}), 200
