@@ -27,7 +27,6 @@
 
 <template>
     <div class="">
-        <h1>hello</h1>
         <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article=article />
         <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="update" />
     </div>
