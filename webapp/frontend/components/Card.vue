@@ -57,6 +57,7 @@
                 'tags': article.tags,
             }
         });
+        isOpen.value = false
     }
     const isOpen = ref(false)
 
