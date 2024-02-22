@@ -174,5 +174,9 @@ class Article(db.Model):
             'institutions': self.institutions,
             'corrupt_people': self.corrupt_people,
             'corrupt_institutions': self.corrupt_institutions,
-            'date': self.date
-            }
+            'is_annoted': self.is_annoted,
+            'is_annoted_corruption': self.is_annoted_corruption,
+            'is_classified': self.is_classified,
+            'is_classified_corruption': self.is_classified_corruption,
+            'date': self.date,
+        }
