@@ -2,7 +2,5 @@
 export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@nuxt/ui'],
-  runtimeConfig: {
-    baseUrl: 'kmonitordemo.duckdns.org',
-  }
+  ssr: false,
 })
