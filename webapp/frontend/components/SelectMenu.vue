@@ -1,21 +1,44 @@
 <template>
-    <USelectMenu class="my-2" v-model="positiveList" :options="list" multiple>
+    <p style="text-transform: capitalize;"> {{ type }}: </p>
+    <USelectMenu option-attribute="name" creatable :searchable="search" searchable-placeholder="Keresés..." trailing
+        class="my-2" v-model="positiveList" :options="list" multiple>
         <template #label>
-        <span v-if="positiveList.length" class="truncate">{{ positiveList.join(', ') }}</span>
-        <span v-else>Válassz ki elemeket</span>
+            <span v-if="positiveList.length" class="truncate">{{ positiveList.map((item) => item.name).join(', ') }}</span>
+            <span v-else>Válassz ki elemeket</span>
+        </template>
+        <template #option-create="{ option }">
+            <span class="flex-shrink-0">Új {{ type }}:</span>
+            <span class="block truncate">{{ option.name }}</span>
         </template>
     </USelectMenu>
 </template>
 
 <script setup lang="ts">
-    let { data, positiveData } = defineProps(['data', 'positiveData']);
+    function search (q: string) {
+        if (q === '') {
+            return list
+        }
+
+        return all.filter((item: any) => {
+            return item.toLowerCase().includes(q.toLowerCase())
+        })
+    }
+
+    let { data, positiveData, all, type } = defineProps(['data', 'positiveData', 'all', 'type']);
     if (data === null) {
         data = ''
     }
+
     if (positiveData === null) {
         positiveData = ''
     }
 
-    const list = data.split(', ')
-    const positiveList = ref(positiveData.split(', '))
+    var list = data.split(', ')
+    var positiveList = ref(positiveData.split(', ').map((item: string) => ({'name': item}) ))
+    if (data === '') {
+        list = []
+    }
+    if (positiveData === '') {
+        positiveList.value = []
+    }
 </script>
