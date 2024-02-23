@@ -20,13 +20,17 @@
         </div>
         <UModal v-model="isOpen">
             <div class="p-4">
+                <p>Cím:</p>
                 <UInput class="my-2" v-model="article.title"/>
+                <p>URL:</p>
                 <UInput class="my-2" v-model="article.url"/>
+                <p>Leírás:</p>
                 <UTextarea class="my-2" v-model="article.description"/>
+                <p>Szöveg:</p>
                 <UTextarea class="my-2" v-model="article.text" rows="20"/>
-                <SelectMenu class="my-2" :data="article.people" :positive-data="article.corrupt_people" />
-                <SelectMenu class="my-2" :data="article.institutions" :positive-data="article.corrupt_institutions" />
-                <SelectMenu class="my-2" :data="article.tags" :positive-data="article.tags" />
+                <SelectMenu class="my-2" :data="article.people" type="személy" :positive-data="article.corrupt_people" :all="['AAAA']" />
+                <SelectMenu class="my-2" :data="article.institutions" type="intézmény" :positive-data="article.corrupt_institutions" :all="['AAAA']" />
+                <SelectMenu class="my-2" :data="article.tags" type="egyéb" :positive-data="article.tags" :all="['AAAA']" />
                 <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
                     <UButton color="gray" @click="closeModal">Mégse</UButton>
                     <UButton @click="submitArticle">Elfogad</UButton>
