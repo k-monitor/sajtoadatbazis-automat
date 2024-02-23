@@ -1,14 +1,21 @@
 <template>
     <div class="p-4">
         <div class="max-w-sm rounded overflow-hidden shadow-lg mb-4 p-4">
-            <p><a :href="article.url" class="font-bold text-xl mb-2">{{ article.title }}</a></p>
-            <UBadge color="blue"> {{ article.url.split('/')[2] }} </UBadge>
+            <p>
+                <a :href="article.url" class="font-bold text-xl mb-2">{{ article.title }}</a>
+                <UBadge class="m-1" color="gray">
+                <Icon v-if="!article.is_annoted" name="mdi:question-mark" color="gray" />
+                <Icon v-if="article.is_annoted && !article.is_annoted_corruption" name="mdi:trash" color="red" />
+                <Icon v-if="article.is_annoted && article.is_annoted_corruption" name="mdi:tick" color="green" />
+                </UBadge>
+            </p>
+            <UBadge class="m-1" color="blue"> {{ article.url.split('/')[2] }} </UBadge>
             <p class="text-base">{{ article.description }}</p>
             <p class="text-base">{{ article.date }}</p>
 
             <UContainer class="flex justify-between px-0 sm:px-0 lg:px-0">
-                <UButton color="red" @click="deleteArticle">Elutasít</UButton>
-                <UButton @click="openModal">Tovább</UButton>
+                <UButton v-if="!article.is_annoted || article.is_annoted_corruption" color="red" @click="deleteArticle">Elutasít</UButton>
+                <UButton v-if="!article.is_annoted || !article.is_annoted_corruption" @click="openModal" class="ml-auto">Tovább</UButton>
             </UContainer>
         </div>
         <UModal v-model="isOpen">
@@ -32,7 +39,6 @@
 <script setup lang="ts">
     async function postUrl(url, data) {
         return await $fetch(url, data)
-        return await $fetch('https://corsproxy.io/?' + encodeURIComponent(url), data);
     }
 
     function openModal() {

@@ -14,7 +14,6 @@
 
     async function getUrl(url) {
         return await $fetch(url)
-        return await $fetch('https://corsproxy.io/?' + encodeURIComponent(url))
     }
 
     const page = ref(1)
