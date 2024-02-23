@@ -1,7 +1,7 @@
 <template>
     <p style="text-transform: capitalize;"> {{ type }}: </p>
     <USelectMenu option-attribute="name" creatable :searchable="search" searchable-placeholder="Keresés..." trailing
-        class="my-2" v-model="positiveList" :options="list" multiple>
+        class="my-2" v-model="positiveList" :options="list" multiple by="name">
         <template #label>
             <span v-if="positiveList.length" class="truncate">{{ positiveList.map((item) => item.name).join(', ') }}</span>
             <span v-else>Válassz ki elemeket</span>
@@ -9,6 +9,9 @@
         <template #option-create="{ option }">
             <span class="flex-shrink-0">Új {{ type }}:</span>
             <span class="block truncate">{{ option.name }}</span>
+        </template>
+        <template #empty>
+            Nincs {{ type }}
         </template>
     </USelectMenu>
 </template>
@@ -19,12 +22,12 @@
             return list
         }
 
-        return all.filter((item: any) => {
+        return labels.filter((item: any) => {
             return item.toLowerCase().includes(q.toLowerCase())
-        })
+        }).map((item: string) => ({'name': item}) )
     }
 
-    let { data, positiveData, all, type } = defineProps(['data', 'positiveData', 'all', 'type']);
+    let { data, positiveData, labels, type } = defineProps(['data', 'positiveData', 'labels', 'type']);
     if (data === null) {
         data = ''
     }
@@ -33,7 +36,7 @@
         positiveData = ''
     }
 
-    var list = data.split(', ')
+    var list = data.split(', ').map((item: string) => ({'name': item}) )
     var positiveList = ref(positiveData.split(', ').map((item: string) => ({'name': item}) ))
     if (data === '') {
         list = []

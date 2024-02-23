@@ -9,7 +9,7 @@ api = Blueprint('api', __name__, url_prefix='/api')
 def api_articles():
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', 'mixed', type=str)
-    domain = request.args.get('domain', '', type=str)
+    domain = request.args.get('domain', 'mind', type=str)
     query = None
     if status == 'mixed':
         query = Article.query.filter_by(is_classified=True, is_classified_corruption=True, is_annoted=False)
@@ -17,7 +17,7 @@ def api_articles():
         query = Article.query.filter_by(is_classified=True, is_annoted_corruption=True, is_annoted=True)
     else:
         query = Article.query.filter_by(is_classified=True, is_annoted_corruption=False, is_annoted=True)
-    if domain != '':
+    if domain != 'mind':
         query = query.filter(Article.url.contains(domain))
     pagination = query.order_by(Article.date.desc()).paginate(page=page, per_page=10)
     return jsonify({'pages': pagination.pages, 'articles': [a.dict() for a in pagination]}), 200
@@ -50,4 +50,5 @@ def all_labels():
         'institution': ['Fidesz', 'MSZP', 'BKV (Budapesti Közlekedési Vállalat) Zrt.'],
         'place': ['Budapest', 'Európa', 'Pest megye'],
         'keywords': ['klientúra', 'ingatlan', 'közbeszerzés'],
+        'domains': ['mind', 'telex.hu', 'hvg.hu', '444.hu'],
     }), 200
