@@ -39,3 +39,12 @@ def annote():
 def add_url():
     print(request.json['url'])
     return jsonify({}), 200
+
+@api.route('/all_labels', methods=["GET"])
+def all_labels():
+    return jsonify({
+        'person': ['Mészáros Lőrinc', 'Orbán Viktor', 'Gyurcsány Ferenc'],
+        'institution': ['Fidesz', 'MSZP', 'BKV (Budapesti Közlekedési Vállalat) Zrt.'],
+        'place': ['Budapest', 'Európa', 'Pest megye'],
+        'keywords': ['klientúra', 'ingatlan', 'közbeszerzés'],
+    }), 200
