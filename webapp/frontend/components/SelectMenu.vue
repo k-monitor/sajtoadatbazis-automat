@@ -19,12 +19,12 @@
             return list
         }
 
-        return all.filter((item: any) => {
+        return labels.filter((item: any) => {
             return item.toLowerCase().includes(q.toLowerCase())
         })
     }
 
-    let { data, positiveData, all, type } = defineProps(['data', 'positiveData', 'all', 'type']);
+    let { data, positiveData, labels, type } = defineProps(['data', 'positiveData', 'labels', 'type']);
     if (data === null) {
         data = ''
     }

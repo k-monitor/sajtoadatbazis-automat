@@ -28,10 +28,10 @@
                 <UTextarea class="my-2" v-model="article.description"/>
                 <p>Szöveg:</p>
                 <UTextarea class="my-2" v-model="article.text" rows="20"/>
-                <SelectMenu class="my-2" :data="article.people" type="személy" :positive-data="article.corrupt_people" :all="all['person']" />
-                <SelectMenu class="my-2" :data="article.institutions" type="intézmény" :positive-data="article.corrupt_institutions" :all="all['institution']" />
+                <SelectMenu class="my-2" :data="article.people" type="személy" :positive-data="article.corrupt_people" :labels="allLabels['person']" />
+                <SelectMenu class="my-2" :data="article.institutions" type="intézmény" :positive-data="article.corrupt_institutions" :labels="allLabels['institution']" />
                 <!-- <SelectMenu class="my-2" :data="article.places" type="helyszín" :positive-data="article.corrupt_places" :all="all['place']" /> -->
-                <SelectMenu class="my-2" :data="article.tags" type="egyéb" :positive-data="article.tags" :all="all['other']" />
+                <SelectMenu class="my-2" :data="article.tags" type="egyéb" :positive-data="article.tags" :labels="allLabels['other']" />
                 <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
                     <UButton color="gray" @click="closeModal">Mégse</UButton>
                     <UButton @click="submitArticle">Elfogad</UButton>
@@ -79,5 +79,5 @@
     }
     const isOpen = ref(false)
 
-    const { article, all } = defineProps(['article', 'all']);
+    const { article, allLabels } = defineProps(['article', 'allLabels']);
 </script>

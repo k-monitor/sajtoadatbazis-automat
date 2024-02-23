@@ -55,7 +55,7 @@
         console.log(status)
         await update()
     }
-    //const all = await getUrl('http://'+hostUrl+'/api/all');
+    const allLabels = await getUrl('http://'+hostUrl+'/api/all_labels');
 </script>
 
 <template>
@@ -70,7 +70,7 @@
 
     <UTabs :items="items" @change="onChange" class="w-full">
         <template #item="{ item }">
-            <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :all="all" />
+            <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" />
             <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="update" />
         </template>
     </UTabs>
