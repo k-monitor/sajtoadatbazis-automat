@@ -10,6 +10,9 @@
             <span class="flex-shrink-0">Új {{ type }}:</span>
             <span class="block truncate">{{ option.name }}</span>
         </template>
+        <template #empty>
+            Nincs {{ type }}
+        </template>
     </USelectMenu>
 </template>
 
