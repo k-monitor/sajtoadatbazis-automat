@@ -1,5 +1,4 @@
 <script setup lang="ts">
-    const domains = ['mind', 'telex.hu', 'hvg.hu']
     var selectedDomain = ref('mind')
 
     const items = [{
@@ -18,6 +17,8 @@
     async function getUrl(url) {
         return await $fetch(url)
     }
+
+    const allLabels = await getUrl('http://'+hostUrl+'/api/all_labels');
 
     const page = ref(1)
     let status = 'mixed'
@@ -57,7 +58,6 @@
         await update()
     }
 
-    const allLabels = await getUrl('http://'+hostUrl+'/api/all_labels');
 </script>
 
 <template>
@@ -65,7 +65,7 @@
         <UButton class="mr-1" @click="openNewUrl">Új cikk</UButton>
         <UContainer class="my-1 flex lg:px-0 px-4 sm:px-0 ml-1">
             <p>Kiválasztott hírportál: &nbsp;</p>
-            <UInputMenu class="w-48" v-model="selectedDomain" :options="domains" @change="update"  />
+            <UInputMenu class="w-48" v-model="selectedDomain" :options="allLabels['domains']" @change="update"  />
         </UContainer>
     </UContainer>
     <UModal v-model="isOpen">
