@@ -1,4 +1,6 @@
 <script setup lang="ts">
+    const all = {'person': [], 'institution': [], 'place': [], 'other': []}
+
     const items = [{
         label: 'Vegyes',
         key: 'mixed'
@@ -19,6 +21,7 @@
     const page = ref(1)
     let status = 'mixed'
     let response = await getUrl('http://'+hostUrl+'/api/articles?page='+(page.value)+'&status='+status);
+
     var articles = response.articles;
     let pages = response.pages;
     let itemsCount = ref(pages*10);
@@ -52,6 +55,7 @@
         console.log(status)
         await update()
     }
+    //const all = await getUrl('http://'+hostUrl+'/api/all');
 </script>
 
 <template>
@@ -66,7 +70,7 @@
 
     <UTabs :items="items" @change="onChange" class="w-full">
         <template #item="{ item }">
-            <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article=article />
+            <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :all="all" />
             <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="update" />
         </template>
     </UTabs>
