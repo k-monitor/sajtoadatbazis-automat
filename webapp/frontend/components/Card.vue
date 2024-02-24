@@ -43,7 +43,7 @@
 
 <script setup lang="ts">
     var hostUrl = 'kmonitordemo.duckdns.org'
-    hostUrl = 'localhost:3000'
+    //hostUrl = 'localhost:3000'
 
     async function postUrl(url, data) {
         return await $fetch(url, data)
