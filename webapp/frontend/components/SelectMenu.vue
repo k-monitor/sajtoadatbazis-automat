@@ -1,7 +1,7 @@
 <template>
     <p style="text-transform: capitalize;"> {{ type }}: </p>
-    <USelectMenu option-attribute=null creatable :searchable="search" searchable-placeholder="Keresés..." trailing
-        class="my-2" v-model="positiveList" :options="list" multiple>
+    <USelectMenu creatable :searchable="search" searchable-placeholder="Keresés..." trailing
+        class="my-2" v-model="positiveList2" :options="list" multiple>
         <template #label>
             <span v-if="positiveList.length" class="truncate">{{ positiveList.join(', ') }}</span>
             <span v-else>Válassz ki elemeket</span>
@@ -27,5 +27,6 @@
         })
     }
 
-    let { list, positiveList, labels, type } = defineProps(['list', 'positiveList', 'labels', 'type']);
+    var { list, positiveList, labels, type } = defineProps(['list', 'positiveList', 'labels', 'type']);
+    var positiveList2 = ref(positiveList)
 </script>

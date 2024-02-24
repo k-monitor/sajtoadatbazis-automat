@@ -168,7 +168,7 @@ class Article(db.Model):
             'title': self.title,
             'text': self.text,
             'description': self.description,
-            'keywords': self.keywords.split(', '),
+            'keywords': self.keywords,
             'tags': self.tags.split(', '),
             'people': self.people.split(', '),
             'institutions': self.institutions.split(', '),
