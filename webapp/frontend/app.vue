@@ -23,8 +23,7 @@
     const page = ref(1)
     let status = 'mixed'
     let response = await getUrl('http://'+hostUrl+'/api/articles?page='+(page.value)+'&status='+status+'&domain='+selectedDomain.value);
-
-    var articles = response.articles;
+    var articles = response.articles
     let pages = response.pages;
     let itemsCount = ref(pages*10);
 
@@ -33,7 +32,7 @@
 
     async function update() {
         const response = await getUrl('http://'+hostUrl+'/api/articles?page='+(page.value)+'&status='+status+'&domain='+selectedDomain.value);
-        articles = response.articles;
+        articles = response.articles
         pages = response.pages;
         itemsCount.value = pages*10;
     }
