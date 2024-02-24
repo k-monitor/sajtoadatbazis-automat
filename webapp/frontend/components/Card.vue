@@ -42,6 +42,9 @@
 </template>
 
 <script setup lang="ts">
+    var hostUrl = 'kmonitordemo.duckdns.org'
+    //hostUrl = 'localhost:3000'
+
     async function postUrl(url, data) {
         return await $fetch(url, data)
     }
@@ -53,13 +56,13 @@
         isOpen.value = false
     }
     async function deleteArticle() {
-        await postUrl('http://kmonitordemo.duckdns.org/api/not_corruption', {
+        await postUrl('http://'+hostUrl+'/api/not_corruption', {
             method: 'POST',
             body: {'id': article.id}
         });
     }
     async function submitArticle() {
-        await postUrl('http://kmonitordemo.duckdns.org/api/annote', {
+        await postUrl('http://'+hostUrl+'/api/annote', {
             method: 'POST',
             body: {
                 'id': article.id,
@@ -67,11 +70,12 @@
                 'title': article.title,
                 'description': article.description,
                 'text': article.text,
-                'relations': article.relations,
                 'people': article.people,
                 'corrupt_people': article.corrupt_people,
                 'institutions': article.institutions,
                 'corrupt_institutions': article.corrupt_institutions,
+                'places': article.places,
+                'corrupt_places': article.corrupt_places,
                 'tags': article.tags,
             }
         });
