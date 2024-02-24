@@ -35,12 +35,26 @@ def annote():
     id = request.json['id']
     Article.query.filter_by(id=id).first().is_annoted = True
     Article.query.filter_by(id=id).first().is_annoted_corruption = True
+    Article.query.filter_by(id=id).first().title = request.json['title']
+    Article.query.filter_by(id=id).first().url = request.json['url']
+    Article.query.filter_by(id=id).first().description = request.json['description']
+    Article.query.filter_by(id=id).first().text = request.json['text']
+    # Article.query.filter_by(id=id).first().keywords = ', '.join(request.json['keywords'])
+    Article.query.filter_by(id=id).first().tags = ', '.join(request.json['tags'])
+    # Article.query.filter_by(id=id).first().people = ', '.join(request.json['people'])
+    # Article.query.filter_by(id=id).first().institutions = ', '.join(request.json['institutions'])
+    # Article.query.filter_by(id=id).first().places = ', '.join(request.json['places'])
+    Article.query.filter_by(id=id).first().corrupt_people = ', '.join(request.json['corrupt_people'])
+    Article.query.filter_by(id=id).first().corrupt_institutions = ', '.join(request.json['corrupt_institutions'])
+    Article.query.filter_by(id=id).first().corrupt_places = ', '.join(request.json['corrupt_places'])
     db.session.commit()
     return jsonify({}), 200
 
 @api.route('/add_url', methods=["POST"])
 def add_url():
     print(request.json['url'])
+    if Article.query.filter_by(url=request.json['url']).first() is None:
+        return jsonify({'error': 'Cikk már létezik'}), 400
     return jsonify({}), 200
 
 @api.route('/all_labels', methods=["GET"])
