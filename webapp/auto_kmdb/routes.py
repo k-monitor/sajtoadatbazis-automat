@@ -40,7 +40,7 @@ def annote():
     Article.query.filter_by(id=id).first().description = request.json['description']
     Article.query.filter_by(id=id).first().text = request.json['text']
     # Article.query.filter_by(id=id).first().keywords = ', '.join(request.json['keywords'])
-    Article.query.filter_by(id=id).first().tags = ', '.join(request.json['tags'])
+    Article.query.filter_by(id=id).first().tags = request.json['tags']
     # Article.query.filter_by(id=id).first().people = ', '.join(request.json['people'])
     # Article.query.filter_by(id=id).first().institutions = ', '.join(request.json['institutions'])
     # Article.query.filter_by(id=id).first().places = ', '.join(request.json['places'])
