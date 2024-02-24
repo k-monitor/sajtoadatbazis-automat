@@ -28,10 +28,10 @@
                 <UTextarea class="my-2" v-model="article.description"/>
                 <p>Szöveg:</p>
                 <UTextarea class="my-2" v-model="article.text" rows="20"/>
-                <SelectMenu class="my-2" :list="article.people" type="személy" :positive-list="article.corrupt_people" :labels="allLabels['person']" />
-                <SelectMenu class="my-2" :list="article.institutions" type="intézmény" :positive-list="article.corrupt_institutions" :labels="allLabels['institution']" />
-                <SelectMenu class="my-2" :list="article.places" type="helyszín" :positive-list="article.corrupt_places" :labels="allLabels['place']" />
-                <SelectMenu class="my-2" :list="article.tags" type="egyéb" :positive-list="article.tags" :labels="allLabels['other']" />
+                <SelectMenu class="my-2" :list="article.people" type="személy" :positive-list="positivePeople" @update:positiveList="updatePositivePeople" :labels="allLabels['person']" />
+                <SelectMenu class="my-2" :list="article.institutions" type="intézmény" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
+                <SelectMenu class="my-2" :list="article.places" type="helyszín" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
+                <SelectMenu class="my-2" :list="article.tags" type="egyéb" :positive-list="positiveTags" @update:positiveList="updatePositiveTags" :labels="allLabels['other']" />
                 <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
                     <UButton color="gray" @click="closeModal">Mégse</UButton>
                     <UButton @click="submitArticle">Elfogad</UButton>
@@ -43,7 +43,7 @@
 
 <script setup lang="ts">
     var hostUrl = 'kmonitordemo.duckdns.org'
-    //hostUrl = 'localhost:3000'
+    hostUrl = 'localhost:3000'
 
     async function postUrl(url, data) {
         return await $fetch(url, data)
@@ -71,12 +71,12 @@
                 'description': article.description,
                 'text': article.text,
                 'people': article.people,
-                'corrupt_people': article.corrupt_people,
+                'corrupt_people': positivePeople.value,
                 'institutions': article.institutions,
-                'corrupt_institutions': article.corrupt_institutions,
+                'corrupt_institutions': positiveInstitutions.value,
                 'places': article.places,
-                'corrupt_places': article.corrupt_places,
-                'tags': article.tags,
+                'corrupt_places': positivePlaces.value,
+                'tags': positiveTags.value,
             }
         });
         isOpen.value = false
@@ -84,4 +84,35 @@
     const isOpen = ref(false)
 
     const { article, allLabels } = defineProps(['article', 'allLabels']);
+
+    var positivePeople = ref(article.corrupt_people.map((person) => ({'label': person})))
+    var positiveInstitutions = ref(article.corrupt_institutions.map((institution) => ({'label': institution})))
+    var positivePlaces = ref(article.corrupt_places.map((place) => ({'label': place})))
+    var positiveTags = ref(article.tags.map((tag) => ({'label': tag})))
+
+    var people = positivePeople.value
+    var institutions = positiveInstitutions.value
+    var places = positivePlaces.value
+    var tags = positiveTags.value
+
+    // Handle update event for positivePeople
+    const updatePositivePeople = (newValue) => {
+        console.log(newValue)
+        positivePeople.value = newValue
+    };
+
+    // Handle update event for positiveInstitutions
+    const updatePositiveInstitutions = (newValue) => {
+        positiveInstitutions.value = newValue;
+    };
+
+    // Handle update event for positivePlaces
+    const updatePositivePlaces = (newValue) => {
+        positivePlaces.value = newValue;
+    };
+
+    // Handle update event for positiveTags
+    const updatePositiveTags = (newValue) => {
+        positiveTags.value = newValue;
+    };
 </script>
