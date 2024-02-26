@@ -53,7 +53,7 @@ def annote():
 @api.route('/add_url', methods=["POST"])
 def add_url():
     print(request.json['url'])
-    if Article.query.filter_by(url=request.json['url']).first() is None:
+    if Article.query.filter_by(url=request.json['url']).first() is not None:
         return jsonify({'error': 'Cikk már létezik'}), 400
     return jsonify({}), 200
 
