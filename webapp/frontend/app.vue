@@ -1,7 +1,10 @@
 <script setup lang="ts">
-    var selectedDomain = ref('mind')
+    const page = ref(1)
+    const statusId = ref(0)
+    const status = computed(() => statusItems[statusId.value].key)
+    const selectedDomain = ref('mind')
 
-    const items = [{
+    const statusItems = [{
         label: 'Vegyes',
         key: 'mixed'
     }, {
@@ -18,27 +21,25 @@
         return await $fetch(url)
     }
 
-    const allLabels = await getUrl('http://'+hostUrl+'/api/all_labels');
+    const { data: allLabels } = await useFetch('http://'+hostUrl+'/api/all_labels');
 
-    const page = ref(1)
-    let status = 'mixed'
-    let response = await getUrl('http://'+hostUrl+'/api/articles?page='+(page.value)+'&status='+status+'&domain='+selectedDomain.value);
-    var articles = response.articles
-    let pages = response.pages;
-    let itemsCount = ref(pages*10);
+    const { pending, data, error, refresh } = await useLazyFetch('http://'+hostUrl+'/api/articles', {
+        query: {
+            page: page,
+            status: status,
+            domain: selectedDomain,
+        },
+    })
+
+    let articles = computed(() => data.value.articles);
+    let pages = computed(() => data.value.pages);
+    let itemsCount = computed(() => pages.value*10);
 
     let newUrl = '';
     let isOpen = ref(false);
     let isOpenError = ref(false);
     let errorText = ref('');
     let errorTitle = ref('');
-
-    async function update() {
-        const response = await getUrl('http://'+hostUrl+'/api/articles?page='+(page.value)+'&status='+status+'&domain='+selectedDomain.value);
-        articles = response.articles
-        pages = response.pages;
-        itemsCount.value = pages*10;
-    }
 
     function openNewUrl () {
         newUrl = ''
@@ -65,14 +66,6 @@
             errorTitle.value = 'Hiba'
         }
     }
-
-    async function onChange (index) {
-        const item = items[index]
-        status = item.key
-        console.log(status)
-        await update()
-    }
-
 </script>
 
 <template>
@@ -80,7 +73,7 @@
         <UButton class="mr-1" @click="openNewUrl">Új cikk</UButton>
         <UContainer class="my-1 flex lg:px-0 px-4 sm:px-0 ml-1">
             <p>Kiválasztott hírportál: &nbsp;</p>
-            <UInputMenu class="w-48" v-model="selectedDomain" :options="allLabels['domains']" @change="update"  />
+            <UInputMenu class="w-48" v-model="selectedDomain" :options="allLabels['domains']" @change="refresh"  />
         </UContainer>
     </UContainer>
     <UModal v-model="isOpen">
@@ -98,10 +91,13 @@
         <UButton @click="isOpenError = false">Bezárás</UButton>
       </div>
     </UModal>
-    <UTabs :items="items" @change="onChange" class="w-full">
-        <template #item="{ item }">
+    <UTabs :items="statusItems" v-model="statusId" class="w-full">
+        <template #item="{ item }" v-if="!pending">
             <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" />
-            <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="update" />
+            <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="refresh" />
+        </template>
+        <template #item="{ item }" v-else>
+            <UProgress animation="elastic" v-if="pending" />
         </template>
     </UTabs>
 </template>
