@@ -32,7 +32,7 @@
 
         return labels.filter((item: any) => {
             return item.toLowerCase().includes(q.toLowerCase())
-        })
+        }).map((item) => ({'label': item}))
     }
 
     var { list, positiveList, labels, type } = defineProps(['list', 'positiveList', 'labels', 'type']);
