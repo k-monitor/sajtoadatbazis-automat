@@ -29,6 +29,9 @@
 
     let newUrl = '';
     let isOpen = ref(false);
+    let isOpenError = ref(false);
+    let errorText = ref('');
+    let errorTitle = ref('');
 
     async function update() {
         const response = await getUrl('http://'+hostUrl+'/api/articles?page='+(page.value)+'&status='+status+'&domain='+selectedDomain.value);
@@ -44,10 +47,23 @@
 
     async function addUrl () {
         isOpen.value = false
-        await $fetch('http://kmonitordemo.duckdns.org/api/add_url', {
-            method: 'POST',
-            body: {'url': newUrl},
-        });
+        try {
+            const {data, error} = await $fetch('http://kmonitordemo.duckdns.org/api/add_url', {
+                method: 'POST',
+                body: {'url': newUrl},
+            });
+            if (error) {
+                console.log(error)
+                isOpenError.value = true
+                errorText.value = data.error
+                errorTitle.value = 'Hiba'
+            }
+        } catch (error) {
+            console.log(error)
+            isOpenError.value = true
+            errorText.value = error
+            errorTitle.value = 'Hiba'
+        }
     }
 
     async function onChange (index) {
@@ -75,6 +91,13 @@
         </div>
     </UModal>
 
+    <UModal v-model="isOpenError">
+      <div class="p-4">
+        <h2>{{ errorTitle }}</h2>
+        <p>{{ errorText }}</p>
+        <UButton @click="isOpenError = false">Bezárás</UButton>
+      </div>
+    </UModal>
     <UTabs :items="items" @change="onChange" class="w-full">
         <template #item="{ item }">
             <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" />
