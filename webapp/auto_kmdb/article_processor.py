@@ -152,7 +152,7 @@ def do_relation_extraction(article: Article):
         print(respText)
         relations += parse_relations(respText)
     print(relations)
-    with jsonlines.open(f'/data/relation_extraction.jsonl', mode='a') as writer:
+    with jsonlines.open(os.environ["DATA_PATH"]+f'/relation_extraction.jsonl', mode='a') as writer:
         writer.write_all(relations)
 
 
