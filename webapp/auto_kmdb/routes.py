@@ -4,7 +4,9 @@ from auto_kmdb.Article import Article
 from auto_kmdb.db import db
 from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers
 
+
 api = Blueprint('api', __name__, url_prefix='/api')
+
 
 @api.route('/articles', methods=["GET"])
 def api_articles():
@@ -31,6 +33,7 @@ def not_corruption():
     db.session.commit()
     return jsonify({}), 200
 
+
 @api.route('/annote', methods=["POST"])
 def annote():
     id = request.json['id']
@@ -51,12 +54,14 @@ def annote():
     db.session.commit()
     return jsonify({}), 200
 
+
 @api.route('/add_url', methods=["POST"])
 def add_url():
     print(request.json['url'])
     if Article.query.filter_by(url=request.json['url']).first() is not None:
         return jsonify({'error': 'Cikk már létezik'}), 400
     return jsonify({}), 200
+
 
 @api.route('/all_labels', methods=["GET"])
 def all_labels():
