@@ -2,6 +2,7 @@ from flask import jsonify, Blueprint, request
 
 from auto_kmdb.Article import Article
 from auto_kmdb.db import db
+from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
@@ -60,9 +61,9 @@ def add_url():
 @api.route('/all_labels', methods=["GET"])
 def all_labels():
     return jsonify({
-        'person': ['Mészáros Lőrinc', 'Orbán Viktor', 'Gyurcsány Ferenc'],
-        'institution': ['Fidesz', 'MSZP', 'BKV (Budapesti Közlekedési Vállalat) Zrt.'],
-        'place': ['Budapest', 'Európa', 'Pest megye'],
-        'keywords': ['klientúra', 'ingatlan', 'közbeszerzés'],
-        'domains': ['mind', 'telex.hu', 'hvg.hu', '444.hu'],
+        'person': get_all_persons(),
+        'institution': get_all_institutions(),
+        'place': get_all_places(),
+        'keywords': get_all_others(),
+        'domains': get_all_newspapers(),
     }), 200
