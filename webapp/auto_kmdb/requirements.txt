@@ -5,3 +5,4 @@ feedparser==6.0.10
 uvicorn[standard]==0.24.0
 gunicorn
 jsonlines
+mysql-connector-python
