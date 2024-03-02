@@ -52,7 +52,7 @@ def get_all_newspapers():
     return get_all('news_newspapers', 'newspaper_id', 'name')
 
 
-def init_news(source, added_by, source_url, clean_url, processing_step):
+def init_news(source, source_url, clean_url):
     """
     This function is used to insert news data into the 'autokmdb_news' table in the MySQL database.
 
@@ -68,11 +68,19 @@ def init_news(source, added_by, source_url, clean_url, processing_step):
     """
     with mysql_db.cursor(dictionary=True) as cursor:
         query = """INSERT INTO autokmdb_news
-                (source, added_by, source_url, clean_url, processing_step)
-                VALUES (%s, %s, %s, %s, %s)"""
-        cursor.execute(query, (source, added_by, source_url, clean_url,
-                               processing_step))
+                (source, source_url, clean_url, processing_step)
+                VALUES (%s, %s, %s, %s)"""
+        cursor.execute(query, (source, source_url, clean_url, 0))
         mysql_db.commit()
+
+
+def check_url_exists(url):
+    with mysql_db.cursor() as cursor:
+        query = "SELECT id FROM autokmdb_news WHERE clean_url = %s"
+        cursor.execute(query, (url,))
+        results = cursor.fetchall()
+
+        return len(results) != 0
 
 
 def add_auto_person(autokmdb_news_id, person_id, found_name, found_position, name, classification_score, classification_label):

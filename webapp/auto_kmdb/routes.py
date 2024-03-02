@@ -3,6 +3,7 @@ from flask import jsonify, Blueprint, request
 from auto_kmdb.Article import Article
 from auto_kmdb.db import db
 from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers
+from auto_kmdb.db import check_url_exists, init_news
 
 
 api = Blueprint('api', __name__, url_prefix='/api')
@@ -57,9 +58,10 @@ def annote():
 
 @api.route('/add_url', methods=["POST"])
 def add_url():
-    print(request.json['url'])
-    if Article.query.filter_by(url=request.json['url']).first() is not None:
+    url = request.json['url']
+    if check_url_exists(url):
         return jsonify({'error': 'Cikk már létezik'}), 400
+    init_news(1, )
     return jsonify({}), 200
 
 
