@@ -177,3 +177,45 @@ def add_auto_other(autokmdb_news_id, other_id, found_name, found_position, name,
                 VALUES (%s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(query, (autokmdb_news_id, other_id, found_name, found_position, name, classification_score, classification_label))
         mysql_db.commit()
+
+
+def get_step_0_queue():
+    """
+    This function fetches the id and clean_url from the 'autokmdb_news' table 
+    in the database where the processing_step is 0. It returns the result as a list of dictionaries.
+
+    Returns:
+    list: A list of dictionaries where each dictionary represents a row from the query result. 
+    Each dictionary contains 'id' and 'url' as keys.
+
+    Example:
+    [{'id': 1, 'url': 'http://example.com'}, {'id': 2, 'url': 'http://example2.com'}, ...]
+    """
+    query = '''SELECT id, clean_url AS url FROM autokmdb_news
+               WHERE processing_step = 0;'''
+    with mysql_db.cursor(dictionary=True) as cursor:
+        cursor.execute(query)
+        return list(cursor.fetchall())
+
+
+def save_step_0(id, text):
+    query = "UPDATE autokmdb_news SET text = ? WHERE id = ?"
+    with mysql_db.cursor(dictionary=True) as cursor:
+        cursor.execute(query, (text, id))
+    mysql_db.commit()
+
+
+def get_step_1_queue():
+    query = '''SELECT id, title, description FROM autokmdb_news
+               WHERE processing_step = 1;'''
+    with mysql_db.cursor(dictionary=True) as cursor:
+        cursor.execute(query)
+        return list(cursor.fetchall())
+
+
+def save_step_1(id, classification_label, classification_score):
+    query = '''UPDATE autokmdb_news SET classification_label = ?,
+               classification_score = ? WHERE id = ?'''
+    with mysql_db.cursor() as cursor:
+        cursor.execute(query, (classification_label, classification_score, id))
+    mysql_db.commit()

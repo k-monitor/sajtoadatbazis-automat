@@ -61,7 +61,7 @@ def add_url():
     url = request.json['url']
     if check_url_exists(url):
         return jsonify({'error': 'Cikk már létezik'}), 400
-    init_news(1, )
+    init_news(1, url, url)
     return jsonify({}), 200
 
 
