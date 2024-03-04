@@ -5,6 +5,8 @@ CREATE TABLE autokmdb_news (
     source_url VARCHAR(255) NOT NULL,
     clean_url VARCHAR(255) NOT NULL,
     text MEDIUMTEXT,
+    title VARCHAR(255),
+    description VARCHAR(255),
     classification_score DOUBLE,
     classification_label INT,
     annotation_label INT,

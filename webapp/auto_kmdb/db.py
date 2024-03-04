@@ -179,38 +179,12 @@ def add_auto_other(autokmdb_news_id, other_id, found_name, found_position, name,
         mysql_db.commit()
 
 
-def get_step_0_queue():
-    """
-    This function fetches the id and clean_url from the 'autokmdb_news' table 
-    in the database where the processing_step is 0. It returns the result as a list of dictionaries.
-
-    Returns:
-    list: A list of dictionaries where each dictionary represents a row from the query result. 
-    Each dictionary contains 'id' and 'url' as keys.
-
-    Example:
-    [{'id': 1, 'url': 'http://example.com'}, {'id': 2, 'url': 'http://example2.com'}, ...]
-    """
-    query = '''SELECT id, clean_url AS url FROM autokmdb_news
-               WHERE processing_step = 0;'''
+def save_step_0(id, text, title, description):
+    query = '''UPDATE autokmdb_news SET text = ?, title = ?, description = ?
+               WHERE id = ?'''
     with mysql_db.cursor(dictionary=True) as cursor:
-        cursor.execute(query)
-        return list(cursor.fetchall())
-
-
-def save_step_0(id, text):
-    query = "UPDATE autokmdb_news SET text = ? WHERE id = ?"
-    with mysql_db.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (text, id))
+        cursor.execute(query, (text, title, description, id))
     mysql_db.commit()
-
-
-def get_step_1_queue():
-    query = '''SELECT id, title, description FROM autokmdb_news
-               WHERE processing_step = 1;'''
-    with mysql_db.cursor(dictionary=True) as cursor:
-        cursor.execute(query)
-        return list(cursor.fetchall())
 
 
 def save_step_1(id, classification_label, classification_score):
@@ -219,3 +193,32 @@ def save_step_1(id, classification_label, classification_score):
     with mysql_db.cursor() as cursor:
         cursor.execute(query, (classification_label, classification_score, id))
     mysql_db.commit()
+
+
+def get_step_queue(step):
+    """
+    This function fetches the data from the 'autokmdb_news' table 
+    in the database where the processing_step is the given step. It returns the result as a list of dictionaries.
+
+    Args:
+    step (int): The processing step to fetch data for.
+
+    Returns:
+    list: A list of dictionaries where each dictionary represents a row from the query result.
+    Each dictionary contains 'id' and the relevant data as keys.
+
+    Example:
+    [{'id': 1, 'url': 'http://example.com'}, {'id': 2, 'url': 'http://example2.com'}, ...]
+    """
+    fields = {
+        0: 'clean_url AS url',
+        1: 'title, description',
+        2: 'text',
+        3: 'text',
+        4: 'text',
+    }
+    query = f'''SELECT id, {fields[step]} FROM autokmdb_news
+               WHERE processing_step = {step};'''
+    with mysql_db.cursor(dictionary=True) as cursor:
+        cursor.execute(query)
+        return list(cursor.fetchall())
