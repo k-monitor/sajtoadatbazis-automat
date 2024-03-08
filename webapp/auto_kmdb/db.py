@@ -66,11 +66,12 @@ def init_news(source, source_url, clean_url):
     Returns:
     None
     """
+
     with mysql_db.cursor(dictionary=True) as cursor:
         query = """INSERT INTO autokmdb_news
                 (source, source_url, clean_url, processing_step)
                 VALUES (%s, %s, %s, %s)"""
-        cursor.execute(query, (source, source_url, clean_url, 0))
+        cursor.execute(query, (0 if source == 'rss' else 1, source_url, clean_url, 0))
         mysql_db.commit()
 
 
@@ -222,3 +223,23 @@ def get_step_queue(step):
     with mysql_db.cursor(dictionary=True) as cursor:
         cursor.execute(query)
         return list(cursor.fetchall())
+
+
+def get_download_queue():
+    return get_step_queue(0)
+
+
+def get_classification_queue():
+    return get_step_queue(1)
+
+
+def get_ner_queue():
+    return get_step_queue(2)
+
+
+def get_keyword_queue():
+    return get_step_queue(3)
+
+
+def get_human_queue():
+    return get_step_queue(4)
