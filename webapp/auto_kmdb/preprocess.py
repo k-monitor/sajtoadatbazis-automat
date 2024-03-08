@@ -54,4 +54,3 @@ replacements = [(picture_pattern, ''), (quote_pattern, '"'),
                 (dot_pattern, '...'), (line_pattern, ''),
                 (space_pattern, ' '), (dash_pattern, '-'),
                 (photo_camera_pattern, ''), (newline_pattern, '\n\n')]
-
