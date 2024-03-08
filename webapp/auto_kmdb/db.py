@@ -180,7 +180,7 @@ def add_auto_other(autokmdb_news_id, other_id, found_name, found_position, name,
         mysql_db.commit()
 
 
-def save_step_0(id, text, title, description):
+def save_download_step(id, text, title, description):
     query = '''UPDATE autokmdb_news SET text = ?, title = ?, description = ?
                WHERE id = ?'''
     with mysql_db.cursor(dictionary=True) as cursor:
@@ -188,7 +188,15 @@ def save_step_0(id, text, title, description):
     mysql_db.commit()
 
 
-def save_step_1(id, classification_label, classification_score):
+def skip_same_news(id):
+    query = '''UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5
+               WHERE id = ?'''
+    with mysql_db.cursor(dictionary=True) as cursor:
+        cursor.execute(query, (id))
+    mysql_db.commit()
+
+
+def save_classification_step(id, classification_label, classification_score):
     query = '''UPDATE autokmdb_news SET classification_label = ?,
                classification_score = ? WHERE id = ?'''
     with mysql_db.cursor() as cursor:
@@ -222,7 +230,7 @@ def get_step_queue(step):
                WHERE processing_step = {step};'''
     with mysql_db.cursor(dictionary=True) as cursor:
         cursor.execute(query)
-        return list(cursor.fetchall())
+        return cursor.fetchone()
 
 
 def get_download_queue():
