@@ -1,5 +1,5 @@
-import Processor
-from db import get_classification_queue, save_classification_step
+from auto_kmdb.Processor import Processor
+from auto_kmdb.db import get_classification_queue, save_classification_step
 from time import sleep
 from transformers import BertForSequenceClassification, BertTokenizer
 import torch.nn.functional as F
@@ -10,6 +10,9 @@ article_classification_prompt = '''{title}
 
 
 class ClassificationProcessor(Processor):
+    def __init__(self):
+        self.done = False
+
     def is_done(self):
         return self.done
 

@@ -1,9 +1,9 @@
-import Processor
-import newspaper
+from auto_kmdb.Processor import Processor
 from auto_kmdb.same_news import same_news
-from db import get_download_queue, save_download_step, skip_same_news
-from preprocess import do_replacements, replacements, common_descriptions
+from auto_kmdb.db import get_download_queue, save_download_step, skip_same_news
+from auto_kmdb.preprocess import do_replacements, replacements, common_descriptions
 from time import sleep
+import newspaper
 
 
 class DownloadProcessor(Processor):

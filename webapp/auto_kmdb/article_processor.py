@@ -1,7 +1,7 @@
 from time import sleep
-import DownloadProcessor
-import ClassificationProcessor
-import NERProcessor
+from auto_kmdb.DownloadProcessor import DownloadProcessor
+from auto_kmdb.ClassificationProcessor import ClassificationProcessor
+from auto_kmdb.NERProcessor import NERProcessor
 
 
 processors = [DownloadProcessor(), ClassificationProcessor(), NERProcessor()]

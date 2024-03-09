@@ -1,10 +1,8 @@
 from flask import jsonify, Blueprint, request
-
-from auto_kmdb.Article import Article
-from auto_kmdb.db import db
+from auto_kmdb.db import get_articles, annote_negative
 from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers
 from auto_kmdb.db import check_url_exists, init_news
-
+from math import ceil
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
@@ -14,45 +12,23 @@ def api_articles():
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', 'mixed', type=str)
     domain = request.args.get('domain', 'mind', type=str)
-    query = None
-    if status == 'mixed':
-        query = Article.query.filter_by(is_classified=True, is_classified_corruption=True, is_annoted=False)
-    elif status == 'positive':
-        query = Article.query.filter_by(is_classified=True, is_annoted_corruption=True, is_annoted=True)
-    else:
-        query = Article.query.filter_by(is_classified=True, is_annoted_corruption=False, is_annoted=True)
-    if domain != 'mind':
-        query = query.filter(Article.url.contains(domain))
-    pagination = query.order_by(Article.date.desc()).paginate(page=page, per_page=10)
-    return jsonify({'pages': pagination.pages, 'articles': [a.dict() for a in pagination]}), 200
+
+    length, articles = get_articles(page, status, domain)
+
+    return jsonify({'pages': ceil(length/10), 'articles': articles}), 200
+
 
 @api.route('/not_corruption', methods=["POST"])
 def not_corruption():
     id = request.json['id']
-    Article.query.filter_by(id=id).first().is_annoted = True
-    Article.query.filter_by(id=id).first().is_annoted_corruption = False
-    db.session.commit()
+    annote_negative(id)
     return jsonify({}), 200
 
 
 @api.route('/annote', methods=["POST"])
 def annote():
     id = request.json['id']
-    Article.query.filter_by(id=id).first().is_annoted = True
-    Article.query.filter_by(id=id).first().is_annoted_corruption = True
-    Article.query.filter_by(id=id).first().title = request.json['title']
-    Article.query.filter_by(id=id).first().url = request.json['url']
-    Article.query.filter_by(id=id).first().description = request.json['description']
-    Article.query.filter_by(id=id).first().text = request.json['text']
-    # Article.query.filter_by(id=id).first().keywords = ', '.join(request.json['keywords'])
-    Article.query.filter_by(id=id).first().tags = request.json['tags']
-    # Article.query.filter_by(id=id).first().people = ', '.join(request.json['people'])
-    # Article.query.filter_by(id=id).first().institutions = ', '.join(request.json['institutions'])
-    # Article.query.filter_by(id=id).first().places = ', '.join(request.json['places'])
-    Article.query.filter_by(id=id).first().corrupt_people = ', '.join(request.json['corrupt_people'])
-    Article.query.filter_by(id=id).first().corrupt_institutions = ', '.join(request.json['corrupt_institutions'])
-    Article.query.filter_by(id=id).first().corrupt_places = ', '.join(request.json['corrupt_places'])
-    db.session.commit()
+    # TODO
     return jsonify({}), 200
 
 

@@ -251,3 +251,40 @@ def get_keyword_queue():
 
 def get_human_queue():
     return get_step_queue(4)
+
+
+def paginate_query(query, page_size, page_number):
+    offset = (page_number - 1) * page_size
+    return query + f" LIMIT {page_size} OFFSET {offset}"
+
+
+def get_articles(page, status, domain='mind'):
+    query = ''
+    if domain == 'mind':
+        domain = '%'
+    else:
+        domain = f"%{domain}%"
+
+    if status == 'mixed':
+        query = '''SELECT id, url, text FROM autokmdb_news
+        WHERE processing_step = 5 AND annotation_label IS NULL AND clean_url LIKE ?;'''
+    elif status == 'positive':
+        query = '''SELECT id, url, text FROM autokmdb_news
+        WHERE processing_step = 5 AND annotation_label = 1 AND clean_url LIKE ?;'''
+    elif status == 'negative':
+        query = '''SELECT id, url, text FROM autokmdb_news
+        WHERE processing_step = 5 AND annotation_label = 0 AND clean_url LIKE ?;'''
+    else:
+        print('Invalid status provided!')
+        return
+
+    with mysql_db.cursor(dictionary=True) as cursor:
+        cursor.execute(paginate_query(query, 10, page), (domain,))
+        return cursor.fetchall()
+
+
+def annote_negative(id):
+    query = '''UPDATE autokmdb_news SET annotation_label = 0 WHERE id = ?;'''
+    with mysql_db.cursor() as cursor:
+        cursor.execute(query, (id,))
+    mysql_db.commit()

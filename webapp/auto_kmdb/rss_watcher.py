@@ -1,6 +1,4 @@
 import time
-import traceback
-
 import feedparser
 from auto_kmdb.options import feed_urls, skip_url_patterns
 from auto_kmdb.db import check_url_exists, init_news

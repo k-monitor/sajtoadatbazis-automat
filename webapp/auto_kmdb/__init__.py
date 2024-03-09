@@ -9,12 +9,7 @@ from auto_kmdb.article_processor import article_processor
 def create_app():
     app = Flask(__name__, instance_relative_config=True, instance_path=os.environ["DATA_PATH"]+'/instance', )
 
-    from auto_kmdb.db import db
-    db.init_app(app)
-
     with app.app_context():
-        db.create_all()
-
         from auto_kmdb.routes import api
         app.register_blueprint(api)
 
