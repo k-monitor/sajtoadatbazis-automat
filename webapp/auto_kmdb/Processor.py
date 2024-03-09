@@ -7,3 +7,6 @@ class Processor:
 
     def process_next(self):
         pass
+
+    def is_done(self):
+        return True

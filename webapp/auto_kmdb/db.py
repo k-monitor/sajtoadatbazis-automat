@@ -1,8 +1,7 @@
-from flask_sqlalchemy import SQLAlchemy
+from functools import cache
 import mysql.connector
 import os
 
-db = SQLAlchemy()
 
 mysql_db = mysql.connector.connect(
   host=os.environ["MYSQL_HOST"],
@@ -13,16 +12,17 @@ mysql_db = mysql.connector.connect(
 )
 
 
-def get_all(table, id_column, name_column, limit=3):
+@cache
+def get_all(table, id_column, name_column, limit=300):
     """
     This function retrieves a limited number of records from a specified MySQL table where the status is 'Y'.
-    
+
     Args:
         table (str): The name of the table from which to retrieve records.
         id_column (str): The name of the column to be used as the ID in the retrieved records.
         name_column (str): The name of the column to be used as the name in the retrieved records.
         limit (int, optional): The maximum number of records to retrieve. Defaults to 3.
-        
+
     Returns:
         list: A list of dictionaries, where each dictionary represents a record from the table and contains the ID and name.
     """

@@ -2,14 +2,12 @@ from flask import Flask
 from threading import Thread
 import os
 
-from auto_kmdb.Article import Article
 from auto_kmdb.rss_watcher import rss_watcher
 from auto_kmdb.article_processor import article_processor
 
 
 def create_app():
     app = Flask(__name__, instance_relative_config=True, instance_path=os.environ["DATA_PATH"]+'/instance', )
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///articles.db'
 
     from auto_kmdb.db import db
     db.init_app(app)

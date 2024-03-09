@@ -5,11 +5,19 @@ from transformers import BertForSequenceClassification, BertTokenizer
 import torch.nn.functional as F
 
 
-class DownloadProcessor(Processor):
+article_classification_prompt = '''{title}
+{description}'''
+
+
+class ClassificationProcessor(Processor):
+    def is_done(self):
+        return self.done
+
     def load_model(self):
         self.model = BertForSequenceClassification.from_pretrained(
             'boapps/kmdb_classification_model')
         self.tokenizer = BertTokenizer.from_pretrained('SZTAKI-HLT/hubert-base-cc')
+        self.is_done = True
 
     def predict(self):
         inputs = self.tokenizer(self.text, return_tensors="pt")
@@ -22,7 +30,7 @@ class DownloadProcessor(Processor):
         next_row = get_classification_queue()
         if next_row is None:
             sleep(30)
-        self.text = next_row['text']
+        self.text = article_classification_prompt.format(next_row)
 
         self.predict()
 

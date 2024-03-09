@@ -1,11 +1,16 @@
 from transformers import pipeline
 from db import get_ner_queue, add_auto_person, add_auto_institution, add_auto_place
 from time import sleep
+import Processor
 
 
-class Processor:
+class NERProcessor(Processor):
     def load_model(self):
         self.classifier = pipeline("ner", model="boapps/kmdb_ner_model", aggregation_strategy="average")
+        self.done = True
+
+    def is_done(self):
+        return self.done
 
     def predict(self):
         self.people = []
