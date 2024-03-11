@@ -1,6 +1,11 @@
 from time import sleep
+from auto_kmdb.db import connection_pool
+
 
 class Processor:
+    def __init__(self):
+        self.connection = connection_pool.get_connection()
+
     def load_model(self):
         pass
 

@@ -11,6 +11,7 @@ article_classification_prompt = '''{title}
 
 class ClassificationProcessor(Processor):
     def __init__(self):
+        super().__init__()
         self.done = False
 
     def is_done(self):
@@ -32,11 +33,11 @@ class ClassificationProcessor(Processor):
         print(self.score)
 
     def process_next(self):
-        next_row = get_classification_queue()
+        next_row = get_classification_queue(self.connection)
         if next_row is None:
             sleep(30)
         self.text = article_classification_prompt.format(title=next_row['title'], description=next_row['description'])
 
         self.predict()
 
-        save_classification_step(next_row['id'], self.label, self.score)
+        save_classification_step(self.connection, next_row['id'], self.label, self.score)

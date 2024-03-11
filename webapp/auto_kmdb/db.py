@@ -1,9 +1,13 @@
 from functools import cache
 import mysql.connector
 import os
+from contextlib import closing
 
 
-mysql_db = mysql.connector.connect(
+connection_pool = mysql.connector.pooling.MySQLConnectionPool(
+  pool_name="cnx_pool",
+  pool_size=5,
+  pool_reset_session=True,
   host=os.environ["MYSQL_HOST"],
   port=os.environ["MYSQL_PORT"],
   user=os.environ["MYSQL_USER"],
@@ -13,7 +17,7 @@ mysql_db = mysql.connector.connect(
 
 
 @cache
-def get_all(table, id_column, name_column, limit=300):
+def get_all(connection, table, id_column, name_column, limit=300):
     """
     This function retrieves a limited number of records from a specified MySQL table where the status is 'Y'.
 
@@ -27,32 +31,32 @@ def get_all(table, id_column, name_column, limit=300):
         list: A list of dictionaries, where each dictionary represents a record from the table and contains the ID and name.
     """
     query = f'SELECT {id_column} AS id, {name_column} AS name FROM {table} WHERE status = "Y" LIMIT {limit};'
-    with mysql_db.cursor(dictionary=True) as cursor:
+    with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query)
         return list(cursor.fetchall())
 
 
-def get_all_persons():
-    return get_all('news_persons', 'person_id', 'name')
+def get_all_persons(connection):
+    return get_all(connection, 'news_persons', 'person_id', 'name')
 
 
-def get_all_institutions():
-    return get_all('news_institutions', 'institution_id', 'name')
+def get_all_institutions(connection):
+    return get_all(connection, 'news_institutions', 'institution_id', 'name')
 
 
-def get_all_places():
-    return get_all('news_places', 'place_id', 'name_hu')
+def get_all_places(connection):
+    return get_all(connection, 'news_places', 'place_id', 'name_hu')
 
 
-def get_all_others():
-    return get_all('news_others', 'other_id', 'name')
+def get_all_others(connection):
+    return get_all(connection, 'news_others', 'other_id', 'name')
 
 
-def get_all_newspapers():
-    return get_all('news_newspapers', 'newspaper_id', 'name')
+def get_all_newspapers(connection):
+    return get_all(connection, 'news_newspapers', 'newspaper_id', 'name')
 
 
-def init_news(source, source_url, clean_url):
+def init_news(connection, source, source_url, clean_url):
     """
     This function is used to insert news data into the 'autokmdb_news' table in the MySQL database.
 
@@ -67,16 +71,16 @@ def init_news(source, source_url, clean_url):
     None
     """
 
-    with mysql_db.cursor(dictionary=True) as cursor:
+    with connection.cursor(dictionary=True) as cursor:
         query = """INSERT INTO autokmdb_news
                 (source, source_url, clean_url, processing_step)
                 VALUES (%s, %s, %s, %s)"""
         cursor.execute(query, (0 if source == 'rss' else 1, source_url, clean_url, 0))
-        mysql_db.commit()
+    connection.commit()
 
 
-def check_url_exists(url):
-    with mysql_db.cursor() as cursor:
+def check_url_exists(connection, url):
+    with connection.cursor() as cursor:
         query = "SELECT id FROM autokmdb_news WHERE clean_url = %s"
         cursor.execute(query, (url,))
         results = cursor.fetchall()
@@ -84,7 +88,7 @@ def check_url_exists(url):
         return len(results) != 0
 
 
-def add_auto_person(autokmdb_news_id, person_id, found_name, found_position, name, classification_score, classification_label):
+def add_auto_person(connection, autokmdb_news_id, person_id, found_name, found_position, name, classification_score, classification_label):
     """
     This function adds a person to the 'autokmdb_persons' table in the MySQL database.
 
@@ -100,15 +104,15 @@ def add_auto_person(autokmdb_news_id, person_id, found_name, found_position, nam
     Returns:
     None
     """
-    with mysql_db.cursor() as cursor:
+    with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_persons 
                 (autokmdb_news_id, person_id, found_name, found_position, name, classification_score, classification_label) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(query, (autokmdb_news_id, person_id, found_name, found_position, name, classification_score, classification_label))
-        mysql_db.commit()
+    connection.commit()
 
 
-def add_auto_institution(autokmdb_news_id, institution_id, found_name, found_position, name, classification_score, classification_label):
+def add_auto_institution(connection, autokmdb_news_id, institution_id, found_name, found_position, name, classification_score, classification_label):
     """
     This function adds an institution to the 'autokmdb_institutions' table in the MySQL database.
 
@@ -124,15 +128,15 @@ def add_auto_institution(autokmdb_news_id, institution_id, found_name, found_pos
     Returns:
     None
     """
-    with mysql_db.cursor() as cursor:
+    with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_institutions 
                 (autokmdb_news_id, institution_id, found_name, found_position, name, classification_score, classification_label) 
                 VALUES (%s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(query, (autokmdb_news_id, institution_id, found_name, found_position, name, classification_score, classification_label))
-        mysql_db.commit()
+    connection.commit()
 
 
-def add_auto_place(autokmdb_news_id, place_id, found_name, found_position, name, classification_score, classification_label):
+def add_auto_place(connection, autokmdb_news_id, place_id, found_name, found_position, name, classification_score, classification_label):
     """
     This function adds a place to the 'autokmdb_places' table in the MySQL database.
 
@@ -148,15 +152,15 @@ def add_auto_place(autokmdb_news_id, place_id, found_name, found_position, name,
     Returns:
     None
     """
-    with mysql_db.cursor() as cursor:
+    with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_places
                 (autokmdb_news_id, place_id, found_name, found_position, name, classification_score, classification_label)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(query, (autokmdb_news_id, place_id, found_name, found_position, name, classification_score, classification_label))
-        mysql_db.commit()
+    connection.commit()
 
 
-def add_auto_other(autokmdb_news_id, other_id, found_name, found_position, name, classification_score, classification_label):
+def add_auto_other(connection, autokmdb_news_id, other_id, found_name, found_position, name, classification_score, classification_label):
     """
     This function adds an 'other' to the 'autokmdb_others' table in the MySQL database.
 
@@ -172,39 +176,39 @@ def add_auto_other(autokmdb_news_id, other_id, found_name, found_position, name,
     Returns:
     None
     """
-    with mysql_db.cursor() as cursor:
+    with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_others
                 (autokmdb_news_id, other_id, found_name, found_position, name, classification_score, classification_label)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(query, (autokmdb_news_id, other_id, found_name, found_position, name, classification_score, classification_label))
-        mysql_db.commit()
+    connection.commit()
 
 
-def save_download_step(id, text, title, description):
+def save_download_step(connection, id, text, title, description):
     query = '''UPDATE autokmdb_news SET text = %s, title = %s, description = %s, processing_step = 1
                WHERE id = %s;'''
-    with mysql_db.cursor(dictionary=True) as cursor:
+    with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (text, title, description, id))
-    mysql_db.commit()
+    connection.commit()
 
 
-def skip_same_news(id):
+def skip_same_news(connection, id):
     query = '''UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5
                WHERE id = %s'''
-    with mysql_db.cursor(dictionary=True) as cursor:
+    with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (id,))
-    mysql_db.commit()
+    connection.commit()
 
 
-def save_classification_step(id, classification_label, classification_score):
+def save_classification_step(connection, id, classification_label, classification_score):
     query = '''UPDATE autokmdb_news SET classification_label = %s,
                classification_score = %s, processing_step = 2 WHERE id = %s'''
-    with mysql_db.cursor() as cursor:
+    with connection.cursor() as cursor:
         cursor.execute(query, (classification_label, classification_score, id))
-    mysql_db.commit()
+    connection.commit()
 
 
-def get_step_queue(step):
+def get_step_queue(connection, step):
     """
     This function fetches the data from the 'autokmdb_news' table 
     in the database where the processing_step is the given step. It returns the result as a list of dictionaries.
@@ -228,29 +232,29 @@ def get_step_queue(step):
     }
     query = f'''SELECT id, {fields[step]} FROM autokmdb_news
                WHERE processing_step = {step} LIMIT 1;'''
-    with mysql_db.cursor(dictionary=True) as cursor:
+    with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query)
         return cursor.fetchone()
 
 
-def get_download_queue():
-    return get_step_queue(0)
+def get_download_queue(connection):
+    return get_step_queue(connection, 0)
 
 
-def get_classification_queue():
-    return get_step_queue(1)
+def get_classification_queue(connection):
+    return get_step_queue(connection, 1)
 
 
-def get_ner_queue():
-    return get_step_queue(2)
+def get_ner_queue(connection):
+    return get_step_queue(connection, 2)
 
 
-def get_keyword_queue():
-    return get_step_queue(3)
+def get_keyword_queue(connection):
+    return get_step_queue(connection, 3)
 
 
-def get_human_queue():
-    return get_step_queue(4)
+def get_human_queue(connection):
+    return get_step_queue(connection, 4)
 
 
 def paginate_query(query, page_size, page_number):
@@ -258,7 +262,7 @@ def paginate_query(query, page_size, page_number):
     return query + f" LIMIT {page_size} OFFSET {offset}"
 
 
-def get_articles(page, status, domain='mind'):
+def get_articles(connection, page, status, domain='mind'):
     query = ''
     if domain == 'mind':
         domain = '%'
@@ -278,13 +282,13 @@ def get_articles(page, status, domain='mind'):
         print('Invalid status provided!')
         return
 
-    with mysql_db.cursor(dictionary=True) as cursor:
+    with connection.cursor(dictionary=True) as cursor:
         cursor.execute(paginate_query(query, 10, page), (domain,))
         return cursor.fetchall()
 
 
-def annote_negative(id):
+def annote_negative(connection, id):
     query = '''UPDATE autokmdb_news SET annotation_label = 0 WHERE id = %s;'''
-    with mysql_db.cursor() as cursor:
+    with connection.cursor() as cursor:
         cursor.execute(query, (id,))
-    mysql_db.commit()
+    connection.commit()

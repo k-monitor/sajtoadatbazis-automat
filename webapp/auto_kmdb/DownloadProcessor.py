@@ -7,8 +7,11 @@ import newspaper
 
 
 class DownloadProcessor(Processor):
+    def __init__(self):
+        super().__init__()
+
     def process_next(self):
-        next_row = get_download_queue()
+        next_row = get_download_queue(self.connection)
         print('Downloading')
         if next_row is None:
             sleep(30)
@@ -37,6 +40,6 @@ class DownloadProcessor(Processor):
             date = ''
 
         if same_news(title, description, text):
-            skip_same_news(next_row['id'])
+            skip_same_news(self.connection, next_row['id'])
         else:
-            save_download_step(next_row['id'], text, title, description)
+            save_download_step(self.connection, next_row['id'], text, title, description)
