@@ -12,9 +12,8 @@ CREATE TABLE autokmdb_news (
     annotation_label INT,
     skip_reason INT,
     processing_step INT NOT NULL,
-    cre_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    mod_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    mod_id INT,
+    cre_time TIMESTAMP DEFAULT '0000-00-00 00:00:00',
+    mod_time TIMESTAMP DEFAULT now() ON UPDATE now(),
     version_number INT
 );
 
@@ -28,8 +27,8 @@ CREATE TABLE autokmdb_persons (
     classification_score DOUBLE,
     classification_label INT,
     annotation_label INT,
-    cre_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    mod_time TIMESTAMP DEFAULT CURRENT ON UPDATE CURRENT_TIMESTAMP,
+    cre_time TIMESTAMP DEFAULT '0000-00-00 00:00:00',
+    mod_time TIMESTAMP DEFAULT now() ON UPDATE now(),
     mod_id INT,
     version_number INT NOT NULL
 );
@@ -44,8 +43,8 @@ CREATE TABLE autokmdb_institutions (
     classification_score DOUBLE,
     classification_label INT,
     annotation_label INT,
-    cre_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    mod_time TIMESTAMP DEFAULT CURRENT ON UPDATE CURRENT_TIMESTAMP,
+    cre_time TIMESTAMP DEFAULT '0000-00-00 00:00:00',
+    mod_time TIMESTAMP DEFAULT now() ON UPDATE now(),
     mod_id INT,
     version_number INT NOT NULL
 );
@@ -60,8 +59,8 @@ CREATE TABLE autokmdb_places (
     classification_score DOUBLE,
     classification_label INT,
     annotation_label INT,
-    cre_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    mod_time TIMESTAMP DEFAULT CURRENT ON UPDATE CURRENT_TIMESTAMP,
+    cre_time TIMESTAMP DEFAULT '0000-00-00 00:00:00',
+    mod_time TIMESTAMP DEFAULT now() ON UPDATE now(),
     mod_id INT,
     version_number INT NOT NULL
 );
@@ -74,8 +73,8 @@ CREATE TABLE autokmdb_others (
     classification_score DOUBLE,
     classification_label INT,
     annotation_label INT,
-    cre_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    mod_time TIMESTAMP DEFAULT CURRENT ON UPDATE CURRENT_TIMESTAMP,
+    cre_time TIMESTAMP DEFAULT '0000-00-00 00:00:00',
+    mod_time TIMESTAMP DEFAULT now() ON UPDATE now(),
     mod_id INT,
     version_number INT NOT NULL
 );
