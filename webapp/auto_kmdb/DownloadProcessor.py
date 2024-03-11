@@ -9,8 +9,10 @@ import newspaper
 class DownloadProcessor(Processor):
     def process_next(self):
         next_row = get_download_queue()
+        print('Downloading')
         if next_row is None:
             sleep(30)
+        print('Downloading', next_row['url'])
         article = newspaper.Article(next_row['url'])
         article.download()
         article.parse()

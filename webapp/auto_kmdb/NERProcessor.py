@@ -12,6 +12,7 @@ class NERProcessor(Processor):
     def load_model(self):
         self.classifier = pipeline("ner", model="boapps/kmdb_ner_model", aggregation_strategy="average")
         self.done = True
+        print("NER model loaded")
 
     def is_done(self):
         return self.done
@@ -83,6 +84,9 @@ class NERProcessor(Processor):
         next_row = get_ner_queue()
         if next_row is None:
             sleep(30)
+
+        self.text = next_row['text']
+        self.predict()
 
         for person in self.people:
             person_id = self.get_person_id(person)

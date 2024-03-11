@@ -1,3 +1,5 @@
+from time import sleep
+
 class Processor:
     def load_model(self):
         pass
@@ -10,3 +12,8 @@ class Processor:
 
     def is_done(self):
         return True
+
+    def process_loop(self):
+        while True:
+            self.process_next()
+            sleep(1)
