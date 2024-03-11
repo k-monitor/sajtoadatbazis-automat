@@ -181,8 +181,8 @@ def add_auto_other(autokmdb_news_id, other_id, found_name, found_position, name,
 
 
 def save_download_step(id, text, title, description):
-    query = '''UPDATE autokmdb_news SET text = ?, title = ?, description = ?
-               WHERE id = ?'''
+    query = '''UPDATE autokmdb_news SET text = %s, title = %s, description = %s, processing_step = 1
+               WHERE id = %s;'''
     with mysql_db.cursor(dictionary=True) as cursor:
         cursor.execute(query, (text, title, description, id))
     mysql_db.commit()
@@ -190,15 +190,15 @@ def save_download_step(id, text, title, description):
 
 def skip_same_news(id):
     query = '''UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5
-               WHERE id = ?'''
+               WHERE id = %s'''
     with mysql_db.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (id))
+        cursor.execute(query, (id,))
     mysql_db.commit()
 
 
 def save_classification_step(id, classification_label, classification_score):
-    query = '''UPDATE autokmdb_news SET classification_label = ?,
-               classification_score = ? WHERE id = ?'''
+    query = '''UPDATE autokmdb_news SET classification_label = %s,
+               classification_score = %s, processing_step = 2 WHERE id = %s'''
     with mysql_db.cursor() as cursor:
         cursor.execute(query, (classification_label, classification_score, id))
     mysql_db.commit()
@@ -227,7 +227,7 @@ def get_step_queue(step):
         4: 'text',
     }
     query = f'''SELECT id, {fields[step]} FROM autokmdb_news
-               WHERE processing_step = {step};'''
+               WHERE processing_step = {step} LIMIT 1;'''
     with mysql_db.cursor(dictionary=True) as cursor:
         cursor.execute(query)
         return cursor.fetchone()
@@ -267,13 +267,13 @@ def get_articles(page, status, domain='mind'):
 
     if status == 'mixed':
         query = '''SELECT id, url, text FROM autokmdb_news
-        WHERE processing_step = 5 AND annotation_label IS NULL AND clean_url LIKE ?;'''
+        WHERE processing_step = 5 AND annotation_label IS NULL AND clean_url LIKE %s;'''
     elif status == 'positive':
         query = '''SELECT id, url, text FROM autokmdb_news
-        WHERE processing_step = 5 AND annotation_label = 1 AND clean_url LIKE ?;'''
+        WHERE processing_step = 5 AND annotation_label = 1 AND clean_url LIKE %s;'''
     elif status == 'negative':
         query = '''SELECT id, url, text FROM autokmdb_news
-        WHERE processing_step = 5 AND annotation_label = 0 AND clean_url LIKE ?;'''
+        WHERE processing_step = 5 AND annotation_label = 0 AND clean_url LIKE %s;'''
     else:
         print('Invalid status provided!')
         return
@@ -284,7 +284,7 @@ def get_articles(page, status, domain='mind'):
 
 
 def annote_negative(id):
-    query = '''UPDATE autokmdb_news SET annotation_label = 0 WHERE id = ?;'''
+    query = '''UPDATE autokmdb_news SET annotation_label = 0 WHERE id = %s;'''
     with mysql_db.cursor() as cursor:
         cursor.execute(query, (id,))
     mysql_db.commit()
