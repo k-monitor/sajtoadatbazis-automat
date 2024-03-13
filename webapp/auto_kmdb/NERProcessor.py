@@ -1,6 +1,7 @@
 from transformers import pipeline, AutoTokenizer
 from auto_kmdb.db import get_ner_queue, add_auto_person, add_auto_institution
-from auto_kmdb.db import add_auto_place, get_all_persons, get_all_institutions, get_all_places
+from auto_kmdb.db import add_auto_place, get_all_persons, get_all_institutions
+from auto_kmdb.db import save_ner_step, get_all_places
 from auto_kmdb.Processor import Processor
 from time import sleep
 
@@ -53,7 +54,7 @@ class NERProcessor(Processor):
         if len(same_names) == 1:
             return same_names[0]['id']
         if len(in_names) == 1:
-            return names_in[0]['id']
+            return in_names[0]['id']
         if len(names_in) == 1:
             return names_in[0]['id']
         return None
@@ -66,7 +67,7 @@ class NERProcessor(Processor):
         if len(same_names) == 1:
             return same_names[0]['id']
         if len(in_names) == 1:
-            return names_in[0]['id']
+            return in_names[0]['id']
         if len(names_in) == 1:
             return names_in[0]['id']
         return None
@@ -79,7 +80,7 @@ class NERProcessor(Processor):
         if len(same_names) == 1:
             return same_names[0]['id']
         if len(in_names) == 1:
-            return names_in[0]['id']
+            return in_names[0]['id']
         if len(names_in) == 1:
             return names_in[0]['id']
         return None
@@ -119,4 +120,4 @@ class NERProcessor(Processor):
                            place['classification_score'],
                            place['classification_label'])
 
-        self.predict()
+        save_ner_step(self.connection, next_row['id'])

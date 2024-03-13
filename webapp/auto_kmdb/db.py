@@ -292,3 +292,10 @@ def annote_negative(connection, id):
     with connection.cursor() as cursor:
         cursor.execute(query, (id,))
     connection.commit()
+
+
+def save_ner_step(connection, id):
+    query = '''UPDATE autokmdb_news SET processing_step = 3 WHERE id = %s;'''
+    with connection.cursor() as cursor:
+        cursor.execute(query, (id,))
+    connection.commit()
