@@ -28,10 +28,10 @@
                 <UTextarea class="my-2" v-model="article.description"/>
                 <p>Szöveg:</p>
                 <UTextarea class="my-2" v-model="article.text" rows="20"/>
-                <SelectMenu class="my-2" :list="article.people" type="személy" :positive-list="positivePeople" @update:positiveList="updatePositivePeople" :labels="allLabels['person']" />
+                <SelectMenu class="my-2" :list="article.persons" type="személy" :positive-list="positivePersons" @update:positiveList="updatePositivePersons" :labels="allLabels['person']" />
                 <SelectMenu class="my-2" :list="article.institutions" type="intézmény" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
                 <SelectMenu class="my-2" :list="article.places" type="helyszín" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
-                <SelectMenu class="my-2" :list="article.tags" type="egyéb" :positive-list="positiveTags" @update:positiveList="updatePositiveTags" :labels="allLabels['other']" />
+                <SelectMenu class="my-2" :list="article.others" type="egyéb" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['other']" />
                 <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
                     <UButton color="gray" @click="closeModal">Mégse</UButton>
                     <UButton @click="submitArticle">Elfogad</UButton>
@@ -70,10 +70,10 @@
                 'title': article.title,
                 'description': article.description,
                 'text': article.text,
-                'corrupt_people': positivePeople.value.map((person) => person.label),
+                'corrupt_people': positivePersons.value.map((person) => person.label),
                 'corrupt_institutions': positiveInstitutions.value.map((institution) => institution.label),
                 'corrupt_places': positivePlaces.value.map((place) => place.label),
-                'tags': positiveTags.value.map((tag) => tag.label),
+                'tags': positiveOthers.value.map((tag) => tag.label),
             }
         });
         isOpen.value = false
@@ -82,20 +82,15 @@
 
     const { article, allLabels } = defineProps(['article', 'allLabels']);
 
-    var positivePeople = ref(article.corrupt_people.map((person) => ({'label': person})))
-    var positiveInstitutions = ref(article.corrupt_institutions.map((institution) => ({'label': institution})))
-    var positivePlaces = ref(article.corrupt_places.map((place) => ({'label': place})))
-    var positiveTags = ref(article.tags.map((tag) => ({'label': tag})))
-
-    var people = positivePeople.value
-    var institutions = positiveInstitutions.value
-    var places = positivePlaces.value
-    var tags = positiveTags.value
+    var positivePersons = ref(article.persons.filter((person) => (person.classification_label == 1)))
+    var positiveInstitutions = ref(article.institutions.filter((institution) => (institution.classification_label == 1)))
+    var positivePlaces = ref(article.places.filter((place) => (place.classification_label == 1)))
+    var positiveOthers = ref(article.others.map((other) => (other.classification_label == 1)))
 
     // Handle update event for positivePeople
-    const updatePositivePeople = (newValue) => {
+    const updatePositivePersons = (newValue) => {
         console.log(newValue)
-        positivePeople.value = newValue
+        positivePersons.value = newValue
     };
 
     // Handle update event for positiveInstitutions
@@ -109,7 +104,7 @@
     };
 
     // Handle update event for positiveTags
-    const updatePositiveTags = (newValue) => {
-        positiveTags.value = newValue;
+    const updatePositiveOthers = (newValue) => {
+        positiveOthers.value = newValue;
     };
 </script>
