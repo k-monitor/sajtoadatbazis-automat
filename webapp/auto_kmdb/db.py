@@ -172,8 +172,11 @@ def get_articles(connection, page, status, domain='mind'):
         domain = f"%{domain}%"
 
     selection = '''SELECT n.id AS id, clean_url AS url, description, title, source, n.classification_score AS classification_score,
-            n.text AS text, n.cre_time AS date, GROUP_CONCAT(p.id SEPARATOR ',') AS persons, GROUP_CONCAT(i.id SEPARATOR ',') AS institutions,
-            GROUP_CONCAT(pl.id SEPARATOR ',') AS places, GROUP_CONCAT(o.id SEPARATOR ',') AS others
+            n.text AS text, n.cre_time AS date,
+            GROUP_CONCAT(CONCAT('{"name":"', p.name, '", "id":',p.id, ', "aid":',p.autokmdb_news_id, ', "classification_score":',p.classification_score, ', "classification_label":',p.classification_label, ', "annotation_label":',COALESCE(p.annotation_label, 'null'), ', "found_name":"',COALESCE(p.found_name, 'null'), '", "found_position":',COALESCE(p.found_position, 'null'),'}') SEPARATOR ',') AS persons,
+            GROUP_CONCAT(CONCAT('{"name":"', i.name, '", "id":',i.id, ', "aid":',i.autokmdb_news_id, ', "classification_score":',i.classification_score, ', "classification_label":',i.classification_label, ', "annotation_label":',COALESCE(i.annotation_label, 'null'), ', "found_name":"',COALESCE(i.found_name, 'null'), '", "found_position":',COALESCE(i.found_position, 'null'),'}') SEPARATOR ',') AS institutions,
+            GROUP_CONCAT(CONCAT('{"name":"', pl.name, '", "id":',pl.id, ', "aid":',pl.autokmdb_news_id, ', "classification_score":',pl.classification_score, ', "classification_label":',pl.classification_label, ', "annotation_label":',COALESCE(pl.annotation_label, 'null'), ', "found_name":"',COALESCE(pl.found_name, 'null'), '", "found_position":',COALESCE(pl.found_position, 'null'),'}') SEPARATOR ',') AS places,
+            GROUP_CONCAT(CONCAT('{"name":"', o.name, '", "id":',o.id, ', "aid":',o.autokmdb_news_id, ', "classification_score":',o.classification_score, ', "classification_label":',o.classification_label, ', "annotation_label":',COALESCE(o.annotation_label, 'null'), '}') SEPARATOR ',') AS others
         FROM autokmdb_news n
         LEFT JOIN autokmdb_persons p ON n.id = p.autokmdb_news_id 
         LEFT JOIN autokmdb_institutions i ON n.id = i.autokmdb_news_id 

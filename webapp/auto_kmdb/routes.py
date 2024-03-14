@@ -3,9 +3,19 @@ from auto_kmdb.db import get_articles, annote_negative, connection_pool
 from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers
 from auto_kmdb.db import check_url_exists, init_news
 from math import ceil
+import json
 
 api = Blueprint('api', __name__, url_prefix='/api')
 connection = connection_pool.get_connection()
+
+
+def reformat_article(article):
+    article['persons'] = json.loads('['+article['persons']+']') if article['persons'] else []
+    article['institutions'] = json.loads('['+article['institutions']+']') if article['institutions'] else []
+    article['places'] = json.loads('['+article['places']+']') if article['places'] else []
+    article['others'] = json.loads('['+article['others']+']') if article['others'] else []
+
+    return article
 
 
 @api.route('/articles', methods=["GET"])
@@ -15,6 +25,7 @@ def api_articles():
     domain = request.args.get('domain', 'mind', type=str)
 
     length, articles = get_articles(connection, page, status, domain)
+    articles = [reformat_article(a) for a in articles]
 
     return jsonify({'pages': ceil(length/10), 'articles': articles}), 200
 
