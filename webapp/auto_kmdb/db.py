@@ -173,11 +173,12 @@ def get_articles(connection, page, status, domain='mind'):
 
     selection = '''SELECT n.id AS id, clean_url AS url, description, title, source, n.classification_score AS classification_score,
             n.text AS text, n.cre_time AS date, GROUP_CONCAT(p.id SEPARATOR ',') AS persons, GROUP_CONCAT(i.id SEPARATOR ',') AS institutions,
-            GROUP_CONCAT(o.id SEPARATOR ',') AS others
+            GROUP_CONCAT(pl.id SEPARATOR ',') AS places, GROUP_CONCAT(o.id SEPARATOR ',') AS others
         FROM autokmdb_news n
         LEFT JOIN autokmdb_persons p ON n.id = p.autokmdb_news_id 
         LEFT JOIN autokmdb_institutions i ON n.id = i.autokmdb_news_id 
         LEFT JOIN autokmdb_others o ON n.id = o.autokmdb_news_id 
+        LEFT JOIN autokmdb_places pl ON n.id = pl.autokmdb_news_id 
         '''
     group = ' GROUP BY id'
 
