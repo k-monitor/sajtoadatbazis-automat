@@ -269,14 +269,14 @@ def get_articles(connection, page, status, domain='mind'):
     else:
         domain = f"%{domain}%"
 
-    selection = 'SELECT id, clean_url, text FROM autokmdb_news '
+    selection = 'SELECT id, clean_url, description, title, source, classification_score, text FROM autokmdb_news '
 
     if status == 'mixed':
-        query = '''WHERE processing_step = 5 AND annotation_label IS NULL AND clean_url LIKE %s'''
+        query = '''WHERE classification_label = 1 AND processing_step = 3 AND annotation_label IS NULL AND clean_url LIKE %s'''
     elif status == 'positive':
-        query = '''WHERE processing_step = 5 AND annotation_label = 1 AND clean_url LIKE %s'''
+        query = '''WHERE classification_label = 1 AND processing_step = 5 AND annotation_label = 1 AND clean_url LIKE %s'''
     elif status == 'negative':
-        query = '''WHERE processing_step = 5 AND annotation_label = 0 AND clean_url LIKE %s'''
+        query = '''WHERE classification_label = 1 AND processing_step = 5 AND annotation_label = 0 AND clean_url LIKE %s'''
     else:
         print('Invalid status provided!')
         return
@@ -285,7 +285,6 @@ def get_articles(connection, page, status, domain='mind'):
         cursor.execute('SELECT COUNT(*) FROM autokmdb_news '+query, (domain,))
         count = cursor.fetchone()
         cursor.execute(paginate_query(selection + query, 10, page), (domain,))
-
         return count['COUNT(*)'], cursor.fetchall()
 
 
