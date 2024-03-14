@@ -89,6 +89,7 @@ class NERProcessor(Processor):
         next_row = get_ner_queue(self.connection)
         if next_row is None:
             sleep(30)
+            return
 
         self.text = next_row['text']
         self.predict()

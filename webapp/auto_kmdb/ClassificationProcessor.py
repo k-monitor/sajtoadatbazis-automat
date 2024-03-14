@@ -36,6 +36,8 @@ class ClassificationProcessor(Processor):
         next_row = get_classification_queue(self.connection)
         if next_row is None:
             sleep(30)
+            return
+
         self.text = article_classification_prompt.format(title=next_row['title'], description=next_row['description'])
 
         self.predict()

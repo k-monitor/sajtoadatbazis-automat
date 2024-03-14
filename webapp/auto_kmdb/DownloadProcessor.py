@@ -15,6 +15,8 @@ class DownloadProcessor(Processor):
         print('Downloading')
         if next_row is None:
             sleep(30)
+            return
+
         print('Downloading', next_row['url'])
         article = newspaper.Article(next_row['url'])
         article.download()
