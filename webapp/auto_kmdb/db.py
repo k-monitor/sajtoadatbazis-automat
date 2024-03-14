@@ -269,22 +269,24 @@ def get_articles(connection, page, status, domain='mind'):
     else:
         domain = f"%{domain}%"
 
+    selection = 'SELECT id, clean_url, text FROM autokmdb_news '
+
     if status == 'mixed':
-        query = '''SELECT id, url, text FROM autokmdb_news
-        WHERE processing_step = 5 AND annotation_label IS NULL AND clean_url LIKE %s;'''
+        query = '''WHERE processing_step = 5 AND annotation_label IS NULL AND clean_url LIKE %s'''
     elif status == 'positive':
-        query = '''SELECT id, url, text FROM autokmdb_news
-        WHERE processing_step = 5 AND annotation_label = 1 AND clean_url LIKE %s;'''
+        query = '''WHERE processing_step = 5 AND annotation_label = 1 AND clean_url LIKE %s'''
     elif status == 'negative':
-        query = '''SELECT id, url, text FROM autokmdb_news
-        WHERE processing_step = 5 AND annotation_label = 0 AND clean_url LIKE %s;'''
+        query = '''WHERE processing_step = 5 AND annotation_label = 0 AND clean_url LIKE %s'''
     else:
         print('Invalid status provided!')
         return
 
     with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(paginate_query(query, 10, page), (domain,))
-        return cursor.fetchall()
+        cursor.execute('SELECT COUNT(*) FROM autokmdb_news '+query, (domain,))
+        count = cursor.fetchone()
+        cursor.execute(paginate_query(selection + query, 10, page), (domain,))
+
+        return count['COUNT(*)'], cursor.fetchall()
 
 
 def annote_negative(connection, id):
