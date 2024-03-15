@@ -65,39 +65,39 @@ def check_url_exists(connection, url):
         return len(results) != 0
 
 
-def add_auto_person(connection, autokmdb_news_id, person_id, found_name, found_position, name, classification_score, classification_label):
+def add_auto_person(connection, autokmdb_news_id, autokmdb_news_name, person_id, found_name, found_position, name, classification_score, classification_label):
     with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_persons 
-                (autokmdb_news_id, person_id, found_name, found_position, name, classification_score, classification_label) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s)"""
-        cursor.execute(query, (autokmdb_news_id, person_id, found_name, found_position, name, classification_score, classification_label))
+                (autokmdb_news_id, autokmdb_news_name, person_id, found_name, found_position, name, classification_score, classification_label) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+        cursor.execute(query, (autokmdb_news_id, autokmdb_news_name, person_id, found_name, found_position, name, classification_score, classification_label))
     connection.commit()
 
 
-def add_auto_institution(connection, autokmdb_news_id, institution_id, found_name, found_position, name, classification_score, classification_label):
+def add_auto_institution(connection, autokmdb_news_id, autokmdb_news_name, institution_id, found_name, found_position, name, classification_score, classification_label):
     with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_institutions 
-                (autokmdb_news_id, institution_id, found_name, found_position, name, classification_score, classification_label) 
-                VALUES (%s, %s, %s, %s, %s, %s, %s)"""
-        cursor.execute(query, (autokmdb_news_id, institution_id, found_name, found_position, name, classification_score, classification_label))
+                (autokmdb_news_id, autokmdb_news_name, institution_id, found_name, found_position, name, classification_score, classification_label) 
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+        cursor.execute(query, (autokmdb_news_id, autokmdb_news_name, institution_id, found_name, found_position, name, classification_score, classification_label))
     connection.commit()
 
 
-def add_auto_place(connection, autokmdb_news_id, place_id, found_name, found_position, name, classification_score, classification_label):
+def add_auto_place(connection, autokmdb_news_id, autokmdb_news_name, place_id, found_name, found_position, name, classification_score, classification_label):
     with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_places
-                (autokmdb_news_id, place_id, found_name, found_position, name, classification_score, classification_label)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)"""
-        cursor.execute(query, (autokmdb_news_id, place_id, found_name, found_position, name, classification_score, classification_label))
+                (autokmdb_news_id, autokmdb_news_name, place_id, found_name, found_position, name, classification_score, classification_label)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+        cursor.execute(query, (autokmdb_news_id, autokmdb_news_name, place_id, found_name, found_position, name, classification_score, classification_label))
     connection.commit()
 
 
-def add_auto_other(connection, autokmdb_news_id, other_id, found_name, found_position, name, classification_score, classification_label):
+def add_auto_other(connection, autokmdb_news_id, autokmdb_news_name, other_id, found_name, found_position, name, classification_score, classification_label):
     with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_others
-                (autokmdb_news_id, other_id, found_name, found_position, name, classification_score, classification_label)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)"""
-        cursor.execute(query, (autokmdb_news_id, other_id, found_name, found_position, name, classification_score, classification_label))
+                (autokmdb_news_id, autokmdb_news_name, other_id, found_name, found_position, name, classification_score, classification_label)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+        cursor.execute(query, (autokmdb_news_id, autokmdb_news_name, other_id, found_name, found_position, name, classification_score, classification_label))
     connection.commit()
 
 

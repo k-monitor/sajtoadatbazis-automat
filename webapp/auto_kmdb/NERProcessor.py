@@ -46,43 +46,43 @@ class NERProcessor(Processor):
 
             # TODO: add_auto_person(autokmdb_news_id, person_id, found_name, found_position, name, classification_score, classification_label)
 
-    def get_person_id(self, person):
+    def get_person(self, person):
         all_people = get_all_persons(self.connection)
         names_in = [p for p in all_people if p['name'] in person['name']]
         in_names = [p for p in all_people if person['name'] in p['name']]
         same_names = [p for p in all_people if p['name'] == person['name']]
         if len(same_names) == 1:
-            return same_names[0]['id']
+            return same_names[0]
         if len(in_names) == 1:
-            return in_names[0]['id']
+            return in_names[0]
         if len(names_in) == 1:
-            return names_in[0]['id']
+            return names_in[0]
         return None
 
-    def get_institution_id(self, institution):
+    def get_institution(self, institution):
         all_institutions = get_all_institutions(self.connection)
         names_in = [p for p in all_institutions if p['name'] in institution['name']]
         in_names = [p for p in all_institutions if institution['name'] in p['name']]
         same_names = [p for p in all_institutions if p['name'] == institution['name']]
         if len(same_names) == 1:
-            return same_names[0]['id']
+            return same_names[0]
         if len(in_names) == 1:
-            return in_names[0]['id']
+            return in_names[0]
         if len(names_in) == 1:
-            return names_in[0]['id']
+            return names_in[0]
         return None
 
-    def get_place_id(self, place):
+    def get_place(self, place):
         all_places = get_all_places(self.connection)
         names_in = [p for p in all_places if p['name'] in place['name']]
         in_names = [p for p in all_places if place['name'] in p['name']]
         same_names = [p for p in all_places if p['name'] == place['name']]
         if len(same_names) == 1:
-            return same_names[0]['id']
+            return same_names[0]
         if len(in_names) == 1:
-            return in_names[0]['id']
+            return in_names[0]
         if len(names_in) == 1:
-            return names_in[0]['id']
+            return names_in[0]
         return None
 
     def process_next(self):
@@ -95,28 +95,28 @@ class NERProcessor(Processor):
         self.predict()
 
         for person in self.people:
-            person_id = self.get_person_id(person)
-            if person_id is None:
+            person_db = self.get_person(person)
+            if person_db is None:
                 continue
-            add_auto_person(self.connection, next_row['id'], person_id, person['found_name'],
+            add_auto_person(self.connection, next_row['id'], person_db['id'], person_db['name'], person['found_name'],
                             person['found_position'], person['name'],
                             person['classification_score'],
                             person['classification_label'])
 
         for institution in self.institutions:
-            institution_id = self.get_institution_id(institution)
-            if institution_id is None:
+            institution_db = self.get_institution(institution)
+            if institution_db is None:
                 continue
-            add_auto_institution(self.connection, next_row['id'], institution_id, institution['found_name'],
+            add_auto_institution(self.connection, next_row['id'], institution_db['id'], institution_db['name'], institution['found_name'],
                                  institution['found_position'], institution['name'],
                                  institution['classification_score'],
                                  institution['classification_label'])
 
         for place in self.places:
-            place_id = self.get_place_id(place)
-            if place_id is None:
+            place_db = self.get_place(place)
+            if place_db is None:
                 continue
-            add_auto_place(self.connection, next_row['id'], place_id, place['found_name'],
+            add_auto_place(self.connection, next_row['id'], place_db['id'], place_db['name'], place['found_name'],
                            place['found_position'], place['name'],
                            place['classification_score'],
                            place['classification_label'])

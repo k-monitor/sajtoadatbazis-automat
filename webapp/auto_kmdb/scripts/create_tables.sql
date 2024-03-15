@@ -20,6 +20,7 @@ CREATE TABLE autokmdb_news (
 CREATE TABLE autokmdb_persons (
     id INT AUTO_INCREMENT PRIMARY KEY,
     autokmdb_news_id INT NOT NULL,
+    autokmdb_news_name INT NOT NULL,
     person_id INT NOT NULL,
     found_name VARCHAR(255) NOT NULL,
     found_position INT NOT NULL,
@@ -36,6 +37,7 @@ CREATE TABLE autokmdb_persons (
 CREATE TABLE autokmdb_institutions (
     id INT AUTO_INCREMENT PRIMARY KEY,
     autokmdb_news_id INT NOT NULL,
+    autokmdb_news_name INT NOT NULL,
     institution_id INT NOT NULL,
     found_name VARCHAR(255) NOT NULL,
     found_position INT NOT NULL,
@@ -52,6 +54,7 @@ CREATE TABLE autokmdb_institutions (
 CREATE TABLE autokmdb_places (
     id INT AUTO_INCREMENT PRIMARY KEY,
     autokmdb_news_id INT NOT NULL,
+    autokmdb_news_name INT NOT NULL,
     place_id INT NOT NULL,
     found_name VARCHAR(255) NOT NULL,
     found_position INT NOT NULL,
@@ -68,6 +71,7 @@ CREATE TABLE autokmdb_places (
 CREATE TABLE autokmdb_others (
     id INT AUTO_INCREMENT PRIMARY KEY,
     autokmdb_news_id INT NOT NULL,
+    autokmdb_news_name INT NOT NULL,
     other_id INT NOT NULL,
     name VARCHAR(255) NOT NULL,
     classification_score DOUBLE,
