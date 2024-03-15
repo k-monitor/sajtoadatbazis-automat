@@ -18,8 +18,8 @@ connection_pool = mysql.connector.pooling.MySQLConnectionPool(
 
 
 @cache
-def get_all(connection, table, id_column, name_column, limit=300):
-    query = f'SELECT {id_column} AS id, {name_column} AS name FROM {table} WHERE status = "Y" LIMIT {limit};'
+def get_all(connection, table, id_column, name_column):
+    query = f'SELECT {id_column} AS id, {name_column} AS name FROM {table} WHERE status = "Y";'
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query)
         return list(cursor.fetchall())
@@ -67,8 +67,8 @@ def check_url_exists(connection, url):
 
 def add_auto_person(connection, autokmdb_news_id, person_name, person_id, found_name, found_position, name, classification_score, classification_label):
     with connection.cursor() as cursor:
-        query = """INSERT INTO autokmdb_persons 
-                (autokmdb_news_id, person_name, person_id, found_name, found_position, name, classification_score, classification_label) 
+        query = """INSERT INTO autokmdb_persons
+                (autokmdb_news_id, person_name, person_id, found_name, found_position, name, classification_score, classification_label)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(query, (autokmdb_news_id, person_name, person_id, found_name, found_position, name, classification_score, classification_label))
     connection.commit()
@@ -76,8 +76,8 @@ def add_auto_person(connection, autokmdb_news_id, person_name, person_id, found_
 
 def add_auto_institution(connection, autokmdb_news_id, institution_name, institution_id, found_name, found_position, name, classification_score, classification_label):
     with connection.cursor() as cursor:
-        query = """INSERT INTO autokmdb_institutions 
-                (autokmdb_news_id, institution_name, institution_id, found_name, found_position, name, classification_score, classification_label) 
+        query = """INSERT INTO autokmdb_institutions
+                (autokmdb_news_id, institution_name, institution_id, found_name, found_position, name, classification_score, classification_label)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(query, (autokmdb_news_id, institution_name, institution_id, found_name, found_position, name, classification_score, classification_label))
     connection.commit()
@@ -174,15 +174,11 @@ def get_articles(connection, page, status, domain='mind'):
 
     selection = '''SELECT n.id AS id, clean_url AS url, description, title, source, n.classification_score AS classification_score,
             n.text AS text, n.cre_time AS date,
-            GROUP_CONCAT(CONCAT('{"name":"', p.name, '", "id":',p.id, ', "person_id":',COALESCE(p.person_id, 'null'), ', "person_name": "',COALESCE(p.person_name, 'null'), '", "classification_score":',p.classification_score, ', "classification_label":',p.classification_label, ', "annotation_label":',COALESCE(p.annotation_label, 'null'), ', "found_name":"',COALESCE(p.found_name, 'null'), '", "found_position":',COALESCE(p.found_position, 'null'),'}') SEPARATOR ',') AS persons,
-            GROUP_CONCAT(CONCAT('{"name":"', i.name, '", "id":',i.id, ', "institution_id":',COALESCE(i.institution_id, 'null'), ', "institution_name": "',COALESCE(i.institution_name, 'null'), '", "classification_score":',i.classification_score, ', "classification_label":',i.classification_label, ', "annotation_label":',COALESCE(i.annotation_label, 'null'), ', "found_name":"',COALESCE(i.found_name, 'null'), '", "found_position":',COALESCE(i.found_position, 'null'),'}') SEPARATOR ',') AS institutions,
-            GROUP_CONCAT(CONCAT('{"name":"', pl.name, '", "id":',pl.id, ', "place_id":',COALESCE(pl.place_id, 'null'), ', "place_name": "',COALESCE(pl.place_name, 'null'), '", "classification_score":',pl.classification_score, ', "classification_label":',pl.classification_label, ', "annotation_label":',COALESCE(pl.annotation_label, 'null'), ', "found_name":"',COALESCE(pl.found_name, 'null'), '", "found_position":',COALESCE(pl.found_position, 'null'),'}') SEPARATOR ',') AS places,
-            GROUP_CONCAT(CONCAT('{"name":"', o.name, '", "id":',o.id, ', "other_id":',COALESCE(o.other_id, 'null'), ', "classification_score":',o.classification_score, ', "classification_label":',o.classification_label, ', "annotation_label":',COALESCE(o.annotation_label, 'null'), '}') SEPARATOR ',') AS others
+            (SELECT GROUP_CONCAT(CONCAT('{"name":"', p.name, '", "id":',p.id, ', "person_id":',COALESCE(p.person_id, 'null'), ', "person_name": "',COALESCE(p.person_name, 'null'), '", "classification_score":',p.classification_score, ', "classification_label":',p.classification_label, ', "annotation_label":',COALESCE(p.annotation_label, 'null'), ', "found_name":"',COALESCE(p.found_name, 'null'), '", "found_position":',COALESCE(p.found_position, 'null'),'}') SEPARATOR ',') FROM autokmdb_persons p WHERE n.id = p.autokmdb_news_id) AS persons,
+            (SELECT GROUP_CONCAT(CONCAT('{"name":"', i.name, '", "id":',i.id, ', "institution_id":',COALESCE(i.institution_id, 'null'), ', "institution_name": "',COALESCE(i.institution_name, 'null'), '", "classification_score":',i.classification_score, ', "classification_label":',i.classification_label, ', "annotation_label":',COALESCE(i.annotation_label, 'null'), ', "found_name":"',COALESCE(i.found_name, 'null'), '", "found_position":',COALESCE(i.found_position, 'null'),'}') SEPARATOR ',') FROM autokmdb_institutions i WHERE n.id = i.autokmdb_news_id) AS institutions,
+            (SELECT GROUP_CONCAT(CONCAT('{"name":"', pl.name, '", "id":',pl.id, ', "place_id":',COALESCE(pl.place_id, 'null'), ', "place_name": "',COALESCE(pl.place_name, 'null'), '", "classification_score":',pl.classification_score, ', "classification_label":',pl.classification_label, ', "annotation_label":',COALESCE(pl.annotation_label, 'null'), ', "found_name":"',COALESCE(pl.found_name, 'null'), '", "found_position":',COALESCE(pl.found_position, 'null'),'}') SEPARATOR ',') FROM autokmdb_places pl WHERE n.id = pl.autokmdb_news_id) AS places,
+            (SELECT GROUP_CONCAT(CONCAT('{"name":"', o.name, '", "id":',o.id, ', "other_id":',COALESCE(o.other_id, 'null'), ', "classification_score":',o.classification_score, ', "classification_label":',o.classification_label, ', "annotation_label":',COALESCE(o.annotation_label, 'null'), '}') SEPARATOR ',') FROM autokmdb_others o WHERE n.id = o.autokmdb_news_id) AS others
         FROM autokmdb_news n
-        LEFT JOIN autokmdb_persons p ON n.id = p.autokmdb_news_id
-        LEFT JOIN autokmdb_institutions i ON n.id = i.autokmdb_news_id
-        LEFT JOIN autokmdb_others o ON n.id = o.autokmdb_news_id
-        LEFT JOIN autokmdb_places pl ON n.id = pl.autokmdb_news_id
         '''
     group = ' GROUP BY id'
 
@@ -197,7 +193,7 @@ def get_articles(connection, page, status, domain='mind'):
         return
 
     with connection.cursor(dictionary=True) as cursor:
-        cursor.execute('SET SESSION group_concat_max_len = 10000;')
+        cursor.execute('SET SESSION group_concat_max_len = 30000;')
         cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query, (domain,))
         count = cursor.fetchone()['COUNT(id)']
         cursor.execute(paginate_query(selection + query + group, 10, page), (domain,))

@@ -6,14 +6,29 @@ from math import ceil
 import json
 
 api = Blueprint('api', __name__, url_prefix='/api')
-connection = connection_pool.get_connection()
 
 
 def reformat_article(article):
-    article['persons'] = json.loads('['+article['persons']+']') if article['persons'] else []
-    article['institutions'] = json.loads('['+article['institutions']+']') if article['institutions'] else []
-    article['places'] = json.loads('['+article['places']+']') if article['places'] else []
-    article['others'] = json.loads('['+article['others']+']') if article['others'] else []
+    try:
+        article['persons'] = json.loads('['+article['persons']+']') if article['persons'] else []
+    except Exception as e:
+        print(e)
+        article['persons'] = []
+    try:
+        article['institutions'] = json.loads('['+article['institutions']+']') if article['institutions'] else []
+    except Exception as e:
+        print(e)
+        article['institutions'] = []
+    try:
+        article['places'] = json.loads('['+article['places']+']') if article['places'] else []
+    except Exception as e:
+        print(e)
+        article['places'] = []
+    try:
+        article['others'] = json.loads('['+article['others']+']') if article['others'] else []
+    except Exception as e:
+        print(e)
+        article['others'] = []
 
     return article
 
@@ -24,17 +39,19 @@ def api_articles():
     status = request.args.get('status', 'mixed', type=str)
     domain = request.args.get('domain', 'mind', type=str)
 
-    length, articles = get_articles(connection, page, status, domain)
-    articles = [reformat_article(a) for a in articles]
+    with connection_pool.get_connection() as connection:
+        length, articles = get_articles(connection, page, status, domain)
+        articles = [reformat_article(a) for a in articles]
 
-    return jsonify({'pages': ceil(length/10), 'articles': articles}), 200
+        return jsonify({'pages': ceil(length/10), 'articles': articles}), 200
 
 
 @api.route('/not_corruption', methods=["POST"])
 def not_corruption():
     id = request.json['id']
-    annote_negative(connection, id)
-    return jsonify({}), 200
+    with connection_pool.get_connection() as connection:
+        annote_negative(connection, id)
+        return jsonify({}), 200
 
 
 @api.route('/annote', methods=["POST"])
@@ -46,19 +63,21 @@ def annote():
 
 @api.route('/add_url', methods=["POST"])
 def add_url():
-    url = request.json['url']
-    if check_url_exists(connection, url):
-        return jsonify({'error': 'Cikk már létezik'}), 400
-    init_news(connection, 1, url, url)
-    return jsonify({}), 200
+    with connection_pool.get_connection() as connection:
+        url = request.json['url']
+        if check_url_exists(connection, url):
+            return jsonify({'error': 'Cikk már létezik'}), 400
+        init_news(connection, 1, url, url)
+        return jsonify({}), 200
 
 
 @api.route('/all_labels', methods=["GET"])
 def all_labels():
-    return jsonify({
-        'person': get_all_persons(connection),
-        'institution': get_all_institutions(connection),
-        'place': get_all_places(connection),
-        'keywords': get_all_others(connection),
-        'domains': get_all_newspapers(connection),
-    }), 200
+    with connection_pool.get_connection() as connection:
+        return jsonify({
+            'person': get_all_persons(connection),
+            'institution': get_all_institutions(connection),
+            'place': get_all_places(connection),
+            'keywords': get_all_others(connection),
+            'domains': get_all_newspapers(connection),
+        }), 200
