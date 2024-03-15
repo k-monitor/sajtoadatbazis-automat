@@ -2,7 +2,7 @@ from functools import cache
 import mysql.connector
 import os
 from contextlib import closing
-import datetime
+from datetime import datetime
 
 
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
@@ -47,11 +47,12 @@ def get_all_newspapers(connection):
 
 def init_news(connection, source, source_url, clean_url):
     current_datetime = datetime.now()
+    cre_time = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
     with connection.cursor(dictionary=True) as cursor:
         query = """INSERT INTO autokmdb_news
                 (source, source_url, clean_url, processing_step, cre_time)
-                VALUES (%s, %s, %s, %s)"""
-        cursor.execute(query, (0 if source == 'rss' else 1, source_url, clean_url, 0, current_datetime.strftime("%Y-%m-%d %H:%M:%S")))
+                VALUES (%s, %s, %s, %s, %s)"""
+        cursor.execute(query, (0 if source == 'rss' else 1, source_url, clean_url, 0, cre_time))
     connection.commit()
 
 
@@ -196,6 +197,7 @@ def get_articles(connection, page, status, domain='mind'):
         return
 
     with connection.cursor(dictionary=True) as cursor:
+        cursor.execute('SET SESSION group_concat_max_len = 10000;')
         cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query, (domain,))
         count = cursor.fetchone()['COUNT(id)']
         cursor.execute(paginate_query(selection + query + group, 10, page), (domain,))
