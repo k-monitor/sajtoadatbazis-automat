@@ -96,27 +96,27 @@ class NERProcessor(Processor):
 
         for person in self.people:
             person_db = self.get_person(person)
-            if person_db is None:
-                continue
-            add_auto_person(self.connection, next_row['id'], person_db['id'], person_db['name'], person['found_name'],
+            pid = person_db['id'] if person_db else None
+            pname = person_db['name'] if person_db else None
+            add_auto_person(self.connection, next_row['id'], pid, pname, person['found_name'],
                             person['found_position'], person['name'],
                             person['classification_score'],
                             person['classification_label'])
 
         for institution in self.institutions:
             institution_db = self.get_institution(institution)
-            if institution_db is None:
-                continue
-            add_auto_institution(self.connection, next_row['id'], institution_db['id'], institution_db['name'], institution['found_name'],
+            iid = institution_db['id'] if institution_db else None
+            iname = institution_db['name'] if institution_db else None
+            add_auto_institution(self.connection, next_row['id'], iid, iname, institution['found_name'],
                                  institution['found_position'], institution['name'],
                                  institution['classification_score'],
                                  institution['classification_label'])
 
         for place in self.places:
             place_db = self.get_place(place)
-            if place_db is None:
-                continue
-            add_auto_place(self.connection, next_row['id'], place_db['id'], place_db['name'], place['found_name'],
+            pid = place_db['id'] if place_db else None
+            pname = place_db['name'] if place_db else None
+            add_auto_place(self.connection, next_row['id'], pid, pname, place['found_name'],
                            place['found_position'], place['name'],
                            place['classification_score'],
                            place['classification_label'])
