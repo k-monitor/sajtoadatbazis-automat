@@ -9,7 +9,7 @@ COPY . auto_kmdb
 
 # Install any needed packages specified in requirements.txt
 RUN pip install -r auto_kmdb/requirements.txt
-RUN python init_container.py
+RUN python auto_kmdb/init_container.py
 
 ENV DATA_PATH="/data"
 
