@@ -6,17 +6,17 @@
         @close="() => $emit('update:positiveList', localPositiveList)"
         creatable :searchable="search" searchable-placeholder="Keresés..."
         class="my-2"
-        v-model="localPositiveList" :options="localList" by="label" option-attribute="label" multiple>
+        v-model="localPositiveList" :options="localList" by="id" option-attribute="name" multiple>
         <template #label>
             <span v-if="localPositiveList.length" class="truncate">{{ localPositiveList.map((item) => item.label).join(', ') }}</span>
             <span v-else>Válassz ki elemeket</span>
         </template>
         <template #option-create="{ option }">
             <span class="flex-shrink-0">Új {{ type }}:</span>
-            <span class="block truncate">{{ option.label }}</span>
+            <span class="block truncate">{{ option.name }}</span>
         </template>
         <template #option="{ option }">
-            <span class="block truncate">{{ option.label }}</span>
+            <span class="block truncate">{{ option.name }}</span>
         </template>
         <template #empty>
             Nincs {{ type }}
@@ -27,17 +27,17 @@
 <script setup lang="ts">
     function search (q: string) {
         if (q === '') {
-            return list.map((item) => ({'label': item}))
+            return list
         }
 
         return labels.filter((item: any) => {
-            return item.toLowerCase().includes(q.toLowerCase())
-        }).map((item) => ({'label': item}))
+            return item.name.toLowerCase().includes(q.toLowerCase())
+        })
     }
 
     var { list, positiveList, labels, type } = defineProps(['list', 'positiveList', 'labels', 'type']);
     // Local state
-    const localList = list.map((item) => ({'label': item}))
+    const localList = list
     console.log(localList)
     const localPositiveList = ref(positiveList);
     console.log(localPositiveList)

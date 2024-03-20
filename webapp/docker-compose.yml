@@ -14,51 +14,8 @@ services:
         target: /data
     ports:
       - "8080:8000"
-
-  spacy_api:
-    build: './spacy_api'
-    hostname: spacy_api
-    ports:
-      - "8088:8000"
-
-  bert_api:
-    build: './bert_api'
-    hostname: bert_api
-    ports:
-      - "8085:8000"
-
-  entity_extraction:
-    build: './llama_cpp_docker'
-    hostname: entity_extraction
-    volumes:
-      - shared-models:/models
-    ports:
-      - "8087:8000"
-    environment:
-      - MODEL_URL=https://huggingface.co/boapps/kmdb-entity-extraction/resolve/main/entity-extraction_q4_k_m.gguf?download\=true
-      - MODEL_FILE=/models/entity-extraction.gguf
-
-  keyword_extraction:
-    build: './llama_cpp_docker'
-    hostname: keyword_extraction
-    volumes:
-      - shared-models:/models
-    ports:
-      - "8086:8000"
-    environment:
-      - MODEL_URL=https://huggingface.co/boapps/kmdb-keyword-extraction/resolve/main/keyword-extraction_q4_k_m.gguf?download\=true
-      - MODEL_FILE=/models/keyword-extraction.gguf
-
-#  relation_extraction:
-#    build: './llama_cpp_docker'
-#    hostname: relation_extraction
-#    volumes:
-#      - shared-models:/models
-#    ports:
-#      - "8084:8000"
-#    environment:
-#      - MODEL_URL=https://huggingface.co/boapps/kmdb-relation-extraction/resolve/main/relation-extraction_q4_k_m.gguf?download\=true
-#      - MODEL_FILE=/models/relation-extraction.gguf
+    env_file:
+      - auto_kmdb.env
 
 volumes:
   shared-models:

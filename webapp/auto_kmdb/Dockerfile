@@ -9,6 +9,9 @@ COPY . auto_kmdb
 
 # Install any needed packages specified in requirements.txt
 RUN pip install -r auto_kmdb/requirements.txt
+RUN python init_container.py
+
+ENV DATA_PATH="/data"
 
 # Make port 8085 available to the world outside this container
 EXPOSE 8000
