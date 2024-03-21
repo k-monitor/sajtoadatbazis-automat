@@ -183,7 +183,7 @@ def get_articles(connection, page, status, domain='mind'):
     group = ' GROUP BY id'
 
     if status == 'mixed':
-        query = '''WHERE n.classification_label = 1 AND processing_step = 3 AND n.annotation_label IS NULL AND clean_url LIKE %s'''
+        query = '''WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND clean_url LIKE %s'''
     elif status == 'positive':
         query = '''WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 1 AND clean_url LIKE %s'''
     elif status == 'negative':
@@ -201,14 +201,28 @@ def get_articles(connection, page, status, domain='mind'):
 
 
 def annote_negative(connection, id):
-    query = '''UPDATE autokmdb_news SET annotation_label = 0 WHERE id = %s;'''
+    query = '''UPDATE autokmdb_news SET annotation_label = 0, processing_step = 5 WHERE id = %s;'''
     with connection.cursor() as cursor:
         cursor.execute(query, (id,))
     connection.commit()
 
 
+def annote_positive(connection, id):
+    query_1 = '''UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5 WHERE id = %s;'''
+    with connection.cursor() as cursor:
+        cursor.execute(query_1, (id,))
+    connection.commit()
+
+
 def save_ner_step(connection, id):
     query = '''UPDATE autokmdb_news SET processing_step = 3 WHERE id = %s;'''
+    with connection.cursor() as cursor:
+        cursor.execute(query, (id,))
+    connection.commit()
+
+
+def save_keyword_step(connection, id)
+    query = '''UPDATE autokmdb_news SET processing_step = 4 WHERE id = %s;'''
     with connection.cursor() as cursor:
         cursor.execute(query, (id,))
     connection.commit()
