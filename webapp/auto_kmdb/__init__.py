@@ -1,6 +1,8 @@
 from flask import Flask
 from threading import Thread
 import os
+from time import sleep
+sleep(10) # TODO better wait handling
 from auto_kmdb.DownloadProcessor import DownloadProcessor
 from auto_kmdb.ClassificationProcessor import ClassificationProcessor
 from auto_kmdb.NERProcessor import NERProcessor

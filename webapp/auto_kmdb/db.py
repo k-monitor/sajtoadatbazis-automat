@@ -3,10 +3,6 @@ import mysql.connector
 import os
 from contextlib import closing
 from datetime import datetime
-from time import sleep
-
-# TODO better wait handling
-sleep(10)
 
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
   pool_name="cnx_pool",
