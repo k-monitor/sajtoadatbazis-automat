@@ -117,6 +117,14 @@ def skip_same_news(connection, id):
     connection.commit()
 
 
+def skip_download_error(connection, id):
+    query = '''UPDATE autokmdb_news SET skip_reason = 3, processing_step = 5
+               WHERE id = %s'''
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query, (id,))
+    connection.commit()
+
+
 def save_classification_step(connection, id, classification_label, classification_score):
     query = '''UPDATE autokmdb_news SET classification_label = %s,
                classification_score = %s, processing_step = 2 WHERE id = %s'''
