@@ -1,6 +1,16 @@
 version: '3.8'
 
 services:
+  ssh_tunnel:
+    build: './ssh_tunnel'
+    ports:
+      - "127.0.0.1:9999:9999"
+    volumes:
+      - type: bind
+        source: ./secrets
+        target: /secrets
+    hostname: ssh_tunnel
+
   frontend:
     build: './frontend'
     ports:

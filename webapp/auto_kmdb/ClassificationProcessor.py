@@ -29,8 +29,8 @@ class ClassificationProcessor(Processor):
         inputs = self.tokenizer(self.text, return_tensors="pt")
         logits = self.model(**inputs).logits
         probabilities = F.softmax(logits[0], dim=-1)
-        self.score = float(probabilities[0])
-        self.label = self.score < 0.42
+        self.score = float(probabilities[1])
+        self.label = 1 if self.score > 0.42 else 0
         print(self.score)
 
     def process_next(self):

@@ -1,6 +1,8 @@
 from flask import Flask
 from threading import Thread
 import os
+from time import sleep
+sleep(10) # TODO better wait handling
 from auto_kmdb.DownloadProcessor import DownloadProcessor
 from auto_kmdb.ClassificationProcessor import ClassificationProcessor
 from auto_kmdb.NERProcessor import NERProcessor
@@ -20,10 +22,6 @@ def create_app():
     for processor in processors:
         processor.load_model()
         Thread(target=processor.process_loop, args=(), daemon=True).start()
-
-    @app.route('/hello')
-    def hello():
-        return 'Hello, World!'
 
     return app
 

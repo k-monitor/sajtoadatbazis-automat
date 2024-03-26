@@ -32,7 +32,7 @@ class NERProcessor(Processor):
             label, e_type = entity['entity_group'].split('_')
             found_name = self.text[entity['start']:entity['end']]
             entity_object = {
-                    'classification_label': label,
+                    'classification_label': 1 if label == 'POS' else 0,
                     'classification_score': float(entity['score']),
                     'found_name': found_name,
                     'name': found_name,
