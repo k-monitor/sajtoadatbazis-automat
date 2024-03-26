@@ -1,7 +1,7 @@
 from flask import jsonify, Blueprint, request
 from auto_kmdb.db import get_articles, annote_negative, connection_pool
 from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers
-from auto_kmdb.db import check_url_exists, init_news
+from auto_kmdb.db import check_url_exists, init_news, 
 from math import ceil
 import json
 
@@ -58,6 +58,7 @@ def not_corruption():
 def annote():
     id = request.json['id']
     # TODO
+
     return jsonify({}), 200
 
 
@@ -83,6 +84,6 @@ def all_labels():
         }), 200
 
 
-@app.route('/status')
+@api.route('/status')
 def hello():
     return 'OK'
