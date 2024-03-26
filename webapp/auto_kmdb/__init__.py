@@ -23,10 +23,6 @@ def create_app():
         processor.load_model()
         Thread(target=processor.process_loop, args=(), daemon=True).start()
 
-    @app.route('/hello')
-    def hello():
-        return 'Hello, World!'
-
     return app
 
 

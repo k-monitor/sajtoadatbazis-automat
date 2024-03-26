@@ -56,13 +56,13 @@
         isOpen.value = false
     }
     async function deleteArticle() {
-        await postUrl('http://'+hostUrl+'/api/not_corruption', {
+        await postUrl('http://'+hostUrl+'/api/annote/negative', {
             method: 'POST',
             body: {'id': article.id}
         });
     }
     async function submitArticle() {
-        await postUrl('http://'+hostUrl+'/api/annote', {
+        await postUrl('http://'+hostUrl+'/api/annote/positive', {
             method: 'POST',
             body: {
                 'id': article.id,

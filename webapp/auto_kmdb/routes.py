@@ -46,7 +46,7 @@ def api_articles():
         return jsonify({'pages': ceil(length/10), 'articles': articles}), 200
 
 
-@api.route('/not_corruption', methods=["POST"])
+@api.route('/annote/negative', methods=["POST"])
 def not_corruption():
     id = request.json['id']
     with connection_pool.get_connection() as connection:
@@ -54,7 +54,7 @@ def not_corruption():
         return jsonify({}), 200
 
 
-@api.route('/annote', methods=["POST"])
+@api.route('/annote/positive', methods=["POST"])
 def annote():
     id = request.json['id']
     # TODO
@@ -81,3 +81,8 @@ def all_labels():
             'keywords': get_all_others(connection),
             'domains': get_all_newspapers(connection),
         }), 200
+
+
+@app.route('/status')
+def hello():
+    return 'OK'
