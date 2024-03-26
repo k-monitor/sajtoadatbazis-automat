@@ -81,3 +81,8 @@ def all_labels():
             'keywords': get_all_others(connection),
             'domains': get_all_newspapers(connection),
         }), 200
+
+
+@app.route('/status')
+def hello():
+    return 'OK'
