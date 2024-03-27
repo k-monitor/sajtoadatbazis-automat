@@ -216,8 +216,8 @@ def annote_negative(connection, id):
 
 def annote_positive(connection, id, source_url, source_url_string, title, description, text):
     query_1 = '''UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5 WHERE id = %s;'''
-    query_2 = '''INSERT INTO news_news (source_url, source_url_string) VALUES %s, %s;'''
-    query_3 = '''INSERT INTO news_lang (news_id, lang, name, teaser, articletext) VALUES %s, %s, %s, %s, %s'''
+    query_2 = '''INSERT INTO news_news (source_url, source_url_string) VALUES (%s, %s);'''
+    query_3 = '''INSERT INTO news_lang (news_id, lang, name, teaser, articletext) VALUES (%s, %s, %s, %s, %s)'''
 
     query_p = '''INSERT INTO news_persons_link (news_id, person_id) VALUES %s, %s'''
     with connection.cursor() as cursor:
