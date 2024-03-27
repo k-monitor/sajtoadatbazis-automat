@@ -61,10 +61,11 @@ def annote():
     title = request.json['title']
     description = request.json['description']
     text = request.json['text']
+    persons = request.json['positive_persons']
     # TODO entities
 
     with connection_pool.get_connection() as connection:
-        annote_positive(connection, id, url, title, title, description, text)
+        annote_positive(connection, id, url, title, title, description, text, persons)
     return jsonify({}), 200
 
 
