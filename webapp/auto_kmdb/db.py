@@ -220,6 +220,7 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
     query_3 = '''INSERT INTO news_lang (news_id, lang, name, teaser, articletext) VALUES (%s, %s, %s, %s, %s)'''
 
     query_p = '''INSERT INTO news_persons_link (news_id, person_id) VALUES (%s, %s)'''
+    query_auto_p = '''UPDATE autokmdb_persons SET annotation_label = 1 WHERE id = %s;'''
     with connection.cursor() as cursor:
         cursor.execute(query_1, (id,))
         cursor.execute(query_2, (source_url, source_url_string))
@@ -227,7 +228,8 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
         print(news_id)
         cursor.execute(query_3, (news_id, 'hu', title, description, text))
         for person in persons:
-            cursor.execute(query_p, (news_id, person['id']))
+            cursor.execute(query_p, (news_id, person['person_id']))
+            cursor.execute(query_auto_p, (person['id']))
         # TODO add other entities
     connection.commit()
 

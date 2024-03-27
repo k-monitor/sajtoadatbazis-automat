@@ -70,10 +70,10 @@
                 'title': article.title,
                 'description': article.description,
                 'text': article.text,
-                'corrupt_people': positivePersons.value.map((person) => person.label),
-                'corrupt_institutions': positiveInstitutions.value.map((institution) => institution.label),
-                'corrupt_places': positivePlaces.value.map((place) => place.label),
-                'tags': positiveOthers.value.map((tag) => tag.label),
+                'positive_persons': positivePersons.value.map((person) => person),
+                'positive_institutions': positiveInstitutions.value.map((institution) => institution),
+                'positive_places': positivePlaces.value.map((place) => place),
+                'tags': positiveOthers.value.map((tag) => tag),
             }
         });
         isOpen.value = false
