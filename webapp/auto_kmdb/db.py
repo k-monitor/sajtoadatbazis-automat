@@ -224,7 +224,7 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
     with connection.cursor() as cursor:
         cursor.execute(query_1, (id,))
         cursor.execute(query_2, (source_url, source_url_string))
-        news_id = connection.mysql_insert_id()
+        news_id = cursor.lastrowid
         print(news_id)
         cursor.execute(query_3, (news_id, 'hu', title, description, text))
         for person in persons:
