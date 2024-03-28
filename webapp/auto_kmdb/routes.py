@@ -1,7 +1,7 @@
 from flask import jsonify, Blueprint, request
 from auto_kmdb.db import get_articles, annote_negative, connection_pool
 from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers
-from auto_kmdb.db import check_url_exists, init_news
+from auto_kmdb.db import check_url_exists, init_news, annote_positive
 from math import ceil
 import json
 
@@ -57,7 +57,15 @@ def not_corruption():
 @api.route('/annote/positive', methods=["POST"])
 def annote():
     id = request.json['id']
-    # TODO
+    url = request.json['url']
+    title = request.json['title']
+    description = request.json['description']
+    text = request.json['text']
+    persons = request.json['positive_persons']
+    # TODO entities
+
+    with connection_pool.get_connection() as connection:
+        annote_positive(connection, id, url, title, title, description, text, persons)
     return jsonify({}), 200
 
 
@@ -83,6 +91,6 @@ def all_labels():
         }), 200
 
 
-@app.route('/status')
+@api.route('/status')
 def hello():
     return 'OK'

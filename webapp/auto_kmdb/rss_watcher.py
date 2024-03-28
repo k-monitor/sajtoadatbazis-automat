@@ -12,6 +12,7 @@ connection = connection_pool.get_connection()
 def rss_watcher(app_context):
     app_context.push()
     while True:
+        print('checking feeds')
         for feed_url in feed_urls:
             get_new_from_rss(feed_url)
         time.sleep(5*60)

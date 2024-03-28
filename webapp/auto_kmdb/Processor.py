@@ -20,5 +20,9 @@ class Processor:
 
     def process_loop(self):
         while True:
-            self.process_next()
+            try:
+                self.process_next()
+            except Exception as e:
+                print(e)
+                sleep(60)
             sleep(1)

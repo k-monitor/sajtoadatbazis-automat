@@ -14,6 +14,7 @@ CREATE TABLE autokmdb_news (
     processing_step INT NOT NULL,
     cre_time TIMESTAMP DEFAULT '0000-00-00 00:00:00',
     mod_time TIMESTAMP DEFAULT now() ON UPDATE now(),
+    mod_id INT,
     version_number INT
 );
 
