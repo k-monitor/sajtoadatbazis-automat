@@ -15,7 +15,8 @@ def rss_watcher(app_context):
     while True:
         print('checking feeds')
         for newspaper in newspapers:
-            get_new_from_rss(newspaper)
+            if newspaper['rss_url']:
+                get_new_from_rss(newspaper)
         time.sleep(5*60)
 
 
