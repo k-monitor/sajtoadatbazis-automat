@@ -36,10 +36,12 @@
 
         return labels.filter((item: any) => {
             return item.name != null && item.name.toLowerCase().includes(q.toLowerCase())
-        }).map((item: any) => {return {'id': item.id, 'name': item.name, 'db_name': item.name}})
+        }).slice(0, 5).map((item: any) => {return {'id': item.id, 'name': item.name, 'db_name': item.name}})
     }
 
-    var { list, positiveList, labels, type } = defineProps(['list', 'positiveList', 'labels', 'type']);
+    const props = defineProps(['list', 'positiveList', 'labels', 'type']);
+    var { list, positiveList, type } = props;
+    const {labels} = props;
     // Local state
     const localList = list
     console.log(localList)
