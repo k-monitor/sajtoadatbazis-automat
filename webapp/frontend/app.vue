@@ -3,6 +3,7 @@
     const statusId = ref(0)
     const status = computed(() => statusItems[statusId.value].key)
     const selectedDomain = ref('mind')
+    const selectedDomainAdd = ref(null)
 
     const statusItems = [{
         label: 'Vegyes',
@@ -51,7 +52,11 @@
         try {
             const {data, error} = await $fetch('http://kmonitordemo.duckdns.org/api/add_url', {
                 method: 'POST',
-                body: {'url': newUrl},
+                body: {
+                    'url': newUrl,
+                    'newspaper_name': selectedDomain['name'],
+                    'newspaper_id': selectedDomain['id'],
+                },
             });
             if (error) {
                 console.log(error)
@@ -76,11 +81,15 @@
             <UInputMenu class="w-48" v-model="selectedDomain" :options="allLabels['domains']" @change="refresh"  />
         </UContainer>
     </UContainer>
+
     <UModal v-model="isOpen">
-        <div class="p-4">
+        <div class="p-4 h-80">
             <p>Új cikk</p>
             <UInput class="my-2" v-model="newUrl" placeholder="https://telex.hu/..."/>
-            <UButton @click="addUrl">Hozzáad</UButton>
+            <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
+                <UInputMenu class="w-48" v-model="selectedDomainAdd" option-attribute="name" :options="allLabels['domains']"  />
+                <UButton @click="addUrl">Hozzáad</UButton>
+            </UContainer>
         </div>
     </UModal>
 
@@ -91,6 +100,7 @@
         <UButton @click="isOpenError = false">Bezárás</UButton>
       </div>
     </UModal>
+
     <UTabs :items="statusItems" v-model="statusId" class="w-full">
         <template #item="{ item }" v-if="!pending">
             <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" />

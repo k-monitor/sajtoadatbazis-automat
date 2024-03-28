@@ -4,6 +4,8 @@ CREATE TABLE autokmdb_news (
     source INT NOT NULL,
     source_url VARCHAR(255) NOT NULL,
     clean_url VARCHAR(255) NOT NULL,
+    newspaper_name VARCHAR(255) NOT NULL,
+    newspaper_id INT NOT NULL,
     text MEDIUMTEXT,
     title VARCHAR(255),
     description VARCHAR(255),

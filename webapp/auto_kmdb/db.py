@@ -44,14 +44,14 @@ def get_all_newspapers(connection):
     return get_all(connection, 'news_newspapers', 'newspaper_id', 'name')
 
 
-def init_news(connection, source, source_url, clean_url):
+def init_news(connection, source, source_url, clean_url, newspaper_name, newspaper_id):
     current_datetime = datetime.now()
     cre_time = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
     with connection.cursor(dictionary=True) as cursor:
         query = """INSERT INTO autokmdb_news
-                (source, source_url, clean_url, processing_step, cre_time)
-                VALUES (%s, %s, %s, %s, %s)"""
-        cursor.execute(query, (0 if source == 'rss' else 1, source_url, clean_url, 0, cre_time))
+                (source, source_url, clean_url, processing_step, cre_time, newspaper_name, newspaper_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+        cursor.execute(query, (0 if source == 'rss' else 1, source_url, clean_url, 0, cre_time, newspaper_name, newspaper_id))
     connection.commit()
 
 
