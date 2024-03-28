@@ -246,3 +246,10 @@ def save_keyword_step(connection, id):
     with connection.cursor() as cursor:
         cursor.execute(query, (id,))
     connection.commit()
+
+
+def get_rss_urls(connection):
+    query = '''SELECT newspaper_id as id, name, rss_url FROM news_newspapers WHERE status = "Y";'''
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query)
+        return cursor.fetchall()
