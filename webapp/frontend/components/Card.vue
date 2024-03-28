@@ -9,7 +9,7 @@
                 <Icon v-if="article.is_annoted && article.is_annoted_corruption" name="mdi:tick" color="green" />
                 </UBadge>
             </p>
-            <UBadge class="m-1" color="blue"> {{ article.url.split('/')[2] }} </UBadge>
+            <UBadge class="m-1" color="blue"> {{ article.newspaper_name }} </UBadge>
             <p class="text-base">{{ article.description }}</p>
             <p class="text-base">{{ article.date }}</p>
 
