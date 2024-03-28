@@ -84,10 +84,10 @@
 
     var personsMap = {}
     for (const person of article.persons) {
-        if (personsMap[person.person_id])
-            personsMap[person.person_id].push(person)
+        if (personsMap[person.db_id])
+            personsMap[person.db_id].push(person)
         else
-            personsMap[person.person_id] = [person]
+            personsMap[person.db_id] = [person]
     }
     var mappedPersons = []
     for (const id in personsMap) {
