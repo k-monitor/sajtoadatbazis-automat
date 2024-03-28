@@ -82,9 +82,34 @@
 
     const { article, allLabels } = defineProps(['article', 'allLabels']);
 
+    var personsMap = {}
+    for (const person of article.persons) {
+        if (personsMap[person.person_id])
+            personsMap[person.person_id].push(person)
+        else
+            personsMap[person.person_id] = [person]
+    }
+    var mappedPersons = []
+    for (const id in personsMap) {
+        let personList = personsMap[id]
+        if (id != null) {
+            let person = personList[0]
+            person['list'] = personList
+            mappedPersons.push(person)
+        } else {
+            for (const person of personList) {
+                person['list'] = [person]
+                mappedPersons.push(person)
+            }
+        }
+    }
+
+    article.persons = mappedPersons
+
     var positivePersons = ref(article.persons.filter((person) => (person.classification_label == 1)))
     var positiveInstitutions = ref(article.institutions.filter((institution) => (institution.classification_label == 1)))
     var positivePlaces = ref(article.places.filter((place) => (place.classification_label == 1)))
+
     var positiveOthers = ref(article.others.map((other) => (other.classification_label == 1)))
 
     // Handle update event for positivePeople
