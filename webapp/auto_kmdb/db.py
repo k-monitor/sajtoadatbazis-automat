@@ -186,11 +186,11 @@ def get_articles(connection, page, status, domain=-1):
     group = ' GROUP BY id'
 
     if status == 'mixed':
-        query = '''WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND clean_url LIKE %s'''
+        query = '''WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL'''
     elif status == 'positive':
-        query = '''WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 1 AND clean_url LIKE %s'''
+        query = '''WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 1'''
     elif status == 'negative':
-        query = '''WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 0 AND clean_url LIKE %s'''
+        query = '''WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 0'''
     else:
         print('Invalid status provided!')
         return
@@ -199,9 +199,9 @@ def get_articles(connection, page, status, domain=-1):
 
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute('SET SESSION group_concat_max_len = 30000;')
-        cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query, (domain,))
+        cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query)
         count = cursor.fetchone()['COUNT(id)']
-        cursor.execute(paginate_query(selection + query + group, 10, page), (domain,))
+        cursor.execute(paginate_query(selection + query + group, 10, page))
         return count, cursor.fetchall()
 
 
