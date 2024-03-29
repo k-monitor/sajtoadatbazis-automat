@@ -37,6 +37,11 @@
         },
     })
 
+    function resetPageRefresh() {
+        page.value = 1
+        refresh()
+    }
+
     let articles = computed(() => data.value.articles);
     let pages = computed(() => data.value.pages);
     let itemsCount = computed(() => pages.value*10);
@@ -83,7 +88,7 @@
         <UButton class="mr-1" @click="openNewUrl">Új cikk</UButton>
         <UContainer class="my-1 flex lg:px-0 px-4 sm:px-0 ml-1">
             <p>Kiválasztott hírportál: &nbsp;</p>
-            <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" value-attribute="id" :options="allDomains" @change="refresh"  />
+            <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" value-attribute="id" :options="allDomains" @change="refresh" />
         </UContainer>
     </UContainer>
 
@@ -106,7 +111,7 @@
       </div>
     </UModal>
 
-    <UTabs :items="statusItems" v-model="statusId" class="w-full">
+    <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh" class="w-full">
         <template #item="{ item }" v-if="!pending">
             <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" />
             <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="refresh" />
