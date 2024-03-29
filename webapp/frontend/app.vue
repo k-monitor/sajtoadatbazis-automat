@@ -21,10 +21,13 @@
         return await $fetch(url)
     }
 
+
     const { data: allLabels } = await useFetch('http://'+hostUrl+'/api/all_labels');
-    if (allLabels.value.domains.id != -1)
-        allLabels.value.domains.unshift({name: 'mind', id: -1})
-    const selectedDomain = ref(allLabels.value.domains[0])
+    let allDomains = [...allLabels.value.domains]
+    if (allDomains[0].id != -1)
+        allDomains.unshift({name: 'mind', id: -1})
+    allDomains = ref(allDomains)
+    const selectedDomain = ref(allDomains[0])
 
     const { pending, data, error, refresh } = await useLazyFetch('http://'+hostUrl+'/api/articles', {
         query: {
@@ -52,12 +55,17 @@
     async function addUrl () {
         isOpen.value = false
         try {
+            console.log({
+                    'url': newUrl,
+                    'newspaper_name': selectedDomainAdd.value.name,
+                    'newspaper_id': selectedDomainAdd.value.id,
+                })
             const {data, error} = await $fetch('http://kmonitordemo.duckdns.org/api/add_url', {
                 method: 'POST',
                 body: {
                     'url': newUrl,
-                    'newspaper_name': selectedDomainAdd['name'],
-                    'newspaper_id': selectedDomain['id'],
+                    'newspaper_name': selectedDomainAdd.value.name,
+                    'newspaper_id': selectedDomainAdd.value.id,
                 },
             });
             if (error) {
@@ -80,7 +88,7 @@
         <UButton class="mr-1" @click="openNewUrl">Új cikk</UButton>
         <UContainer class="my-1 flex lg:px-0 px-4 sm:px-0 ml-1">
             <p>Kiválasztott hírportál: &nbsp;</p>
-            <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" value-attribute="id" :options="allLabels['domains']" @change="refresh"  />
+            <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" value-attribute="id" :options="allDomains" @change="refresh"  />
         </UContainer>
     </UContainer>
 
