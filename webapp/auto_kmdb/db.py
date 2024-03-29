@@ -192,7 +192,7 @@ def get_articles(connection, page, status, domain=-1):
     elif status == 'negative':
         query = '''WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 0'''
     elif status == 'processing':
-        query = '''WHERE rocessing_step < 4'''
+        query = '''WHERE processing_step < 4'''
     else:
         print('Invalid status provided!')
         return
