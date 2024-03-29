@@ -10,6 +10,7 @@
                 </UBadge>
             </p>
             <UBadge class="m-1" color="blue"> {{ article.newspaper_name }} </UBadge>
+            <UBadge v-if="article.source == 1" class="m-1" color="orange"> manuálisan hozzáadott </UBadge>
             <p class="text-base">{{ article.description }}</p>
             <p class="text-base">{{ article.date }}</p>
 
