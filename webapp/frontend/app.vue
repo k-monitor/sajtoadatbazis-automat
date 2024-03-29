@@ -13,6 +13,9 @@
     }, {
         label: 'Elutasított',
         key: 'negative'
+    }, {
+        label: 'Feldolgozás alatt',
+        key: 'processing'
     }]
 
     var hostUrl = 'kmonitordemo.duckdns.org'
