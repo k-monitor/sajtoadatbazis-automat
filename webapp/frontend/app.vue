@@ -2,7 +2,6 @@
     const page = ref(1)
     const statusId = ref(0)
     const status = computed(() => statusItems[statusId.value].key)
-    const selectedDomain = ref(null)
     const selectedDomainAdd = ref(null)
 
     const statusItems = [{
@@ -23,12 +22,15 @@
     }
 
     const { data: allLabels } = await useFetch('http://'+hostUrl+'/api/all_labels');
+    if (allLabels.value.domains.id != -1)
+        allLabels.value.domains.unshift({name: 'mind', id: -1})
+    const selectedDomain = ref(allLabels.value.domains[0])
 
     const { pending, data, error, refresh } = await useLazyFetch('http://'+hostUrl+'/api/articles', {
         query: {
             page: page,
             status: status,
-            domain: selectedDomain.id,
+            domain: selectedDomain,
         },
     })
 
@@ -55,7 +57,7 @@
                 body: {
                     'url': newUrl,
                     'newspaper_name': selectedDomainAdd['name'],
-                    'newspaper_id': selectedDomainAdd['id'],
+                    'newspaper_id': selectedDomain['id'],
                 },
             });
             if (error) {
@@ -78,7 +80,7 @@
         <UButton class="mr-1" @click="openNewUrl">Új cikk</UButton>
         <UContainer class="my-1 flex lg:px-0 px-4 sm:px-0 ml-1">
             <p>Kiválasztott hírportál: &nbsp;</p>
-            <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" :options="allLabels['domains']" @change="refresh"  />
+            <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" value-attribute="id" :options="allLabels['domains']" @change="refresh"  />
         </UContainer>
     </UContainer>
 
@@ -87,7 +89,7 @@
             <p>Új cikk</p>
             <UInput class="my-2" v-model="newUrl" placeholder="https://telex.hu/..."/>
             <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
-                <UInputMenu class="w-48" v-model="selectedDomainAdd" option-attribute="name" :options="allLabels['domains']"  />
+                <UInputMenu class="w-48" placeholder="válassz egy hírportált" v-model="selectedDomainAdd" option-attribute="name" :options="allLabels['domains']"  />
                 <UButton @click="addUrl">Hozzáad</UButton>
             </UContainer>
         </div>
