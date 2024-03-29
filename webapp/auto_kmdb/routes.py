@@ -37,7 +37,7 @@ def reformat_article(article):
 def api_articles():
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', 'mixed', type=str)
-    domain = request.args.get('domain', 'mind', type=str)
+    domain = request.args.get('domain', -1, type=int)
 
     with connection_pool.get_connection() as connection:
         length, articles = get_articles(connection, page, status, domain)

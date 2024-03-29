@@ -2,7 +2,7 @@
     const page = ref(1)
     const statusId = ref(0)
     const status = computed(() => statusItems[statusId.value].key)
-    const selectedDomain = ref('mind')
+    const selectedDomain = ref(null)
     const selectedDomainAdd = ref(null)
 
     const statusItems = [{
@@ -28,7 +28,7 @@
         query: {
             page: page,
             status: status,
-            domain: selectedDomain,
+            domain: selectedDomain.id,
         },
     })
 
@@ -54,8 +54,8 @@
                 method: 'POST',
                 body: {
                     'url': newUrl,
-                    'newspaper_name': selectedDomain['name'],
-                    'newspaper_id': selectedDomain['id'],
+                    'newspaper_name': selectedDomainAdd['name'],
+                    'newspaper_id': selectedDomainAdd['id'],
                 },
             });
             if (error) {
@@ -78,7 +78,7 @@
         <UButton class="mr-1" @click="openNewUrl">Új cikk</UButton>
         <UContainer class="my-1 flex lg:px-0 px-4 sm:px-0 ml-1">
             <p>Kiválasztott hírportál: &nbsp;</p>
-            <UInputMenu class="w-48" v-model="selectedDomain" :options="allLabels['domains']" @change="refresh"  />
+            <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" :options="allLabels['domains']" @change="refresh"  />
         </UContainer>
     </UContainer>
 

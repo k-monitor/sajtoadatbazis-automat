@@ -172,12 +172,8 @@ def paginate_query(query, page_size, page_number):
     return query + f" LIMIT {page_size} OFFSET {offset}"
 
 
-def get_articles(connection, page, status, domain='mind'):
+def get_articles(connection, page, status, domain=-1):
     query = ''
-    if domain == 'mind':
-        domain = '%'
-    else:
-        domain = f"%{domain}%"
 
     selection = '''SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score,
             n.text AS text, n.cre_time AS date,
@@ -198,6 +194,8 @@ def get_articles(connection, page, status, domain='mind'):
     else:
         print('Invalid status provided!')
         return
+    if domain and domain != -1 and isinstance(domain, int):
+        query += ' AND n.newspaper_id = '+str(domain)
 
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute('SET SESSION group_concat_max_len = 30000;')
