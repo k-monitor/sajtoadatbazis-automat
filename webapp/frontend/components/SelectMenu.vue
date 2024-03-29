@@ -44,7 +44,5 @@
     const {labels} = props;
     // Local state
     const localList = list
-    console.log(localList)
     const localPositiveList = ref(positiveList);
-    console.log(localPositiveList)
 </script>

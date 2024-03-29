@@ -55,11 +55,6 @@
     async function addUrl () {
         isOpen.value = false
         try {
-            console.log({
-                    'url': newUrl,
-                    'newspaper_name': selectedDomainAdd.value.name,
-                    'newspaper_id': selectedDomainAdd.value.id,
-                })
             const {data, error} = await $fetch('http://kmonitordemo.duckdns.org/api/add_url', {
                 method: 'POST',
                 body: {

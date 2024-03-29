@@ -226,7 +226,7 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
         print(news_id)
         cursor.execute(query_3, (news_id, 'hu', title, description, text))
         for person in persons:
-            cursor.execute(query_p, (news_id, person['person_id']))
+            cursor.execute(query_p, (news_id, person['db_id']))
             cursor.execute(query_auto_p, (person['id'],))
         # TODO add other entities
     connection.commit()

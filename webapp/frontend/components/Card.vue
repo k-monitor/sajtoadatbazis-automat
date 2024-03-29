@@ -62,6 +62,11 @@
         });
     }
     async function submitArticle() {
+        let positivePersonsList = positivePersons.value.map((person) => person.list).flat()
+        positivePersonsList.forEach(element => {
+            element.annotation_label = 1
+        });
+
         await postUrl('http://'+hostUrl+'/api/annote/positive', {
             method: 'POST',
             body: {
@@ -70,7 +75,7 @@
                 'title': article.title,
                 'description': article.description,
                 'text': article.text,
-                'positive_persons': positivePersons.value.map((person) => person),
+                'positive_persons': positivePersonsList,
                 'positive_institutions': positiveInstitutions.value.map((institution) => institution),
                 'positive_places': positivePlaces.value.map((place) => place),
                 'tags': positiveOthers.value.map((tag) => tag),
@@ -85,21 +90,21 @@
     var personsMap = {}
     for (const person of article.persons) {
         if (personsMap[person.db_id])
-            personsMap[person.db_id].push(person)
+            personsMap[person.db_id].push({ ...person})
         else
-            personsMap[person.db_id] = [person]
+            personsMap[person.db_id] = [{ ...person}]
     }
     var mappedPersons = []
     for (const id in personsMap) {
         let personList = personsMap[id]
         if (id != null) {
-            let person = personList[0]
-            person['list'] = personList
-            mappedPersons.push(person)
+            let person = { ...personList[0]}
+            person['list'] =  [...personList]
+            mappedPersons.push({ ...person})
         } else {
             for (const person of personList) {
-                person['list'] = [person]
-                mappedPersons.push(person)
+                person['list'] = [{ ...person}]
+                mappedPersons.push({ ...person})
             }
         }
     }
