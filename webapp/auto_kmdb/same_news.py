@@ -27,7 +27,7 @@ def same_news(title, description, text):
             return True
     if text.strip().endswith(')'):
         for news_name in news_names:
-            if text[text.rfind('('):].lower():
+            if text[text.rfind('('):].lower() == '('+news_name+')': 
                 return True
 
     return False

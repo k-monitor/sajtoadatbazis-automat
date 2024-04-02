@@ -108,11 +108,11 @@ def save_download_step(connection, id, text, title, description):
     connection.commit()
 
 
-def skip_same_news(connection, id):
-    query = '''UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5
+def skip_same_news(connection, id, text, title, description):
+    query = '''UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5, text = %s, title = %s, description = %s, processing_step = 1
                WHERE id = %s'''
     with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (id,))
+        cursor.execute(query, (text, title, description, id))
     connection.commit()
 
 
@@ -134,7 +134,7 @@ def save_classification_step(connection, id, classification_label, classificatio
 
 def get_step_queue(connection, step):
     fields = {
-        0: 'clean_url AS url',
+        0: 'clean_url AS url, source',
         1: 'title, description, source',
         2: 'text',
         3: 'text',
