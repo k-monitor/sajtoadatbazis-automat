@@ -4,17 +4,21 @@ from auto_kmdb.db import get_download_queue, save_download_step, skip_same_news,
 from auto_kmdb.preprocess import do_replacements, replacements, common_descriptions
 from time import sleep
 import newspaper
+from auto_kmdb.db import connection_pool
 
 
 class DownloadProcessor(Processor):
     def __init__(self):
-        super().__init__()
+        pass
+        # super().__init__()
 
     def process_next(self):
+        self.connection = connection_pool.get_connection()
         next_row = get_download_queue(self.connection)
         print('Downloading')
         if next_row is None:
             sleep(30)
+            self.connection.close()
             return
 
         print('Downloading', next_row['url'])
@@ -25,6 +29,7 @@ class DownloadProcessor(Processor):
         except Exception as e:
             print(e)
             skip_download_error(self.connection, next_row['id'])
+            self.connection.close()
             return
 
         title = do_replacements(article.title, replacements)
@@ -50,3 +55,5 @@ class DownloadProcessor(Processor):
             skip_same_news(self.connection, next_row['id'])
         else:
             save_download_step(self.connection, next_row['id'], text, title, description)
+
+        self.connection.close()
