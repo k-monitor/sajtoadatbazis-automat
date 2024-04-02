@@ -51,8 +51,8 @@ class DownloadProcessor(Processor):
         else:
             date = ''
 
-        if same_news(title, description, text):
-            skip_same_news(self.connection, next_row['id'])
+        if same_news(title, description, text) and next_row['source'] != 1:
+            skip_same_news(self.connection, next_row['id'], text, title, description)
         else:
             save_download_step(self.connection, next_row['id'], text, title, description)
 
