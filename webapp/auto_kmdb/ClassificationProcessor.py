@@ -40,6 +40,11 @@ class ClassificationProcessor(Processor):
             self.connection.close()
             sleep(30)
             return
+        
+        if next_row['source'] == 1:
+            save_classification_step(self.connection, next_row['id'], 1, 1.0)
+            self.connection.close()
+            return
 
         self.text = article_classification_prompt.format(title=next_row['title'], description=next_row['description'])
 

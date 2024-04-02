@@ -135,7 +135,7 @@ def save_classification_step(connection, id, classification_label, classificatio
 def get_step_queue(connection, step):
     fields = {
         0: 'clean_url AS url',
-        1: 'title, description',
+        1: 'title, description, source',
         2: 'text',
         3: 'text',
         4: 'text',
