@@ -17,7 +17,7 @@ CREATE TABLE autokmdb_news (
     cre_time TIMESTAMP DEFAULT '0000-00-00 00:00:00',
     mod_time TIMESTAMP DEFAULT now() ON UPDATE now(),
     mod_id INT,
-    version_number INT
+    version_number INT NOT NULL
 );
 
 CREATE TABLE autokmdb_persons (
