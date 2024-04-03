@@ -34,21 +34,20 @@ class ClassificationProcessor(Processor):
         print(self.score)
 
     def process_next(self):
-        self.connection = connection_pool.get_connection()
-        next_row = get_classification_queue(self.connection)
+        with connection_pool.get_connection() as connection:
+            next_row = get_classification_queue(connection)
         if next_row is None:
-            self.connection.close()
             sleep(30)
             return
         
         if next_row['source'] == 1:
-            save_classification_step(self.connection, next_row['id'], 1, 1.0)
-            self.connection.close()
+            with connection_pool.get_connection() as connection:
+                save_classification_step(connection, next_row['id'], 1, 1.0)
             return
 
         self.text = article_classification_prompt.format(title=next_row['title'], description=next_row['description'])
 
         self.predict()
 
-        save_classification_step(self.connection, next_row['id'], self.label, self.score)
-        self.connection.close()
+        with connection_pool.get_connection() as connection:
+            save_classification_step(connection, next_row['id'], self.label, self.score)

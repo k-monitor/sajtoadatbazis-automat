@@ -6,7 +6,7 @@ from datetime import datetime
 
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
   pool_name="cnx_pool",
-  pool_size=5,
+  pool_size=10,
   pool_reset_session=True,
   host=os.environ["MYSQL_HOST"],
   port=os.environ["MYSQL_PORT"],

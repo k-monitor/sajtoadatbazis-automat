@@ -13,12 +13,11 @@ class DownloadProcessor(Processor):
         # super().__init__()
 
     def process_next(self):
-        self.connection = connection_pool.get_connection()
-        next_row = get_download_queue(self.connection)
+        with connection_pool.get_connection() as connection:
+            next_row = get_download_queue(connection)
         print('Downloading')
         if next_row is None:
             sleep(30)
-            self.connection.close()
             return
 
         print('Downloading', next_row['url'])
@@ -28,8 +27,8 @@ class DownloadProcessor(Processor):
             article.parse()
         except Exception as e:
             print(e)
-            skip_download_error(self.connection, next_row['id'])
-            self.connection.close()
+            with connection_pool.get_connection() as connection:
+                skip_download_error(connection, next_row['id'])
             return
 
         title = do_replacements(article.title, replacements)
@@ -52,8 +51,8 @@ class DownloadProcessor(Processor):
             date = ''
 
         if same_news(title, description, text) and next_row['source'] != 1:
-            skip_same_news(self.connection, next_row['id'], text, title, description)
+            with connection_pool.get_connection() as connection:
+                skip_same_news(connection, next_row['id'], text, title, description)
         else:
-            save_download_step(self.connection, next_row['id'], text, title, description)
-
-        self.connection.close()
+            with connection_pool.get_connection() as connection:
+                save_download_step(connection, next_row['id'], text, title, description)

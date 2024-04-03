@@ -48,15 +48,11 @@ class NERProcessor(Processor):
             # TODO: add_auto_person(autokmdb_news_id, person_id, found_name, found_position, name, classification_score, classification_label)
 
     def get_person(self, person):
-        all_people = get_all_persons(self.connection)
+        with connection_pool.get_connection() as connection:
+            all_people = get_all_persons(connection)
         names_in = [p for p in all_people if p['name'] and p['name'] in person['name']]
         in_names = [p for p in all_people if p['name'] and person['name'] in p['name']]
         same_names = [p for p in all_people if p['name'] and p['name'] == person['name']]
-        print('process persons')
-        print(person['name'])
-        print(len(same_names))
-        print(len(in_names))
-        print(len(names_in))
         if len(same_names) == 1:
             return same_names[0]
         if len(in_names) == 1:
@@ -66,7 +62,8 @@ class NERProcessor(Processor):
         return None
 
     def get_institution(self, institution):
-        all_institutions = get_all_institutions(self.connection)
+        with connection_pool.get_connection() as connection:
+            all_institutions = get_all_institutions(connection)
         names_in = [p for p in all_institutions if p['name'] and p['name'] in institution['name']]
         in_names = [p for p in all_institutions if p['name'] and institution['name'] in p['name']]
         same_names = [p for p in all_institutions if p['name'] and p['name'] == institution['name']]
@@ -79,7 +76,8 @@ class NERProcessor(Processor):
         return None
 
     def get_place(self, place):
-        all_places = get_all_places(self.connection)
+        with connection_pool.get_connection() as connection:
+            all_places = get_all_places(connection)
         names_in = [p for p in all_places if p['name'] and p['name'] in place['name']]
         in_names = [p for p in all_places if p['name'] and place['name'] in p['name']]
         same_names = [p for p in all_places if p['name'] and p['name'] == place['name']]
@@ -92,10 +90,11 @@ class NERProcessor(Processor):
         return None
 
     def process_next(self):
-        self.connection = connection_pool.get_connection()
-        next_row = get_ner_queue(self.connection)
+
+        
+        with connection_pool.get_connection() as connection:
+            next_row = get_ner_queue(connection)
         if next_row is None:
-            self.connection.close()
             sleep(30)
             return
 
@@ -118,7 +117,8 @@ class NERProcessor(Processor):
                 pname = person_db['name'] if person_db else None
                 if pname is not None:
                     added_persons.append(pname)
-                add_auto_person(self.connection, next_row['id'], pname, pid, person['found_name'],
+                with connection_pool.get_connection() as connection:
+                    add_auto_person(connection, next_row['id'], pname, pid, person['found_name'],
                                 person['found_position'], person['name'],
                                 person['classification_score'],
                                 person['classification_label'])
@@ -129,7 +129,8 @@ class NERProcessor(Processor):
             iname = institution_db['name'] if institution_db else None
             if iname is not None:
                 added_institutions.append(iname)
-            add_auto_institution(self.connection, next_row['id'], iname, iid, institution['found_name'],
+            with connection_pool.get_connection() as connection:
+                add_auto_institution(connection, next_row['id'], iname, iid, institution['found_name'],
                                  institution['found_position'], institution['name'],
                                  institution['classification_score'],
                                  institution['classification_label'])
@@ -140,10 +141,11 @@ class NERProcessor(Processor):
             plname = place_db['name'] if place_db else None
             if plname is not None:
                 added_places.append(plname)
-            add_auto_place(self.connection, next_row['id'], plname, plid, place['found_name'],
+            with connection_pool.get_connection() as connection:
+                add_auto_place(connection, next_row['id'], plname, plid, place['found_name'],
                            place['found_position'], place['name'],
                            place['classification_score'],
                            place['classification_label'])
 
-        save_ner_step(self.connection, next_row['id'])
-        self.connection.close()
+        with connection_pool.get_connection() as connection:
+            save_ner_step(connection, next_row['id'])

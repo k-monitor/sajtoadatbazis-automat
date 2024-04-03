@@ -20,15 +20,14 @@ class KeywordProcessor(Processor):
         pass
 
     def process_next(self):
-        self.connection = connection_pool.get_connection()
-        next_row = get_keyword_queue(self.connection)
+        with connection_pool.get_connection() as connection:
+            next_row = get_keyword_queue(connection)
         if next_row is None:
-            self.connection.close()
             sleep(30)
             return
         self.predict()
 
         # TODO
 
-        save_keyword_step(self.connection, next_row['id'])
-        self.connection.close()
+        with connection_pool.get_connection() as connection:
+            save_keyword_step(connection, next_row['id'])
