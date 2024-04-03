@@ -51,7 +51,7 @@ def init_news(connection, source, source_url, clean_url, newspaper_name, newspap
     with connection.cursor(dictionary=True) as cursor:
         query = """INSERT INTO autokmdb_news
                 (source, source_url, clean_url, processing_step, cre_time, newspaper_name, newspaper_id, version_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(query, (0 if source == 'rss' else 1, source_url, clean_url, 0, cre_time, newspaper_name, newspaper_id, VERSION_NUMBER))
     connection.commit()
 
@@ -69,7 +69,7 @@ def add_auto_person(connection, autokmdb_news_id, person_name, person_id, found_
     with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_persons
                 (autokmdb_news_id, person_name, person_id, found_name, found_position, name, classification_score, classification_label, version_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(query, (autokmdb_news_id, person_name, person_id, found_name, found_position, name, classification_score, classification_label, VERSION_NUMBER))
     connection.commit()
 
@@ -78,7 +78,7 @@ def add_auto_institution(connection, autokmdb_news_id, institution_name, institu
     with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_institutions
                 (autokmdb_news_id, institution_name, institution_id, found_name, found_position, name, classification_score, classification_label, version_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(query, (autokmdb_news_id, institution_name, institution_id, found_name, found_position, name, classification_score, classification_label, VERSION_NUMBER))
     connection.commit()
 
@@ -87,7 +87,7 @@ def add_auto_place(connection, autokmdb_news_id, place_name, place_id, found_nam
     with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_places
                 (autokmdb_news_id, place_name, place_id, found_name, found_position, name, classification_score, classification_label, version_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(query, (autokmdb_news_id, place_name, place_id, found_name, found_position, name, classification_score, classification_label, VERSION_NUMBER))
     connection.commit()
 
@@ -96,7 +96,7 @@ def add_auto_other(connection, autokmdb_news_id, other_id, found_name, found_pos
     with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_others
                 (autokmdb_news_id, other_id, found_name, found_position, name, classification_score, classification_label, version_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)"""
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(query, (autokmdb_news_id, other_id, found_name, found_position, name, classification_score, classification_label, VERSION_NUMBER))
     connection.commit()
 
