@@ -108,11 +108,11 @@ def save_download_step(connection, id, text, title, description):
     connection.commit()
 
 
-def skip_same_news(connection, id):
-    query = '''UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5
+def skip_same_news(connection, id, text, title, description):
+    query = '''UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5, text = %s, title = %s, description = %s, processing_step = 1
                WHERE id = %s'''
     with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (id,))
+        cursor.execute(query, (text, title, description, id))
     connection.commit()
 
 
@@ -134,14 +134,14 @@ def save_classification_step(connection, id, classification_label, classificatio
 
 def get_step_queue(connection, step):
     fields = {
-        0: 'clean_url AS url',
-        1: 'title, description',
+        0: 'clean_url AS url, source',
+        1: 'title, description, source',
         2: 'text',
         3: 'text',
         4: 'text',
     }
     query = f'''SELECT id, {fields[step]} FROM autokmdb_news
-               WHERE processing_step = {step} LIMIT 1;'''
+               WHERE processing_step = {step} ORDER BY source DESC, mod_time DESC LIMIT 1'''
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query)
         return cursor.fetchone()
@@ -183,7 +183,7 @@ def get_articles(connection, page, status, domain=-1):
             (SELECT GROUP_CONCAT(CONCAT('{"name":"', o.name, '", "id":',o.id, ', "db_id":',COALESCE(o.other_id, 'null'), ', "classification_score":',o.classification_score, ', "classification_label":',o.classification_label, ', "annotation_label":',COALESCE(o.annotation_label, 'null'), '}') SEPARATOR ',') FROM autokmdb_others o WHERE n.id = o.autokmdb_news_id) AS others
         FROM autokmdb_news n
         '''
-    group = ' GROUP BY id'
+    group = ' GROUP BY id ORDER BY source DESC, n.mod_time DESC'
 
     if status == 'mixed':
         query = '''WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL'''
