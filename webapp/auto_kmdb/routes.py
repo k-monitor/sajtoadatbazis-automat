@@ -43,7 +43,7 @@ def api_articles():
         length, articles = get_articles(connection, page, status, domain)
         articles = [reformat_article(a) for a in articles]
 
-        return jsonify({'pages': ceil(length/10), 'articles': articles}), 200
+    return jsonify({'pages': ceil(length/10), 'articles': articles}), 200
 
 
 @api.route('/annote/negative', methods=["POST"])
@@ -51,7 +51,7 @@ def not_corruption():
     id = request.json['id']
     with connection_pool.get_connection() as connection:
         annote_negative(connection, id)
-        return jsonify({}), 200
+    return jsonify({}), 200
 
 
 @api.route('/annote/positive', methods=["POST"])
