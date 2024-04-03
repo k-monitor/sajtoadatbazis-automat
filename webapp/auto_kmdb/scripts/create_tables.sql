@@ -8,7 +8,7 @@ CREATE TABLE autokmdb_news (
     newspaper_id INT NOT NULL,
     text MEDIUMTEXT,
     title VARCHAR(255),
-    description VARCHAR(255),
+    description VARCHAR(1023),
     classification_score DOUBLE,
     classification_label INT,
     annotation_label INT,
