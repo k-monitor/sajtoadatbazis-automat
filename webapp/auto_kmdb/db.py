@@ -176,7 +176,7 @@ def paginate_query(query, page_size, page_number):
 def get_articles(connection, page, status, domain=-1):
     query = ''
 
-    selection = '''SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score,
+    selection = '''SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label,
             n.text AS text, n.cre_time AS date,
             (SELECT GROUP_CONCAT(CONCAT('{"name":"', p.name, '", "id":',p.id, ', "db_id":',COALESCE(p.person_id, 'null'), ', "db_name": "',COALESCE(p.person_name, 'null'), '", "classification_score":',p.classification_score, ', "classification_label":',p.classification_label, ', "annotation_label":',COALESCE(p.annotation_label, 'null'), ', "found_name":"',COALESCE(p.found_name, 'null'), '", "found_position":',COALESCE(p.found_position, 'null'),'}') SEPARATOR ',') FROM autokmdb_persons p WHERE n.id = p.autokmdb_news_id) AS persons,
             (SELECT GROUP_CONCAT(CONCAT('{"name":"', i.name, '", "id":',i.id, ', "db_id":',COALESCE(i.institution_id, 'null'), ', "db_name": "',COALESCE(i.institution_name, 'null'), '", "classification_score":',i.classification_score, ', "classification_label":',i.classification_label, ', "annotation_label":',COALESCE(i.annotation_label, 'null'), ', "found_name":"',COALESCE(i.found_name, 'null'), '", "found_position":',COALESCE(i.found_position, 'null'),'}') SEPARATOR ',') FROM autokmdb_institutions i WHERE n.id = i.autokmdb_news_id) AS institutions,
