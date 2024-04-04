@@ -222,9 +222,9 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
 
     query_p = '''INSERT INTO news_persons_link (news_id, person_id) VALUES (%s, %s)'''
     query_auto_p = '''UPDATE autokmdb_persons SET annotation_label = 1 WHERE id = %s;'''
-    query_i = '''INSERT INTO news_institutions_link (news_id, person_id) VALUES (%s, %s)'''
+    query_i = '''INSERT INTO news_institutions_link (news_id, institution_id) VALUES (%s, %s)'''
     query_auto_i = '''UPDATE autokmdb_institutions SET annotation_label = 1 WHERE id = %s;'''
-    query_pl = '''INSERT INTO news_places_link (news_id, person_id) VALUES (%s, %s)'''
+    query_pl = '''INSERT INTO news_places_link (news_id, place_id) VALUES (%s, %s)'''
     query_auto_pl = '''UPDATE autokmdb_places SET annotation_label = 1 WHERE id = %s;'''
     with connection.cursor() as cursor:
         cursor.execute(query_1, (id,))
