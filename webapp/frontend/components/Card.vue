@@ -99,6 +99,8 @@
 
     const { article, allLabels } = defineProps(['article', 'allLabels']);
 
+    article.date = new Date(Date.parse(article.date)).toLocaleString()
+
     // TODO: clean this code 
 
     var personsMap = {}
