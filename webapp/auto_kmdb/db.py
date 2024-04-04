@@ -264,3 +264,32 @@ def get_rss_urls(connection):
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query)
         return cursor.fetchall()
+
+def validate_session(connection, session_id):
+    query = '''SELECT * FROM users_sessions WHERE session_id = %s;'''
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query, (session_id,))
+    session = cursor.fetchone()
+    if session is None or session['registered'] == 0:
+        return False
+    # is this it?
+    return True
+
+def get_roles(connection, session_id):
+    query = '''SELECT * FROM users_sessions WHERE session_id = %s;'''
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query, (session_id,))
+    session = cursor.fetchone()
+    if session is None or session['registered'] == 0:
+        return []
+    
+    user_id = session['registered']
+
+    query_u = '''SELECT * FROM users_modul_rights WHERE user_id = %s;'''
+
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query_u, (user_id,))
+
+    roles = [{'modul_name': r['modul_name'], 'action_name': r['action_name'], 'action_right': r['action_right']} for r in cursor.fetchall()]
+
+    return roles
