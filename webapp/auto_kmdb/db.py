@@ -51,7 +51,7 @@ def init_news(connection, source, source_url, clean_url, newspaper_name, newspap
     with connection.cursor(dictionary=True) as cursor:
         query = """INSERT INTO autokmdb_news
                 (source, source_url, clean_url, processing_step, cre_time, newspaper_name, newspaper_id, version_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(query, (0 if source == 'rss' else 1, source_url, clean_url, 0, cre_time, newspaper_name, newspaper_id, VERSION_NUMBER))
     connection.commit()
 
