@@ -56,11 +56,15 @@
     function closeModal() {
         isOpen.value = false
     }
+
+    const { article, allLabels, refresh } = defineProps(['article', 'allLabels', 'refresh']);
+
     async function deleteArticle() {
         await postUrl('http://'+hostUrl+'/api/annote/negative', {
             method: 'POST',
             body: {'id': article.id}
         });
+        refresh()
     }
     async function submitArticle() {
         let positivePersonsList = positivePersons.value.map((person) => person.list).flat()
@@ -93,11 +97,10 @@
                 'tags': positiveOthers.value.map((tag) => tag),
             }
         });
+        refresh()
         isOpen.value = false
     }
     const isOpen = ref(false)
-
-    const { article, allLabels } = defineProps(['article', 'allLabels']);
 
     article.date = new Date(Date.parse(article.date)).toLocaleString()
 
