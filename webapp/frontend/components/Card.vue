@@ -88,8 +88,8 @@
                 'description': article.description,
                 'text': article.text,
                 'positive_persons': positivePersonsList,
-                'positive_institutions': positiveInstitutions,
-                'positive_places': positivePlaces,
+                'positive_institutions': positiveInstitutions.value,
+                'positive_places': positivePlaces.value,
                 'tags': positiveOthers.value.map((tag) => tag),
             }
         });
@@ -101,7 +101,7 @@
 
     article.date = new Date(Date.parse(article.date)).toLocaleString()
 
-    // TODO: clean this code 
+    // TODO: clean this code
 
     var personsMap = {}
     for (const person of article.persons) {
