@@ -62,9 +62,11 @@ def annote():
     description = request.json['description']
     text = request.json['text']
     persons = request.json['positive_persons']
+    institutions = request.json['positive_institutions']
+    places = request.json['positive_places']
 
     with connection_pool.get_connection() as connection:
-        annote_positive(connection, id, url, title, title, description, text, persons)
+        annote_positive(connection, id, url, title, title, description, text, persons, institutions, places)
     return jsonify({}), 200
 
 
