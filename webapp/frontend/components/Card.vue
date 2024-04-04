@@ -4,9 +4,9 @@
             <p>
                 <a :href="article.url" class="font-bold text-xl mb-2">{{ article.title }}</a>
                 <UBadge class="m-1" color="gray">
-                <Icon v-if="!article.is_annoted" name="mdi:question-mark" color="gray" />
-                <Icon v-if="article.is_annoted && !article.is_annoted_corruption" name="mdi:trash" color="red" />
-                <Icon v-if="article.is_annoted && article.is_annoted_corruption" name="mdi:tick" color="green" />
+                <Icon v-if="article.annotation_label == null" name="mdi:question-mark" color="gray" />
+                <Icon v-if="article.annotation_label == 0" name="mdi:trash" color="red" />
+                <Icon v-if="article.annotation_label == 1" name="mdi:tick" color="green" />
                 </UBadge>
             </p>
             <UBadge class="m-1" color="blue"> {{ article.newspaper_name }} </UBadge>
