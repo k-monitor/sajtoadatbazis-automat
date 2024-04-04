@@ -68,6 +68,17 @@
             element.annotation_label = 1
         });
 
+        let positiveInstitutionsList = positiveInstitutions.value.map((institution) => institution.list).flat()
+        positiveInstitutionsList.forEach(element => {
+            element.annotation_label = 1
+        });
+
+        let positivePlacesList = positivePlaces.value.map((place) => place.list).flat()
+        positivePlacesList.forEach(element => {
+            element.annotation_label = 1
+        });
+
+
         await postUrl('http://'+hostUrl+'/api/annote/positive', {
             method: 'POST',
             body: {
@@ -77,8 +88,8 @@
                 'description': article.description,
                 'text': article.text,
                 'positive_persons': positivePersonsList,
-                'positive_institutions': positiveInstitutions.value.map((institution) => institution),
-                'positive_places': positivePlaces.value.map((place) => place),
+                'positive_institutions': positiveInstitutions,
+                'positive_places': positivePlaces,
                 'tags': positiveOthers.value.map((tag) => tag),
             }
         });
@@ -87,6 +98,8 @@
     const isOpen = ref(false)
 
     const { article, allLabels } = defineProps(['article', 'allLabels']);
+
+    // TODO: clean this code 
 
     var personsMap = {}
     for (const person of article.persons) {
@@ -111,6 +124,55 @@
     }
 
     article.persons = mappedPersons
+
+    var institutionsMap = {}
+    for (const institution of article.institutions) {
+        if (institutionsMap[institution.db_id])
+            institutionsMap[institution.db_id].push({ ...institution})
+        else
+            institutionsMap[institution.db_id] = [{ ...institution}]
+    }
+    var mappedInstitutions = []
+    for (const id in institutionsMap) {
+        let institutionList = institutionsMap[id]
+        if (id != null) {
+            let institution = { ...institutionList[0]}
+            institution['list'] =  [...institutionList]
+            mappedInstitutions.push({ ...institution})
+        } else {
+            for (const institution of institutionList) {
+                institution['list'] = [{ ...institution}]
+                mappedInstitutions.push({ ...institution})
+            }
+        }
+    }
+
+    article.institutions = mappedInstitutions
+
+    var placesMap = {}
+    for (const place of article.places) {
+        if (placesMap[place.db_id])
+            placesMap[place.db_id].push({ ...place})
+        else
+            placesMap[place.db_id] = [{ ...place}]
+    }
+    var mappedPlaces = []
+    for (const id in placesMap) {
+        let placeList = placesMap[id]
+        if (id != null) {
+            let place = { ...placeList[0]}
+            place['list'] =  [...placeList]
+            mappedPlaces.push({ ...place})
+        } else {
+            for (const place of placeList) {
+                place['list'] = [{ ...place}]
+                mappedPlaces.push({ ...place})
+            }
+        }
+    }
+
+    article.places = mappedPlaces
+
 
     var positivePersons = ref(article.persons.filter((person) => (person.classification_label == 1)))
     var positiveInstitutions = ref(article.institutions.filter((institution) => (institution.classification_label == 1)))

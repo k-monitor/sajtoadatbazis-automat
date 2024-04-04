@@ -215,23 +215,32 @@ def annote_negative(connection, id):
     connection.commit()
 
 
-def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons):
+def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places):
     query_1 = '''UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5 WHERE id = %s;'''
     query_2 = '''INSERT INTO news_news (source_url, source_url_string) VALUES (%s, %s);'''
     query_3 = '''INSERT INTO news_lang (news_id, lang, name, teaser, articletext) VALUES (%s, %s, %s, %s, %s)'''
 
     query_p = '''INSERT INTO news_persons_link (news_id, person_id) VALUES (%s, %s)'''
     query_auto_p = '''UPDATE autokmdb_persons SET annotation_label = 1 WHERE id = %s;'''
+    query_i = '''INSERT INTO news_institutions_link (news_id, person_id) VALUES (%s, %s)'''
+    query_auto_i = '''UPDATE autokmdb_institutions SET annotation_label = 1 WHERE id = %s;'''
+    query_pl = '''INSERT INTO news_places_link (news_id, person_id) VALUES (%s, %s)'''
+    query_auto_pl = '''UPDATE autokmdb_places SET annotation_label = 1 WHERE id = %s;'''
     with connection.cursor() as cursor:
         cursor.execute(query_1, (id,))
         cursor.execute(query_2, (source_url, source_url_string))
         news_id = cursor.lastrowid
-        print(news_id)
         cursor.execute(query_3, (news_id, 'hu', title, description, text))
         for person in persons:
             cursor.execute(query_p, (news_id, person['db_id']))
             cursor.execute(query_auto_p, (person['id'],))
-        # TODO add other entities
+        for institution in institutions:
+            cursor.execute(query_i, (news_id, institution['db_id']))
+            cursor.execute(query_auto_i, (institution['id'],))
+        for place in places:
+            cursor.execute(query_pl, (news_id, place['db_id']))
+            cursor.execute(query_auto_pl, (place['id'],))
+        # TODO add others
     connection.commit()
 
 
