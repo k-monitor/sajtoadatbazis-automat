@@ -231,6 +231,7 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
         cursor.execute(query_2, (source_url, source_url_string))
         news_id = cursor.lastrowid
         cursor.execute(query_3, (news_id, 'hu', title, description, text))
+        # TODO add missing (not linked) entities to db
         for person in persons:
             cursor.execute(query_p, (news_id, person['db_id']))
             cursor.execute(query_auto_p, (person['id'],))

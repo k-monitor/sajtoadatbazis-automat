@@ -5,7 +5,7 @@
     const selectedDomainAdd = ref(null)
 
     const statusItems = [{
-        label: 'Vegyes',
+        label: 'Ellenőrizendő',
         key: 'mixed'
     }, {
         label: 'Elfogadott',
@@ -116,7 +116,7 @@
 
     <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh" class="w-full">
         <template #item="{ item }" v-if="!pending">
-            <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" />
+            <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" :refresh="refresh" />
             <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="refresh" />
         </template>
         <template #item="{ item }" v-else>

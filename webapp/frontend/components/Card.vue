@@ -56,11 +56,15 @@
     function closeModal() {
         isOpen.value = false
     }
+
+    const { article, allLabels, refresh } = defineProps(['article', 'allLabels', 'refresh']);
+
     async function deleteArticle() {
         await postUrl('http://'+hostUrl+'/api/annote/negative', {
             method: 'POST',
             body: {'id': article.id}
         });
+        refresh()
     }
     async function submitArticle() {
         let positivePersonsList = positivePersons.value.map((person) => person.list).flat()
@@ -88,20 +92,19 @@
                 'description': article.description,
                 'text': article.text,
                 'positive_persons': positivePersonsList,
-                'positive_institutions': positiveInstitutions,
-                'positive_places': positivePlaces,
+                'positive_institutions': positiveInstitutions.value,
+                'positive_places': positivePlaces.value,
                 'tags': positiveOthers.value.map((tag) => tag),
             }
         });
+        refresh()
         isOpen.value = false
     }
     const isOpen = ref(false)
 
-    const { article, allLabels } = defineProps(['article', 'allLabels']);
-
     article.date = new Date(Date.parse(article.date)).toLocaleString()
 
-    // TODO: clean this code 
+    // TODO: clean this code
 
     var personsMap = {}
     for (const person of article.persons) {
