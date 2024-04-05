@@ -38,9 +38,10 @@ def api_articles():
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', 'mixed', type=str)
     domain = request.args.get('domain', -1, type=int)
+    q = request.args.get('q', 'mixed', type=str)
 
     with connection_pool.get_connection() as connection:
-        length, articles = get_articles(connection, page, status, domain)
+        length, articles = get_articles(connection, page, status, domain, '%'+q+'%')
         articles = [reformat_article(a) for a in articles]
 
     return jsonify({'pages': ceil(length/10), 'articles': articles}), 200
