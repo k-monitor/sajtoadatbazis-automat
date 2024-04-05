@@ -200,13 +200,13 @@ def get_articles(connection, page, status, domain=-1, q=''):
     if domain and domain != -1 and isinstance(domain, int):
         query += ' AND n.newspaper_id = '+str(domain)
     
-    query += ' AND (n.title LIKE %s OR n.description LIKE %s)'
+    query += ' AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)'
 
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute('SET SESSION group_concat_max_len = 30000;')
-        cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query, (q,q))
+        cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query, (q,q,q,q))
         count = cursor.fetchone()['COUNT(id)']
-        cursor.execute(paginate_query(selection + query + group, 10, page), (q,q))
+        cursor.execute(paginate_query(selection + query + group, 10, page), (q,q,q,q))
         return count, cursor.fetchall()
 
 
