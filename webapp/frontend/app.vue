@@ -94,7 +94,11 @@
         <div>
         <UContainer class="my-1 flex lg:px-0 px-4 sm:px-0 ml-1">
             <p>Kiválasztott hírportál: &nbsp;</p>
-            <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" value-attribute="id" :options="allDomains" @change="refresh" />
+            <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" value-attribute="id" :options="allDomains" @change="refresh">
+                <template #option="{ option }">
+                    <span><Icon v-if="option.has_rss" name="mdi:rss" color="orange"/> {{ option.name }}</span>
+                </template>
+            </UInputMenu>
             <UInput class="px-4" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
         </UContainer>
     </div>
@@ -105,7 +109,8 @@
             <p>Új cikk</p>
             <UInput class="my-2" v-model="newUrl" placeholder="https://telex.hu/..."/>
             <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
-                <UInputMenu class="w-48" placeholder="válassz egy hírportált" v-model="selectedDomainAdd" option-attribute="name" :options="allLabels['domains']"  />
+                <UInputMenu class="w-48" placeholder="válassz egy hírportált" v-model="selectedDomainAdd" option-attribute="name" :options="allLabels['domains']">
+                </UInputMenu>
                 <UButton @click="addUrl">Hozzáad</UButton>
             </UContainer>
         </div>
