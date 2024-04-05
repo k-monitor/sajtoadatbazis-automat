@@ -173,7 +173,7 @@ def paginate_query(query, page_size, page_number):
     return query + f" LIMIT {page_size} OFFSET {offset}"
 
 
-def get_articles(connection, page, status, domain=-1):
+def get_articles(connection, page, status, domain=-1, q=''):
     query = ''
 
     selection = '''SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label,
@@ -199,12 +199,14 @@ def get_articles(connection, page, status, domain=-1):
         return
     if domain and domain != -1 and isinstance(domain, int):
         query += ' AND n.newspaper_id = '+str(domain)
+    
+    query += ' AND (n.title LIKE %s OR n.description LIKE %s)'
 
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute('SET SESSION group_concat_max_len = 30000;')
-        cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query)
+        cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query, (q,q))
         count = cursor.fetchone()['COUNT(id)']
-        cursor.execute(paginate_query(selection + query + group, 10, page))
+        cursor.execute(paginate_query(selection + query + group, 10, page), (q,q))
         return count, cursor.fetchall()
 
 

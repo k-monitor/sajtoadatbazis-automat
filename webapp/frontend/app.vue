@@ -31,12 +31,14 @@
         allDomains.unshift({name: 'mind', id: -1})
     allDomains = ref(allDomains)
     const selectedDomain = ref(allDomains[0])
+    let q = ref('')
 
     const { pending, data, error, refresh } = await useLazyFetch('http://'+hostUrl+'/api/articles', {
         query: {
             page: page,
             status: status,
             domain: selectedDomain,
+            q: q,
         },
     })
 
@@ -92,6 +94,7 @@
         <UContainer class="my-1 flex lg:px-0 px-4 sm:px-0 ml-1">
             <p>Kiválasztott hírportál: &nbsp;</p>
             <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" value-attribute="id" :options="allDomains" @change="refresh" />
+            <UInput class="px-4" name="q" v-model="q" color="primary" variant="outline" placeholder="Search..." />
         </UContainer>
     </UContainer>
 
