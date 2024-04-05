@@ -89,13 +89,15 @@
 </script>
 
 <template>
-    <UContainer class="my-1 justify-between flex lg:px-0 px-4 sm:px-0 ml-1">
+    <UContainer class="my-1 justify-between flex lg:px-0 px-4 sm:px-0 ml-1 max-w-full">
         <UButton class="mr-1" @click="openNewUrl">Új cikk</UButton>
+        <div>
         <UContainer class="my-1 flex lg:px-0 px-4 sm:px-0 ml-1">
             <p>Kiválasztott hírportál: &nbsp;</p>
             <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" value-attribute="id" :options="allDomains" @change="refresh" />
-            <UInput class="px-4" name="q" v-model="q" color="primary" variant="outline" placeholder="Search..." />
+            <UInput class="px-4" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
         </UContainer>
+    </div>
     </UContainer>
 
     <UModal v-model="isOpen">
@@ -117,7 +119,7 @@
       </div>
     </UModal>
 
-    <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh" class="w-full">
+    <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh">
         <template #item="{ item }" v-if="!pending">
             <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" :refresh="refresh" />
             <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="refresh" />
