@@ -43,17 +43,18 @@ def get_all_others(connection):
 
 @cache
 def get_all_newspapers(connection):
-    #return get_all(connection, 'news_newspapers', 'newspaper_id', 'name')
     query = '''SELECT n.newspaper_id AS id, n.name AS name, n.rss_url AS rss_url, COUNT(a.newspaper_id) AS article_count FROM news_newspapers n
     LEFT JOIN autokmdb_news a ON n.newspaper_id = a.newspaper_id WHERE n.status = "Y"
     GROUP BY n.newspaper_id, n.name, n.rss_url;'''
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query)
-        return [{'id': r['id'],
+        l = [{'id': r['id'],
                  'name': r['name'],
                  'has_rss': bool(r['rss_url']),
                  'article_count': r['article_count'],
                  } for r in cursor.fetchall()]
+        l.sort(key=lambda r: r['article_count'], reverse=True)
+        return l
 
 
 def init_news(connection, source, source_url, clean_url, newspaper_name, newspaper_id):
