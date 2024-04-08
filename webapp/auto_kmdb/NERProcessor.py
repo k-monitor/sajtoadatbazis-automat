@@ -14,8 +14,8 @@ class NERProcessor(Processor):
 
     def load_model(self):
         self.classifier = pipeline("ner", model="boapps/kmdb_ner_model",
-                                   aggregation_strategy="average",
-                                   tokenizer=AutoTokenizer.from_pretrained("boapps/kmdb_ner_model", model_max_length=512))
+                                   aggregation_strategy="first",
+                                   tokenizer=AutoTokenizer.from_pretrained("SZTAKI-HLT/hubert-base-cc", model_max_length=512))
         self.done = True
         print("NER model loaded")
 
