@@ -18,14 +18,14 @@
         key: 'processing'
     }]
 
-    var hostUrl = 'kmonitordemo.duckdns.org'
+    var baseUrl = 'https://adatbazis.k-monitor.hu/autokmdb'
 
     async function getUrl(url) {
         return await $fetch(url)
     }
 
 
-    const { data: allLabels } = await useFetch('http://'+hostUrl+'/api/all_labels');
+    const { data: allLabels } = await useFetch(baseUrl+'/api/all_labels');
     let allDomains = [...allLabels.value.domains]
     if (allDomains[0].id != -1)
         allDomains.unshift({name: 'mind', id: -1})
@@ -33,7 +33,7 @@
     const selectedDomain = ref(allDomains[0])
     let q = ref('')
 
-    const { pending, data, error, refresh } = await useLazyFetch('http://'+hostUrl+'/api/articles', {
+    const { pending, data, error, refresh } = await useLazyFetch(baseUrl+'/api/articles', {
         query: {
             page: page,
             status: status,
@@ -65,7 +65,7 @@
     async function addUrl () {
         isOpen.value = false
         try {
-            const {data, error} = await $fetch('http://kmonitordemo.duckdns.org/api/add_url', {
+            const {data, error} = await $fetch(baseUrl+'/api/add_url', {
                 method: 'POST',
                 body: {
                     'url': newUrl,

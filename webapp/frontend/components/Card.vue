@@ -53,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-    var hostUrl = 'kmonitordemo.duckdns.org'
+    var baseUrl = 'https://adatbazis.k-monitor.hu/autokmdb'
     //hostUrl = 'localhost:3000'
 
     async function postUrl(url, data) {
@@ -70,7 +70,7 @@
     const { article, allLabels, refresh } = defineProps(['article', 'allLabels', 'refresh']);
 
     async function deleteArticle() {
-        await postUrl('http://'+hostUrl+'/api/annote/negative', {
+        await postUrl(baseUrl+'/api/annote/negative', {
             method: 'POST',
             body: {'id': article.id}
         });
@@ -93,7 +93,7 @@
         });
 
 
-        await postUrl('http://'+hostUrl+'/api/annote/positive', {
+        await postUrl(baseUrl+'/api/annote/positive', {
             method: 'POST',
             body: {
                 'id': article.id,
