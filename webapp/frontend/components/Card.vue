@@ -19,26 +19,36 @@
                 <UButton v-if="!article.is_annoted || !article.is_annoted_corruption" @click="openModal" class="ml-auto">Tovább</UButton>
             </UContainer>
         </div>
-        <UModal v-model="isOpen">
-            <div class="p-4">
-                <p>Cím:</p>
-                <UInput class="my-2" v-model="article.title"/>
-                <p>URL:</p>
-                <UInput class="my-2" v-model="article.url"/>
-                <p>Leírás:</p>
-                <UTextarea class="my-2" v-model="article.description"/>
-                <p>Szöveg:</p>
-                <UTextarea class="my-2" v-model="article.text" rows="20"/>
-                <SelectMenu class="my-2" :list="article.persons" type="személy" :positive-list="positivePersons" @update:positiveList="updatePositivePersons" :labels="allLabels['person']" />
-                <SelectMenu class="my-2" :list="article.institutions" type="intézmény" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
-                <SelectMenu class="my-2" :list="article.places" type="helyszín" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
-                <SelectMenu class="my-2" :list="article.others" type="egyéb" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['other']" />
+        <UModal v-model="isOpen"  :ui="{ width: 'sm:max-w-6xl' }">
+            <div class="p-4 w-full">
+                <div  class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
+                    <div class="max-w-2xl mx-4 flex-grow">
+                        <p>Cím:</p>
+                        <UInput class="my-2" v-model="article.title"/>
+                        <p>URL:</p>
+                        <UInput class="my-2" v-model="article.url"/>
+                        <p>Leírás:</p>
+                        <UTextarea class="my-2" v-model="article.description"/>
+                        <p>Szöveg:</p>
+                        <UTextarea class="my-2" v-model="article.text" rows="20"/>
+                    </div>
+
+                    <div class="max-w-sm mx-4 flex-grow">
+                        <SelectMenu class="my-2" :list="article.persons" type="személy" :positive-list="positivePersons" @update:positiveList="updatePositivePersons" :labels="allLabels['person']" />
+                        <SelectMenu class="my-2" :list="article.institutions" type="intézmény" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
+                        <SelectMenu class="my-2" :list="article.places" type="helyszín" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
+                        <SelectMenu class="my-2" :list="article.others" type="egyéb" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['other']" />
+                    </div>
+
+                </div>
                 <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
-                    <UButton color="gray" @click="closeModal">Mégse</UButton>
-                    <UButton @click="submitArticle">Elfogad</UButton>
-                </UContainer>
+                        <UButton color="gray" @click="closeModal">Mégse</UButton>
+                        <UButton @click="submitArticle">Elfogad</UButton>
+                    </UContainer>
+
             </div>
         </UModal>
+
     </div>
 </template>
 
@@ -177,7 +187,6 @@
     }
 
     article.places = mappedPlaces
-
 
     var positivePersons = ref(article.persons.filter((person) => (person.classification_label == 1)))
     var positiveInstitutions = ref(article.institutions.filter((institution) => (institution.classification_label == 1)))
