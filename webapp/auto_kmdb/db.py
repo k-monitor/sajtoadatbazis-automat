@@ -231,7 +231,7 @@ def annote_negative(connection, id):
 
 def create_person(connection, name):
     print('adding', name)
-    query = '''INSERT INTO news_persons (status, name, cre_id, mod_id, import_id) VALUES (%s, %s);'''
+    query = '''INSERT INTO news_persons (status, name, cre_id, mod_id, import_id) VALUES (%s, %s, %s, %s, %s);'''
     with connection.cursor() as cursor:
         cursor.execute(query, ('Y', name, 865, 865, 0))
         db_id = cursor.lastrowid
@@ -241,7 +241,7 @@ def create_person(connection, name):
 
 
 def create_institution(connection, name):
-    query = '''INSERT INTO news_institutions (status, name, cre_id, mod_id, import_id) VALUES (%s, %s);'''
+    query = '''INSERT INTO news_institutions (status, name, cre_id, mod_id, import_id) VALUES (%s, %s, %s, %s, %s);'''
     with connection.cursor() as cursor:
         cursor.execute(query, ('Y', name, 865, 865, 0))
         db_id = cursor.lastrowid
