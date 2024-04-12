@@ -8,11 +8,12 @@
             searchable-placeholder="Keresés..."
             class="my-2"
             v-model="localPositiveList" :options="localList" by="id" 
+            option-attribute="name"
             creatable
             multiple
         >
         <template #label>
-            <span v-if="localPositiveList.length" class="truncate">{{ localPositiveList.map((item) => item.db_name != 'null' ? item.db_name : item.name).join(', ') }}</span>
+            <span v-if="localPositiveList.length" class="truncate">{{ localPositiveList.map((item) => (item.db_name != 'null' && item.db_name) ? item.db_name : item.name).join(', ') }}</span>
             <span v-else>Válassz ki elemeket</span>
         </template>
         <template #option-create="{ option }">
