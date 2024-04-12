@@ -229,6 +229,20 @@ def annote_negative(connection, id):
     connection.commit()
 
 
+def create_person(connection, name):
+    query = '''INSERT INTO news_persons (status, name, cre_id, mod_id, import_id) VALUES (%s, %s);'''
+    with connection.cursor() as cursor:
+        cursor.execute(query, ('Y', name, 865, 865, 0))
+    connection.commit()
+
+
+def create_institution(connection, name):
+    query = '''INSERT INTO news_institutions (status, name, cre_id, mod_id, import_id) VALUES (%s, %s);'''
+    with connection.cursor() as cursor:
+        cursor.execute(query, ('Y', name, 865, 865, 0))
+    connection.commit()
+
+
 def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places):
     query_1 = '''UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5 WHERE id = %s;'''
     query_2 = '''INSERT INTO news_news (source_url, source_url_string) VALUES (%s, %s);'''
@@ -245,7 +259,15 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
         cursor.execute(query_2, (source_url, source_url_string))
         news_id = cursor.lastrowid
         cursor.execute(query_3, (news_id, 'hu', title, description, text))
-        # TODO add missing (not linked) entities to db
+        for person in persons:
+            if 'db_id' not in person and person['name']:
+                create_person(connection, person['name'])
+                person['db_id'] = cursor.lastrowid
+        for institution in institutions:
+            if 'db_id' not in institution and institution['name']:
+                create_institution(connection, institution['name'])
+                institution['db_id'] = cursor.lastrowid
+
         for person in persons:
             cursor.execute(query_p, (news_id, person['db_id']))
             cursor.execute(query_auto_p, (person['id'],))
