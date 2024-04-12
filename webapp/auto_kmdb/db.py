@@ -230,17 +230,23 @@ def annote_negative(connection, id):
 
 
 def create_person(connection, name):
+    print('adding', name)
     query = '''INSERT INTO news_persons (status, name, cre_id, mod_id, import_id) VALUES (%s, %s);'''
     with connection.cursor() as cursor:
         cursor.execute(query, ('Y', name, 865, 865, 0))
+        db_id = cursor.lastrowid
+        print(db_id)
     connection.commit()
+    return db_id
 
 
 def create_institution(connection, name):
     query = '''INSERT INTO news_institutions (status, name, cre_id, mod_id, import_id) VALUES (%s, %s);'''
     with connection.cursor() as cursor:
         cursor.execute(query, ('Y', name, 865, 865, 0))
+        db_id = cursor.lastrowid
     connection.commit()
+    return db_id
 
 
 def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places):
@@ -260,13 +266,13 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
         news_id = cursor.lastrowid
         cursor.execute(query_3, (news_id, 'hu', title, description, text))
         for person in persons:
-            if 'db_id' not in person and person['name']:
-                create_person(connection, person['name'])
-                person['db_id'] = cursor.lastrowid
+            if not person['db_id'] and person['name']:
+                db_id = create_person(connection, person['name'])
+                person['db_id'] = db_id
         for institution in institutions:
-            if 'db_id' not in institution and institution['name']:
-                create_institution(connection, institution['name'])
-                institution['db_id'] = cursor.lastrowid
+            if not institution['db_id'] and institution['name']:
+                db_id = create_institution(connection, institution['name'])
+                institution['db_id'] = db_id
 
         for person in persons:
             cursor.execute(query_p, (news_id, person['db_id']))
