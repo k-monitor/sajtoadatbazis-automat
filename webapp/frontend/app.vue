@@ -16,6 +16,9 @@
     }, {
         label: 'Feldolgozás alatt',
         key: 'processing'
+    }, {
+        label: 'Mindegyik',
+        key: 'all'
     }]
 
     var baseUrl = 'https://adatbazis.k-monitor.hu/autokmdb'
