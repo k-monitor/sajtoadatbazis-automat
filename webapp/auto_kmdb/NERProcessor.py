@@ -7,6 +7,18 @@ from time import sleep
 from auto_kmdb.db import connection_pool
 
 
+def join_entities(classifications):
+    new_classifications = []
+    last_end = -1
+    for classification in classifications:
+        if classification['start'] == last_end:
+            new_classifications[-1]['word'] += classification['word']
+        else:
+            new_classifications.append(classification)
+        last_end = classification['end']
+    return new_classifications
+
+
 class NERProcessor(Processor):
     def __init__(self):
         #super().__init__()
@@ -16,6 +28,7 @@ class NERProcessor(Processor):
         self.classifier = pipeline("ner", model="boapps/kmdb_ner_model",
                                    aggregation_strategy="first", stride=8,
                                    tokenizer=AutoTokenizer.from_pretrained("SZTAKI-HLT/hubert-base-cc", model_max_length=512))
+        
         self.done = True
         print("NER model loaded")
 
@@ -26,7 +39,7 @@ class NERProcessor(Processor):
         self.people = []
         self.institutions = []
         self.places = []
-        self.classifications = self.classifier(self.text)
+        self.classifications = join_entities(self.classifier(self.text))
         for entity in self.classifications:
             print(entity)
             label, e_type = entity['entity_group'].split('_')
