@@ -1,6 +1,6 @@
 <template>
     <div class="p-4">
-        <div class="max-w-sm rounded overflow-hidden shadow-lg mb-4 p-4">
+        <div class="max-w-md rounded overflow-hidden shadow-lg mb-4 p-4">
             <p>
                 <a :href="article.url" class="font-bold text-xl mb-2">{{ article.title }}</a>
                 <UBadge class="m-1" color="gray">
@@ -11,15 +11,15 @@
             </p>
             <UBadge class="m-1" color="blue"> {{ article.newspaper_name }} </UBadge>
             <UBadge v-if="article.source == 1" class="m-1" color="orange"> manuálisan hozzáadott </UBadge>
-            <p class="text-base">{{ article.description }}</p>
-            <p class="text-base">{{ article.date }}</p>
+            <p class="text-base text-pretty">{{ article.description }}</p>
+            <p class="text-base text-right py-1">{{ article.date }}</p>
 
-            <UContainer class="flex justify-between px-0 sm:px-0 lg:px-0">
-                <UButton v-if="!article.is_annoted || article.is_annoted_corruption" color="red" @click="deleteArticle">Elutasít</UButton>
-                <UButton v-if="!article.is_annoted || !article.is_annoted_corruption" @click="openModal" class="ml-auto">Tovább</UButton>
+            <UContainer v-if="article.processing_step >= 5" class="flex justify-between px-0 sm:px-0 lg:px-0">
+                <UButton v-if="article.annotation_label != 0" color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Kiszed" }}</UButton>
+                <UButton v-if="true" @click="openModal" class="ml-auto">{{ article.annotation_label == null ? "Tovább" : "Szerkeszt" }}</UButton>
             </UContainer>
         </div>
-        <UModal v-model="isOpen"  :ui="{ width: 'sm:max-w-6xl' }">
+        <UModal v-model="isOpen"  :ui="{ width: 'sm:max-w-7xl' }">
             <div class="p-4 w-full">
                 <div  class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
                     <div class="max-w-2xl mx-4 flex-grow">
@@ -33,7 +33,7 @@
                         <UTextarea class="my-2" v-model="article.text" rows="20"/>
                     </div>
 
-                    <div class="max-w-sm mx-4 flex-grow">
+                    <div class="max-w-lg mx-4 flex-grow">
                         <SelectMenu class="my-2" :list="article.persons" type="személy" :positive-list="positivePersons" @update:positiveList="updatePositivePersons" :labels="allLabels['person']" />
                         <SelectMenu class="my-2" :list="article.institutions" type="intézmény" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
                         <SelectMenu class="my-2" :list="article.places" type="helyszín" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
