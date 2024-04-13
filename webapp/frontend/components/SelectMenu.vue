@@ -37,7 +37,7 @@
 
         return labels.filter((item: any) => {
             return item.name != null && item.name.toLowerCase().includes(q.toLowerCase())
-        }).slice(0, 5).map((item: any) => {return {'id': item.id, 'name': item.name, 'db_name': item.name}})
+        }).slice(0, 5).map((item: any) => {return {'id': 'db_'+item.id, 'db_id': item.id, 'name': item.name, 'db_name': item.name}})
     }
 
     const props = defineProps(['list', 'positiveList', 'labels', 'type']);
