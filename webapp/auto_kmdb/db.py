@@ -207,7 +207,7 @@ def get_articles(connection, page, status, domain=-1, q=''):
     elif status == 'processing':
         query = '''WHERE processing_step < 4'''
     elif status == 'all':
-        pass
+        query = '''WHERE processing_step >= 0'''
     else:
         print('Invalid status provided!')
         return

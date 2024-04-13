@@ -14,9 +14,9 @@
             <p class="text-base text-pretty">{{ article.description }}</p>
             <p class="text-base text-right py-1">{{ article.date }}</p>
 
-            <UContainer v-if="article.processing_step >= 5" class="flex justify-between px-0 sm:px-0 lg:px-0">
+            <UContainer v-if="article.processing_step >= 4" class="flex justify-between px-0 sm:px-0 lg:px-0">
                 <UButton v-if="article.annotation_label != 0" color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Kiszed" }}</UButton>
-                <UButton v-if="true" @click="openModal" class="ml-auto">{{ article.annotation_label == null ? "Tovább" : "Szerkeszt" }}</UButton>
+                <UButton v-if="true" @click="openModal" class="ml-auto">{{ article.annotation_label == null ? "Tovább" : article.annotation_label == 0 ? "Mégis elfogad" : "Szerkeszt" }}</UButton>
             </UContainer>
         </div>
         <UModal v-model="isOpen"  :ui="{ width: 'sm:max-w-7xl' }">
