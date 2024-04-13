@@ -301,13 +301,16 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
 
         for person in persons:
             cursor.execute(query_p, (news_id, person['db_id']))
-            cursor.execute(query_auto_p, (person['id'],))
+            if isinstance(person['id'], int):
+                cursor.execute(query_auto_p, (person['id'],))
         for institution in institutions:
             cursor.execute(query_i, (news_id, institution['db_id']))
-            cursor.execute(query_auto_i, (institution['id'],))
+            if isinstance(institution['id'], int):
+                cursor.execute(query_auto_i, (institution['id'],))
         for place in places:
             cursor.execute(query_pl, (news_id, place['db_id']))
-            cursor.execute(query_auto_pl, (place['id'],))
+            if isinstance(place['id'], int):
+                cursor.execute(query_auto_pl, (place['id'],))
         # TODO add others
     connection.commit()
 
