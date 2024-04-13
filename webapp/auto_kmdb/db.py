@@ -249,8 +249,14 @@ def get_articles(connection, page, status, domain=-1, q=''):
 
 def annote_negative(connection, id):
     query = '''UPDATE autokmdb_news SET annotation_label = 0, processing_step = 5 WHERE id = %s;'''
+    query_id = '''SELECT news_id FROM autokmdb_news WHERE id = %s;'''
+    query_remove = '''UPDATE news_news SET active = 'N' WHERE news_id = %s;'''
     with connection.cursor() as cursor:
         cursor.execute(query, (id,))
+        cursor.execute(query_id, (id,))
+        news_id = cursor.fetchone()['news_id']
+        if news_id:
+            cursor.execute(query_remove, (news_id,))
     connection.commit()
 
 
@@ -275,7 +281,7 @@ def create_institution(connection, name):
 
 
 def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places):
-    query_1 = '''UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5 WHERE id = %s;'''
+    query_1 = '''UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s WHERE id = %s;'''
     query_2 = '''INSERT INTO news_news (source_url, source_url_string) VALUES (%s, %s);'''
     query_3 = '''INSERT INTO news_lang (news_id, lang, name, teaser, articletext) VALUES (%s, %s, %s, %s, %s)'''
 
@@ -286,9 +292,9 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
     query_pl = '''INSERT INTO news_places_link (news_id, place_id) VALUES (%s, %s)'''
     query_auto_pl = '''UPDATE autokmdb_places SET annotation_label = 1 WHERE id = %s;'''
     with connection.cursor() as cursor:
-        cursor.execute(query_1, (id,))
         cursor.execute(query_2, (source_url, source_url_string))
         news_id = cursor.lastrowid
+        cursor.execute(query_1, (id, news_id))
         cursor.execute(query_3, (news_id, 'hu', title, description, text))
         for person in persons:
             if not person['db_id'] and person['name']:
