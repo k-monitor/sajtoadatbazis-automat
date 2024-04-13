@@ -3,6 +3,8 @@
     const statusId = ref(0)
     let q = ref('')
 
+    var baseUrl = 'https://adatbazis.k-monitor.hu/autokmdb'
+
     const allLabels = useFetch(baseUrl+'/api/all_labels').data;
     let allDomains = computed(() => allLabels.value == null ? [] : [{name: 'mind', id: -1}].concat(allLabels.value?.domains))
     const selectedDomain = ref(allDomains[0])
@@ -14,20 +16,22 @@
         },
     }).data;
 
+    console.log(articleCounts)
+
     const statusItems = computed(() => [{
-        label: `Ellenőrizendő (${articleCounts['mixed']})`,
+        label: `Ellenőrizendő (${articleCounts.value['mixed']})`,
         key: 'mixed'
     }, {
-        label: `Elfogadott (${articleCounts['mixed']})`,
+        label: `Elfogadott (${articleCounts.value['positive']})`,
         key: 'positive'
     }, {
-        label: `Elutasított (${articleCounts['mixed']})`,
+        label: `Elutasított (${articleCounts.value['negative']})`,
         key: 'negative'
     }, {
-        label: `Feldolgozás alatt (${articleCounts['mixed']})`,
+        label: `Feldolgozás alatt (${articleCounts.value['processing']})`,
         key: 'processing'
     }, {
-        label: `Mindegyik (${articleCounts['all']})`,
+        label: `Mindegyik (${articleCounts.value['all']})`,
         key: 'all'
     }]);
     const status = computed(() => statusItems.value[statusId.value].key)
@@ -49,8 +53,6 @@
     console.log(articleQuery)
 
     const selectedDomainAdd = ref(null)
-
-    var baseUrl = 'https://adatbazis.k-monitor.hu/autokmdb'
 
     async function getUrl(url) {
         return await $fetch(url)
