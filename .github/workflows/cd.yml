@@ -34,4 +34,4 @@ jobs:
           podman image rm localhost/webapp_auto_kmdb
           podman image rm localhost/webapp_frontend
           podman image rm localhost/webapp_ssh_tunnel
-          podman-compose up -d --no-cache
+          podman-compose up -d
