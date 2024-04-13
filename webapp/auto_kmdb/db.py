@@ -185,10 +185,33 @@ def paginate_query(query, page_size, page_number):
     return query + f" LIMIT {page_size} OFFSET {offset}"
 
 
+def get_article_counts(connection, domain=-1, q=''):
+    article_counts = {}
+    for status in ['mixed', 'positive', 'negative', 'processing', 'all']:
+        if status == 'mixed':
+            query = '''WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL'''
+        elif status == 'positive':
+            query = '''WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 1'''
+        elif status == 'negative':
+            query = '''WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 0'''
+        elif status == 'processing':
+            query = '''WHERE processing_step < 4'''
+        elif status == 'all':
+            query = '''WHERE processing_step >= 0'''
+        if domain and domain != -1 and isinstance(domain, int):
+            query += ' AND n.newspaper_id = '+str(domain)
+        query += ' AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)'
+        with connection.cursor(dictionary=True) as cursor:
+            cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query, (q,q,q,q))
+            count = cursor.fetchone()['COUNT(id)']
+            article_counts[status] = count
+    return article_counts
+
+
 def get_articles(connection, page, status, domain=-1, q=''):
     query = ''
 
-    selection = '''SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step,
+    selection = '''SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step, skip_reason,
             n.text AS text, n.cre_time AS date,
             (SELECT GROUP_CONCAT(CONCAT('{"name":"', p.name, '", "id":',p.id, ', "db_id":',COALESCE(p.person_id, 'null'), ', "db_name": "',COALESCE(p.person_name, 'null'), '", "classification_score":',p.classification_score, ', "classification_label":',p.classification_label, ', "annotation_label":',COALESCE(p.annotation_label, 'null'), ', "found_name":"',COALESCE(p.found_name, 'null'), '", "found_position":',COALESCE(p.found_position, 'null'),'}') SEPARATOR ',') FROM autokmdb_persons p WHERE n.id = p.autokmdb_news_id) AS persons,
             (SELECT GROUP_CONCAT(CONCAT('{"name":"', i.name, '", "id":',i.id, ', "db_id":',COALESCE(i.institution_id, 'null'), ', "db_name": "',COALESCE(i.institution_name, 'null'), '", "classification_score":',i.classification_score, ', "classification_label":',i.classification_label, ', "annotation_label":',COALESCE(i.annotation_label, 'null'), ', "found_name":"',COALESCE(i.found_name, 'null'), '", "found_position":',COALESCE(i.found_position, 'null'),'}') SEPARATOR ',') FROM autokmdb_institutions i WHERE n.id = i.autokmdb_news_id) AS institutions,

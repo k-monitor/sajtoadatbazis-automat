@@ -4,9 +4,11 @@
             <p>
                 <a :href="article.url" class="font-bold text-xl mb-2">{{ article.title }}</a>
                 <UBadge class="m-1" color="gray">
-                <Icon v-if="article.annotation_label == null" name="mdi:question-mark" color="gray" />
-                <Icon v-if="article.annotation_label == 0" name="mdi:trash" color="red" />
-                <Icon v-if="article.annotation_label == 1" name="mdi:tick" color="green" />
+                <Icon size="1.5em" v-if="article.skip_reason > 1" name="mdi:alert-circle-outline" color="orange" />
+                <Icon size="1.5em" v-else-if="article.processing_step < 4" name="mdi:database-clock-outline" color="gray" />
+                <Icon size="1.5em" v-else-if="article.annotation_label == null" name="mdi:question-mark" color="gray" />
+                <Icon size="1.5em" v-else-if="article.annotation_label == 0" name="mdi:database-remove-outline" color="red" />
+                <Icon size="1.5em" v-else-if="article.annotation_label == 1" name="mdi:database-check-outline" color="green" />
                 </UBadge>
             </p>
             <UBadge class="m-1" color="blue"> {{ article.newspaper_name }} </UBadge>
@@ -14,7 +16,8 @@
             <p class="text-base text-pretty">{{ article.description }}</p>
             <p class="text-base text-right py-1">{{ article.date }}</p>
 
-            <UContainer v-if="article.processing_step >= 4" class="flex justify-between px-0 sm:px-0 lg:px-0">
+            <UButton v-if="article.skip_reason > 1" color="grey" @click="retryArticle">Újra</UButton>
+            <UContainer v-else-if="article.processing_step >= 4 " class="flex justify-between px-0 sm:px-0 lg:px-0">
                 <UButton v-if="article.annotation_label != 0" color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Kiszed" }}</UButton>
                 <UButton v-if="true" @click="openModal" class="ml-auto">{{ article.annotation_label == null ? "Tovább" : article.annotation_label == 0 ? "Mégis elfogad" : "Szerkeszt" }}</UButton>
             </UContainer>
@@ -69,6 +72,9 @@
 
     const { article, allLabels, refresh } = defineProps(['article', 'allLabels', 'refresh']);
 
+    async function retryArticle() {
+        // TODO
+    }
     async function deleteArticle() {
         await postUrl(baseUrl+'/api/annote/negative', {
             method: 'POST',
