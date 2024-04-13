@@ -4,9 +4,11 @@
             <p>
                 <a :href="article.url" class="font-bold text-xl mb-2">{{ article.title }}</a>
                 <UBadge class="m-1" color="gray">
-                <Icon v-if="article.annotation_label == null" name="mdi:question-mark" color="gray" />
-                <Icon v-if="article.annotation_label == 0" name="mdi:trash" color="red" />
-                <Icon v-if="article.annotation_label == 1" name="mdi:tick" color="green" />
+                <Icon size="1.5em" v-if="article.skip_reason > 1" name="mdi:alert-circle-outline" color="orange" />
+                <Icon size="1.5em" v-else-if="article.processing_step < 4" name="mdi:database-clock-outline" color="gray" />
+                <Icon size="1.5em" v-else-if="article.annotation_label == null" name="mdi:question-mark" color="gray" />
+                <Icon size="1.5em" v-else-if="article.annotation_label == 0" name="mdi:database-remove-outline" color="red" />
+                <Icon size="1.5em" v-else-if="article.annotation_label == 1" name="mdi:database-check-outline" color="green" />
                 </UBadge>
             </p>
             <UBadge class="m-1" color="blue"> {{ article.newspaper_name }} </UBadge>
