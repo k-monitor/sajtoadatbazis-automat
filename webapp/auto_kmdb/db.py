@@ -257,9 +257,9 @@ def annote_negative(connection, id):
     query_remove_other = '''DELETE FROM news_others_link WHERE news_id = %s;'''
     query_remove_lang = '''DELETE FROM news_lang WHERE news_id = %s;'''
     with connection.cursor() as cursor:
-        cursor.execute(query, (id,))
         cursor.execute(query_id, (id,))
-        news_id = cursor.fetchone()['news_id']
+        news_id = cursor.fetchone()[0]
+        cursor.execute(query, (id,))
         if news_id:
             cursor.execute(query_remove, (news_id,))
             cursor.execute(query_remove_person, (news_id,))
