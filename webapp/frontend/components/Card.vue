@@ -16,7 +16,8 @@
             <p class="text-base text-pretty">{{ article.description }}</p>
             <p class="text-base text-right py-1">{{ article.date }}</p>
 
-            <UContainer v-if="article.processing_step >= 4" class="flex justify-between px-0 sm:px-0 lg:px-0">
+            <UButton v-if="article.skip_reason > 1" color="grey" @click="retryArticle">Újra</UButton>
+            <UContainer v-else-if="article.processing_step >= 4 " class="flex justify-between px-0 sm:px-0 lg:px-0">
                 <UButton v-if="article.annotation_label != 0" color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Kiszed" }}</UButton>
                 <UButton v-if="true" @click="openModal" class="ml-auto">{{ article.annotation_label == null ? "Tovább" : article.annotation_label == 0 ? "Mégis elfogad" : "Szerkeszt" }}</UButton>
             </UContainer>
@@ -71,6 +72,9 @@
 
     const { article, allLabels, refresh } = defineProps(['article', 'allLabels', 'refresh']);
 
+    async function retryArticle() {
+        // TODO
+    }
     async function deleteArticle() {
         await postUrl(baseUrl+'/api/annote/negative', {
             method: 'POST',
