@@ -19,19 +19,19 @@
     console.log(articleCounts)
 
     const statusItems = computed(() => [{
-        label: `Ellenőrizendő (${articleCounts.value['mixed']})`,
+        label: `Ellenőrizendő (${articleCounts.value ? articleCounts.value['mixed'] : '...'})`,
         key: 'mixed'
     }, {
-        label: `Elfogadott (${articleCounts.value['positive']})`,
+        label: `Elfogadott (${articleCounts.value ? articleCounts.value['positive'] : '...'}})`,
         key: 'positive'
     }, {
-        label: `Elutasított (${articleCounts.value['negative']})`,
+        label: `Elutasított (${articleCounts.value ? articleCounts.value['negative'] : '...'}})`,
         key: 'negative'
     }, {
-        label: `Feldolgozás alatt (${articleCounts.value['processing']})`,
+        label: `Feldolgozás alatt (${articleCounts.value ? articleCounts.value['processing'] : '...'}})`,
         key: 'processing'
     }, {
-        label: `Mindegyik (${articleCounts.value['all']})`,
+        label: `Mindegyik (${articleCounts.value ? articleCounts.value['all'] : '...'}})`,
         key: 'all'
     }]);
     const status = computed(() => statusItems.value[statusId.value].key)
