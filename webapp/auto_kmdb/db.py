@@ -304,7 +304,7 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
     with connection.cursor() as cursor:
         cursor.execute(query_2, (source_url, source_url_string))
         news_id = cursor.lastrowid
-        cursor.execute(query_1, (id, news_id))
+        cursor.execute(query_1, (news_id, id))
         cursor.execute(query_3, (news_id, 'hu', title, description, text))
         for person in persons:
             if not person['db_id'] and person['name']:
