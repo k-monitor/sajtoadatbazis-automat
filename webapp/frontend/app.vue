@@ -1,42 +1,39 @@
 <script setup lang="ts">
     const page = ref(1)
     const statusId = ref(0)
-    const status = computed(() => statusItems[statusId.value].key)
-    const selectedDomainAdd = ref(null)
-
-    const statusItems = [{
-        label: 'Ellenőrizendő',
-        key: 'mixed'
-    }, {
-        label: 'Elfogadott',
-        key: 'positive'
-    }, {
-        label: 'Elutasított',
-        key: 'negative'
-    }, {
-        label: 'Feldolgozás alatt',
-        key: 'processing'
-    }, {
-        label: 'Mindegyik',
-        key: 'all'
-    }]
-
-    var baseUrl = 'https://adatbazis.k-monitor.hu/autokmdb'
-
-    async function getUrl(url) {
-        return await $fetch(url)
-    }
-
-
-    const { data: allLabels } = await useFetch(baseUrl+'/api/all_labels');
-    let allDomains = [...allLabels.value.domains]
-    if (allDomains[0].id != -1)
-        allDomains.unshift({name: 'mind', id: -1})
-    allDomains = ref(allDomains)
-    const selectedDomain = ref(allDomains[0])
     let q = ref('')
 
-    const { pending, data, error, refresh } = await useLazyFetch(baseUrl+'/api/articles', {
+    const allLabels = useFetch(baseUrl+'/api/all_labels').data;
+    let allDomains = computed(() => allLabels.value == null ? [] : [{name: 'mind', id: -1}].concat(allLabels.value?.domains))
+    const selectedDomain = ref(allDomains[0])
+
+    const articleCounts = useFetch(baseUrl+'/api/article_counts', {
+        query: {
+            domain: selectedDomain,
+            q: q,
+        },
+    }).data;
+
+    const statusItems = computed(() => [{
+        label: `Ellenőrizendő (${articleCounts['mixed']})`,
+        key: 'mixed'
+    }, {
+        label: `Elfogadott (${articleCounts['mixed']})`,
+        key: 'positive'
+    }, {
+        label: `Elutasított (${articleCounts['mixed']})`,
+        key: 'negative'
+    }, {
+        label: `Feldolgozás alatt (${articleCounts['mixed']})`,
+        key: 'processing'
+    }, {
+        label: `Mindegyik (${articleCounts['all']})`,
+        key: 'all'
+    }]);
+    const status = computed(() => statusItems.value[statusId.value].key)
+
+
+    const { pending, data: articleQuery, error, refresh } = useLazyFetch(baseUrl+'/api/articles', {
         query: {
             page: page,
             status: status,
@@ -45,14 +42,25 @@
         },
     })
 
+    let articles = computed(() => articleQuery.value?.articles);
+    let pages = computed(() => articleQuery.value?.pages);
+    let itemsCount = computed(() => articleQuery.value == null ? null : (pages.value*10));
+    
+    console.log(articleQuery)
+
+    const selectedDomainAdd = ref(null)
+
+    var baseUrl = 'https://adatbazis.k-monitor.hu/autokmdb'
+
+    async function getUrl(url) {
+        return await $fetch(url)
+    }
+
+
     function resetPageRefresh() {
         page.value = 1
         refresh()
     }
-
-    let articles = computed(() => data.value.articles);
-    let pages = computed(() => data.value.pages);
-    let itemsCount = computed(() => pages.value*10);
 
     let newUrl = '';
     let isOpen = ref(false);

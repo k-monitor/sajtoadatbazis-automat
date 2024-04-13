@@ -1,7 +1,7 @@
 from flask import jsonify, Blueprint, request
 from auto_kmdb.db import get_articles, annote_negative, connection_pool
 from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers
-from auto_kmdb.db import check_url_exists, init_news, annote_positive
+from auto_kmdb.db import check_url_exists, init_news, annote_positive, get_article_counts
 from math import ceil
 import json
 
@@ -33,12 +33,22 @@ def reformat_article(article):
     return article
 
 
+@api.route('/article_counts', methods=["GET"])
+def api_article_counts():
+    domain = request.args.get('domain', -1, type=int)
+    q = request.args.get('q', '', type=str)
+    with connection_pool.get_connection() as connection:
+        article_counts = get_article_counts(connection, domain, '%'+q+'%')
+
+    return jsonify(article_counts), 200
+
+
 @api.route('/articles', methods=["GET"])
 def api_articles():
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', 'mixed', type=str)
     domain = request.args.get('domain', -1, type=int)
-    q = request.args.get('q', 'mixed', type=str)
+    q = request.args.get('q', '', type=str)
 
     with connection_pool.get_connection() as connection:
         length, articles = get_articles(connection, page, status, domain, '%'+q+'%')

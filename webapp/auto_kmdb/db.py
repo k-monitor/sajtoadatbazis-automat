@@ -185,6 +185,29 @@ def paginate_query(query, page_size, page_number):
     return query + f" LIMIT {page_size} OFFSET {offset}"
 
 
+def get_article_counts(connection, domain=-1, q=''):
+    article_counts = {}
+    for status in ['mixed', 'positive', 'negative', 'processing', 'all']:
+        if status == 'mixed':
+            query = '''WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL'''
+        elif status == 'positive':
+            query = '''WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 1'''
+        elif status == 'negative':
+            query = '''WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 0'''
+        elif status == 'processing':
+            query = '''WHERE processing_step < 4'''
+        elif status == 'all':
+            query = '''WHERE processing_step >= 0'''
+        if domain and domain != -1 and isinstance(domain, int):
+            query += ' AND n.newspaper_id = '+str(domain)
+        query += ' AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)'
+        with connection.cursor(dictionary=True) as cursor:
+            cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query, (q,q,q,q))
+            count = cursor.fetchone()['COUNT(id)']
+            article_counts[status] = count
+    return article_counts
+
+
 def get_articles(connection, page, status, domain=-1, q=''):
     query = ''
 
