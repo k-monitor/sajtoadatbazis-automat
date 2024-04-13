@@ -9,33 +9,30 @@
     let allDomains = computed(() => allLabels.value == null ? [] : [{name: 'mind', id: -1}].concat(allLabels.value?.domains))
     const selectedDomain = ref(allDomains[0])
 
-    const articleCounts = useFetch(baseUrl+'/api/article_counts', {
+    const { data: articleCounts, refresh: refreshArticleCounts } = useLazyFetch(baseUrl+'/api/article_counts', {
         query: {
             domain: selectedDomain,
             q: q,
         },
-    }).data;
-
-    console.log(articleCounts)
+    });
 
     const statusItems = computed(() => [{
         label: `Ellenőrizendő (${articleCounts.value ? articleCounts.value['mixed'] : '...'})`,
         key: 'mixed'
     }, {
-        label: `Elfogadott (${articleCounts.value ? articleCounts.value['positive'] : '...'}})`,
+        label: `Elfogadott (${articleCounts.value ? articleCounts.value['positive'] : '...'})`,
         key: 'positive'
     }, {
-        label: `Elutasított (${articleCounts.value ? articleCounts.value['negative'] : '...'}})`,
+        label: `Elutasított (${articleCounts.value ? articleCounts.value['negative'] : '...'})`,
         key: 'negative'
     }, {
-        label: `Feldolgozás alatt (${articleCounts.value ? articleCounts.value['processing'] : '...'}})`,
+        label: `Feldolgozás alatt (${articleCounts.value ? articleCounts.value['processing'] : '...'})`,
         key: 'processing'
     }, {
-        label: `Mindegyik (${articleCounts.value ? articleCounts.value['all'] : '...'}})`,
+        label: `Mindegyik (${articleCounts.value ? articleCounts.value['all'] : '...'})`,
         key: 'all'
     }]);
     const status = computed(() => statusItems.value[statusId.value].key)
-
 
     const { pending, data: articleQuery, error, refresh } = useLazyFetch(baseUrl+'/api/articles', {
         query: {
@@ -50,17 +47,11 @@
     let pages = computed(() => articleQuery.value?.pages);
     let itemsCount = computed(() => articleQuery.value == null ? null : (pages.value*10));
     
-    console.log(articleQuery)
-
     const selectedDomainAdd = ref(null)
-
-    async function getUrl(url) {
-        return await $fetch(url)
-    }
-
 
     function resetPageRefresh() {
         page.value = 1
+        refreshArticleCounts()
         refresh()
     }
 
