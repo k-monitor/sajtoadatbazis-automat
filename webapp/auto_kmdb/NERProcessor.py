@@ -44,7 +44,7 @@ class NERProcessor(Processor):
         self.people = []
         self.institutions = []
         self.places = []
-        self.classifications = [strip_entity(e) for e in join_entities(self.classifier(self.text)) if len(e['word']) < 3]
+        self.classifications = [strip_entity(e) for e in join_entities(self.classifier(self.text)) if len(e['word']) > 3]
         for entity in self.classifications:
             print(entity)
             label, e_type = entity['entity_group'].split('_')
