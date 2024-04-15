@@ -355,11 +355,10 @@ def validate_session(connection, session_id):
     query = '''SELECT * FROM users_sessions WHERE session_id = %s;'''
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (session_id,))
-    session = cursor.fetchone()
+        session = cursor.fetchone()
     if session is None or session['registered'] == 0:
-        return False
-    # is this it?
-    return True
+        return None
+    return session['registered']
 
 def get_roles(connection, session_id):
     query = '''SELECT * FROM users_sessions WHERE session_id = %s;'''
