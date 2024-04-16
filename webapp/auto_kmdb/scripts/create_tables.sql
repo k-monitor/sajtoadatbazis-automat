@@ -88,12 +88,10 @@ CREATE TABLE autokmdb_others (
 
 CREATE TABLE autokmdb_alias_place (
     place_id INT,
-    alias_name VARCHAR(512),
-    CONSTRAINT nodup PRIMARY KEY (place_id,alias_name)
+    alias_name VARCHAR(512)
 );
 
 CREATE TABLE autokmdb_alias_institution (
     institution_id INT,
-    alias_name VARCHAR(512),
-    CONSTRAINT nodup PRIMARY KEY (institution_id,alias_name)
+    alias_name VARCHAR(512)
 );
