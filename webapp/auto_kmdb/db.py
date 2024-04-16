@@ -315,16 +315,25 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
                 db_id = create_institution(connection, institution['name'])
                 institution['db_id'] = db_id
 
+        done_person_ids = set()
+        done_institution_ids = set()
+        done_place_ids = set()
         for person in persons:
-            cursor.execute(query_p, (news_id, person['db_id']))
+            if person['db_id'] not in done_person_ids:
+                cursor.execute(query_p, (news_id, person['db_id']))
+                done_person_ids.add(person['db_id'])
             if isinstance(person['id'], int):
                 cursor.execute(query_auto_p, (person['id'],))
         for institution in institutions:
-            cursor.execute(query_i, (news_id, institution['db_id']))
+            if institution['db_id'] not in done_institution_ids:
+                cursor.execute(query_i, (news_id, institution['db_id']))
+                done_institution_ids.add(institution['db_id'])
             if isinstance(institution['id'], int):
                 cursor.execute(query_auto_i, (institution['id'],))
         for place in places:
-            cursor.execute(query_pl, (news_id, place['db_id']))
+            if place['db_id'] not in done_place_ids:
+                cursor.execute(query_pl, (news_id, place['db_id']))
+                done_place_ids.add(place['db_id'])
             if isinstance(place['id'], int):
                 cursor.execute(query_auto_pl, (place['id'],))
         # TODO add others
