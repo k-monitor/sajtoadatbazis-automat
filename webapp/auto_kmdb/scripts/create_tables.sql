@@ -84,3 +84,15 @@ CREATE TABLE autokmdb_others (
     mod_id INT,
     version_number INT NOT NULL
 );
+
+CREATE TABLE autokmdb_alias_place (
+    place_id INT,
+    alias_name VARCHAR(500),
+    CONSTRAINT nodup PRIMARY KEY (place_id,alias_name)
+);
+
+CREATE TABLE autokmdb_alias_institution (
+    institution_id INT,
+    alias_name VARCHAR(500),
+    CONSTRAINT nodup PRIMARY KEY (institution_id,alias_name)
+);
