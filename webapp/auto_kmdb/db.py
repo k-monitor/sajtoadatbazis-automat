@@ -222,7 +222,7 @@ def get_articles(connection, page, status, domain=-1, q=''):
     group = ' GROUP BY id ORDER BY source DESC, n.mod_time DESC'
 
     if status == 'mixed':
-        query = '''WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL'''
+        query = '''WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND (n.skip_reason = 0 OR n.skip_reason is NULL)'''
     elif status == 'positive':
         query = '''WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 1'''
     elif status == 'negative':
