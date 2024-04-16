@@ -103,6 +103,7 @@
             method: 'POST',
             body: {
                 'id': article.id,
+                'newspaper_id': article.newspaper_id,
                 'url': article.url,
                 'title': article.title,
                 'description': article.description,
