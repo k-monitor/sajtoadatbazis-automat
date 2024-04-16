@@ -8,6 +8,9 @@ import json
 api = Blueprint('api', __name__, url_prefix='/api')
 
 
+def get_session_id(request):
+    return request.cookies.get('PHPSESSID')
+
 def reformat_article(article):
     try:
         article['persons'] = json.loads('['+article['persons']+']') if article['persons'] else []
@@ -35,7 +38,7 @@ def reformat_article(article):
 
 @api.route('/article_counts', methods=["GET"])
 def api_article_counts():
-    session_id = request.cookies.get('PHPSESSID')
+    session_id = get_session_id(request)
     with connection_pool.get_connection() as connection:
         if not validate_session(connection, session_id):
             return jsonify({'error': 'Nem vagy bejelentkezve!'}), 401
@@ -50,7 +53,7 @@ def api_article_counts():
 
 @api.route('/articles', methods=["GET"])
 def api_articles():
-    session_id = request.cookies.get('PHPSESSID')
+    session_id = get_session_id(request)
     with connection_pool.get_connection() as connection:
         if not validate_session(connection, session_id):
             return jsonify({'error': 'Nem vagy bejelentkezve!'}), 401
@@ -69,7 +72,7 @@ def api_articles():
 
 @api.route('/annote/negative', methods=["POST"])
 def not_corruption():
-    session_id = request.cookies.get('PHPSESSID')
+    session_id = get_session_id(request)
     with connection_pool.get_connection() as connection:
         user_id = validate_session(connection, session_id)
         if not user_id:
@@ -83,7 +86,7 @@ def not_corruption():
 
 @api.route('/annote/positive', methods=["POST"])
 def annote():
-    session_id = request.cookies.get('PHPSESSID')
+    session_id = get_session_id(request)
     with connection_pool.get_connection() as connection:
         user_id = validate_session(connection, session_id)
         if not user_id:
@@ -105,7 +108,7 @@ def annote():
 
 @api.route('/add_url', methods=["POST"])
 def add_url():
-    session_id = request.cookies.get('PHPSESSID')
+    session_id = get_session_id(request)
     with connection_pool.get_connection() as connection:
         user_id = validate_session(connection, session_id)
         if not user_id:
@@ -121,7 +124,7 @@ def add_url():
 
 @api.route('/all_labels', methods=["GET"])
 def all_labels():
-    session_id = request.cookies.get('PHPSESSID')
+    session_id = get_session_id(request)
     with connection_pool.get_connection() as connection:
         if not validate_session(connection, session_id):
             return jsonify({'error': 'Nem vagy bejelentkezve!'}), 401
