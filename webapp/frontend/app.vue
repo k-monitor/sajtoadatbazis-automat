@@ -9,7 +9,7 @@
     const statusId = ref(0)
     let q = ref('')
 
-    var baseUrl = 'https://adatbazis.k-monitor.hu/autokmdb'
+    var baseUrl = 'https://autokmdb.deepdata.hu/autokmdb'
 
     const allLabels = useFetch(baseUrl+'/api/all_labels').data;
     let allDomains = computed(() => allLabels.value == null ? [] : [{name: 'mind', id: -1}].concat(allLabels.value?.domains))
