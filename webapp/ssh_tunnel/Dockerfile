@@ -3,4 +3,4 @@ RUN apk add --no-cache openssh
 
 EXPOSE 9999
 
-CMD ["ssh", "-N", "-L", "9999:127.0.0.1:3306", "-p", "22", "-i", "/secrets/autokmdb_key", "-o", "PubkeyAcceptedKeyTypes=ssh-rsa", "-o", "StrictHostKeyChecking=no", "-o", "GatewayPorts=true", "autokmdb@kmonitordemo.duckdns.org", "-v"]
+CMD ["ssh", "-N", "-L", "9999:127.0.0.1:3306", "-p", "22", "-i", "/secrets/autokmdb_key", "-o", "PubkeyAcceptedKeyTypes=ssh-rsa", "-o", "StrictHostKeyChecking=no", "-o", "GatewayPorts=true", "autokmdb@ahalo.hu", "-v"]
