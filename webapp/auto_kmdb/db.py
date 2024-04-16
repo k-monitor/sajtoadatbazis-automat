@@ -290,10 +290,11 @@ def create_institution(connection, name):
     return db_id
 
 
-def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places):
+def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places, newspaper_id):
     query_1 = '''UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s WHERE id = %s;'''
-    query_2 = '''INSERT INTO news_news (source_url, source_url_string) VALUES (%s, %s);'''
+    query_2 = '''INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time) VALUES (%s, %s, %s, %s, %s);'''
     query_3 = '''INSERT INTO news_lang (news_id, lang, name, teaser, articletext) VALUES (%s, %s, %s, %s, %s)'''
+    query_np = '''INSERT INTO news_newspapers_link (news_id, newspaper_id) VALUES (%s, %s);'''
 
     query_p = '''INSERT INTO news_persons_link (news_id, person_id) VALUES (%s, %s)'''
     query_auto_p = '''UPDATE autokmdb_persons SET annotation_label = 1 WHERE id = %s;'''
@@ -301,8 +302,12 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
     query_auto_i = '''UPDATE autokmdb_institutions SET annotation_label = 1 WHERE id = %s;'''
     query_pl = '''INSERT INTO news_places_link (news_id, place_id) VALUES (%s, %s)'''
     query_auto_pl = '''UPDATE autokmdb_places SET annotation_label = 1 WHERE id = %s;'''
+
+    current_datetime = datetime.now()
+    cre_time = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+
     with connection.cursor() as cursor:
-        cursor.execute(query_2, (source_url, source_url_string))
+        cursor.execute(query_2, (source_url, source_url_string, cre_time, cre_time, cre_time))
         news_id = cursor.lastrowid
         cursor.execute(query_1, (news_id, id))
         cursor.execute(query_3, (news_id, 'hu', title, description, text))
@@ -314,6 +319,8 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
             if not institution['db_id'] and institution['name']:
                 db_id = create_institution(connection, institution['name'])
                 institution['db_id'] = db_id
+
+        cursor.execute(query_np, (news_id, newspaper_id))
 
         done_person_ids = set()
         done_institution_ids = set()
