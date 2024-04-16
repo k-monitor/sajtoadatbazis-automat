@@ -1,7 +1,7 @@
 from flask import jsonify, Blueprint, request
 from auto_kmdb.db import get_articles, annote_negative, connection_pool
 from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers
-from auto_kmdb.db import check_url_exists, init_news, annote_positive, get_article_counts
+from auto_kmdb.db import check_url_exists, init_news, annote_positive, get_article_counts, validate_session
 from math import ceil
 import json
 
@@ -35,6 +35,11 @@ def reformat_article(article):
 
 @api.route('/article_counts', methods=["GET"])
 def api_article_counts():
+    session_id = request.cookies.get('PHPSESSID')
+    with connection_pool.get_connection() as connection:
+        if not validate_session(connection, session_id):
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 403
+
     domain = request.args.get('domain', -1, type=int)
     q = request.args.get('q', '', type=str)
     with connection_pool.get_connection() as connection:
@@ -45,6 +50,11 @@ def api_article_counts():
 
 @api.route('/articles', methods=["GET"])
 def api_articles():
+    session_id = request.cookies.get('PHPSESSID')
+    with connection_pool.get_connection() as connection:
+        if not validate_session(connection, session_id):
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 403
+
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', 'mixed', type=str)
     domain = request.args.get('domain', -1, type=int)
@@ -59,6 +69,12 @@ def api_articles():
 
 @api.route('/annote/negative', methods=["POST"])
 def not_corruption():
+    session_id = request.cookies.get('PHPSESSID')
+    with connection_pool.get_connection() as connection:
+        user_id = validate_session(connection, session_id)
+        if not user_id:
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 403
+
     id = request.json['id']
     with connection_pool.get_connection() as connection:
         annote_negative(connection, id)
@@ -67,6 +83,12 @@ def not_corruption():
 
 @api.route('/annote/positive', methods=["POST"])
 def annote():
+    session_id = request.cookies.get('PHPSESSID')
+    with connection_pool.get_connection() as connection:
+        user_id = validate_session(connection, session_id)
+        if not user_id:
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 403
+
     id = request.json['id']
     url = request.json['url']
     title = request.json['title']
@@ -83,6 +105,12 @@ def annote():
 
 @api.route('/add_url', methods=["POST"])
 def add_url():
+    session_id = request.cookies.get('PHPSESSID')
+    with connection_pool.get_connection() as connection:
+        user_id = validate_session(connection, session_id)
+        if not user_id:
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 403
+
     with connection_pool.get_connection() as connection:
         url = request.json['url']
         if check_url_exists(connection, url):
@@ -93,6 +121,11 @@ def add_url():
 
 @api.route('/all_labels', methods=["GET"])
 def all_labels():
+    session_id = request.cookies.get('PHPSESSID')
+    with connection_pool.get_connection() as connection:
+        if not validate_session(connection, session_id):
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 403
+
     with connection_pool.get_connection() as connection:
         return jsonify({
             'person': get_all_persons(connection),
