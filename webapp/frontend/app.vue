@@ -1,4 +1,10 @@
 <script setup lang="ts">
+    let newUrl = '';
+    let isOpen = ref(false);
+    let isOpenError = ref(false);
+    let errorText = ref('');
+    let errorTitle = ref('');
+
     const page = ref(1)
     const statusId = ref(0)
     let q = ref('')
@@ -13,6 +19,13 @@
         query: {
             domain: selectedDomain,
             q: q,
+        },
+        onResponse({ request, response, options }) {
+            if (response.status >= 300) {
+                isOpenError.value = true
+                errorText.value = response._data.error
+                errorTitle.value = 'Hiba ' + response.status
+            }
         },
     });
 
@@ -34,12 +47,19 @@
     }]);
     const status = computed(() => statusItems.value[statusId.value].key)
 
-    const { pending, data: articleQuery, error, refresh } = useLazyFetch(baseUrl+'/api/articles', {
+    const { pending, data: articleQuery, refresh } = useLazyFetch(baseUrl+'/api/articles', {
         query: {
             page: page,
             status: status,
             domain: selectedDomain,
             q: q,
+        },
+        onResponse({ request, response, options }) {
+            if (response.status >= 300) {
+                isOpenError.value = true
+                errorText.value = response._data.error
+                errorTitle.value = 'Hiba ' + response.status
+            }
         },
     })
 
@@ -55,12 +75,6 @@
         refresh()
     }
 
-    let newUrl = '';
-    let isOpen = ref(false);
-    let isOpenError = ref(false);
-    let errorText = ref('');
-    let errorTitle = ref('');
-
     function openNewUrl () {
         newUrl = ''
         isOpen.value = true
@@ -69,20 +83,21 @@
     async function addUrl () {
         isOpen.value = false
         try {
-            const {data, error} = await $fetch(baseUrl+'/api/add_url', {
+            const {data} = await $fetch(baseUrl+'/api/add_url', {
                 method: 'POST',
                 body: {
                     'url': newUrl,
                     'newspaper_name': selectedDomainAdd.value.name,
                     'newspaper_id': selectedDomainAdd.value.id,
                 },
+                onResponse({ request, response, options }) {
+                    if (response.status >= 300) {
+                        isOpenError.value = true
+                        errorText.value = response._data.error
+                        errorTitle.value = 'Hiba ' + response.status
+                    }
+                },
             });
-            if (error) {
-                console.log(error)
-                isOpenError.value = true
-                errorText.value = data.error
-                errorTitle.value = 'Hiba'
-            }
         } catch (error) {
             console.log(error)
             isOpenError.value = true
