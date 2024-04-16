@@ -38,7 +38,7 @@ def api_article_counts():
     session_id = request.cookies.get('PHPSESSID')
     with connection_pool.get_connection() as connection:
         if not validate_session(connection, session_id):
-            return jsonify({}), 403
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 403
 
     domain = request.args.get('domain', -1, type=int)
     q = request.args.get('q', '', type=str)
@@ -53,7 +53,7 @@ def api_articles():
     session_id = request.cookies.get('PHPSESSID')
     with connection_pool.get_connection() as connection:
         if not validate_session(connection, session_id):
-            return jsonify({}), 403
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 403
 
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', 'mixed', type=str)
@@ -73,7 +73,7 @@ def not_corruption():
     with connection_pool.get_connection() as connection:
         user_id = validate_session(connection, session_id)
         if not user_id:
-            return jsonify({}), 403
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 403
 
     id = request.json['id']
     with connection_pool.get_connection() as connection:
@@ -87,7 +87,7 @@ def annote():
     with connection_pool.get_connection() as connection:
         user_id = validate_session(connection, session_id)
         if not user_id:
-            return jsonify({}), 403
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 403
 
     id = request.json['id']
     url = request.json['url']
@@ -109,7 +109,7 @@ def add_url():
     with connection_pool.get_connection() as connection:
         user_id = validate_session(connection, session_id)
         if not user_id:
-            return jsonify({}), 403
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 403
 
     with connection_pool.get_connection() as connection:
         url = request.json['url']
@@ -124,7 +124,7 @@ def all_labels():
     session_id = request.cookies.get('PHPSESSID')
     with connection_pool.get_connection() as connection:
         if not validate_session(connection, session_id):
-            return jsonify({}), 403
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 403
 
     with connection_pool.get_connection() as connection:
         return jsonify({
