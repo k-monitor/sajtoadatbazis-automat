@@ -56,7 +56,7 @@
 </template>
 
 <script setup lang="ts">
-    var baseUrl = 'https://adatbazis.k-monitor.hu/autokmdb'
+    var baseUrl = 'https://autokmdb.deepdata.hu/autokmdb'
     //hostUrl = 'localhost:3000'
 
     async function postUrl(url, data) {
