@@ -270,29 +270,29 @@ def annote_negative(connection, id):
     connection.commit()
 
 
-def create_person(connection, name):
+def create_person(connection, name, user_id):
     print('adding', name)
     query = '''INSERT INTO news_persons (status, name, cre_id, mod_id, import_id) VALUES (%s, %s, %s, %s, %s);'''
     with connection.cursor() as cursor:
-        cursor.execute(query, ('Y', name, 865, 865, 0))
+        cursor.execute(query, ('Y', name, user_id, user_id, 0))
         db_id = cursor.lastrowid
         print(db_id)
     connection.commit()
     return db_id
 
 
-def create_institution(connection, name):
+def create_institution(connection, name, user_id):
     query = '''INSERT INTO news_institutions (status, name, cre_id, mod_id, import_id) VALUES (%s, %s, %s, %s, %s);'''
     with connection.cursor() as cursor:
-        cursor.execute(query, ('Y', name, 865, 865, 0))
+        cursor.execute(query, ('Y', name, user_id, user_id, 0))
         db_id = cursor.lastrowid
     connection.commit()
     return db_id
 
 
-def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places, newspaper_id):
+def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places, newspaper_id, user_id):
     query_1 = '''UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s WHERE id = %s;'''
-    query_2 = '''INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time) VALUES (%s, %s, %s, %s, %s);'''
+    query_2 = '''INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id) VALUES (%s, %s, %s, %s, %s, %s, %s);'''
     query_3 = '''INSERT INTO news_lang (news_id, lang, name, teaser, articletext) VALUES (%s, %s, %s, %s, %s)'''
     query_np = '''INSERT INTO news_newspapers_link (news_id, newspaper_id) VALUES (%s, %s);'''
 
@@ -307,17 +307,17 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
     cre_time = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
 
     with connection.cursor() as cursor:
-        cursor.execute(query_2, (source_url, source_url_string, cre_time, cre_time, cre_time))
+        cursor.execute(query_2, (source_url, source_url_string, cre_time, cre_time, cre_time, user_id, user_id))
         news_id = cursor.lastrowid
         cursor.execute(query_1, (news_id, id))
         cursor.execute(query_3, (news_id, 'hu', title, description, text))
         for person in persons:
             if not person['db_id'] and person['name']:
-                db_id = create_person(connection, person['name'])
+                db_id = create_person(connection, person['name'], user_id)
                 person['db_id'] = db_id
         for institution in institutions:
             if not institution['db_id'] and institution['name']:
-                db_id = create_institution(connection, institution['name'])
+                db_id = create_institution(connection, institution['name'], user_id)
                 institution['db_id'] = db_id
 
         cursor.execute(query_np, (news_id, newspaper_id))
