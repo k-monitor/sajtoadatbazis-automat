@@ -3,6 +3,7 @@ import mysql.connector
 import os
 from contextlib import closing
 from datetime import datetime
+from slugify import slugify
 
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
   pool_name="cnx_pool",
@@ -292,7 +293,7 @@ def create_institution(connection, name, user_id):
 
 def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places, newspaper_id, user_id):
     query_1 = '''UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s WHERE id = %s;'''
-    query_2 = '''INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id) VALUES (%s, %s, %s, %s, %s, %s, %s);'''
+    query_2 = '''INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id, alias, seo_url_default) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);'''
     query_3 = '''INSERT INTO news_lang (news_id, lang, name, teaser, articletext) VALUES (%s, %s, %s, %s, %s)'''
     query_np = '''INSERT INTO news_newspapers_link (news_id, newspaper_id) VALUES (%s, %s);'''
     query_cat = '''INSERT INTO news_categories_link (news_id, cid, head) VALUES (%s, %s, %s);'''
@@ -308,7 +309,9 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
     cre_time = int(current_datetime.timestamp())
 
     with connection.cursor() as cursor:
-        cursor.execute(query_2, (source_url, source_url_string, cre_time, cre_time, cre_time, user_id, user_id))
+        alias = slugify(title)
+        seo_url_default = 'hirek/magyar-hirek/'+alias
+        cursor.execute(query_2, (source_url, source_url_string, cre_time, cre_time, cre_time, user_id, user_id, alias, seo_url_default))
         news_id = cursor.lastrowid
         cursor.execute(query_1, (news_id, id))
         cursor.execute(query_3, (news_id, 'hu', title, description, text))
