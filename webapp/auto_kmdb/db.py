@@ -304,7 +304,7 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
     query_auto_pl = '''UPDATE autokmdb_places SET annotation_label = 1 WHERE id = %s;'''
 
     current_datetime = datetime.now()
-    cre_time = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+    cre_time = int(current_datetime.timestamp())
 
     with connection.cursor() as cursor:
         cursor.execute(query_2, (source_url, source_url_string, cre_time, cre_time, cre_time, user_id, user_id))
