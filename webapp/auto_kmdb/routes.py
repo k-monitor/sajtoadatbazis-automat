@@ -103,7 +103,7 @@ def annote():
     newspaper_id = request.json['newspaper_id']
 
     with connection_pool.get_connection() as connection:
-        annote_positive(connection, id, url, title, title, description, text, persons, institutions, places, newspaper_id)
+        annote_positive(connection, id, url, title, title, description, text, persons, institutions, places, newspaper_id, user_id)
     return jsonify({}), 200
 
 

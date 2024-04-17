@@ -3,6 +3,7 @@ import mysql.connector
 import os
 from contextlib import closing
 from datetime import datetime
+from slugify import slugify
 
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
   pool_name="cnx_pool",
@@ -270,31 +271,32 @@ def annote_negative(connection, id):
     connection.commit()
 
 
-def create_person(connection, name):
+def create_person(connection, name, user_id):
     print('adding', name)
     query = '''INSERT INTO news_persons (status, name, cre_id, mod_id, import_id) VALUES (%s, %s, %s, %s, %s);'''
     with connection.cursor() as cursor:
-        cursor.execute(query, ('Y', name, 865, 865, 0))
+        cursor.execute(query, ('Y', name, user_id, user_id, 0))
         db_id = cursor.lastrowid
         print(db_id)
     connection.commit()
     return db_id
 
 
-def create_institution(connection, name):
+def create_institution(connection, name, user_id):
     query = '''INSERT INTO news_institutions (status, name, cre_id, mod_id, import_id) VALUES (%s, %s, %s, %s, %s);'''
     with connection.cursor() as cursor:
-        cursor.execute(query, ('Y', name, 865, 865, 0))
+        cursor.execute(query, ('Y', name, user_id, user_id, 0))
         db_id = cursor.lastrowid
     connection.commit()
     return db_id
 
 
-def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places, newspaper_id):
+def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places, newspaper_id, user_id):
     query_1 = '''UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s WHERE id = %s;'''
-    query_2 = '''INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time) VALUES (%s, %s, %s, %s, %s);'''
+    query_2 = '''INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id, alias, seo_url_default) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s);'''
     query_3 = '''INSERT INTO news_lang (news_id, lang, name, teaser, articletext) VALUES (%s, %s, %s, %s, %s)'''
     query_np = '''INSERT INTO news_newspapers_link (news_id, newspaper_id) VALUES (%s, %s);'''
+    query_cat = '''INSERT INTO news_categories_link (news_id, cid, head) VALUES (%s, %s, %s);'''
 
     query_p = '''INSERT INTO news_persons_link (news_id, person_id) VALUES (%s, %s)'''
     query_auto_p = '''UPDATE autokmdb_persons SET annotation_label = 1 WHERE id = %s;'''
@@ -304,23 +306,26 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
     query_auto_pl = '''UPDATE autokmdb_places SET annotation_label = 1 WHERE id = %s;'''
 
     current_datetime = datetime.now()
-    cre_time = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+    cre_time = int(current_datetime.timestamp())
 
     with connection.cursor() as cursor:
-        cursor.execute(query_2, (source_url, source_url_string, cre_time, cre_time, cre_time))
+        alias = slugify(title)
+        seo_url_default = 'hirek/magyar-hirek/'+alias
+        cursor.execute(query_2, (source_url, source_url_string, cre_time, cre_time, cre_time, user_id, user_id, alias, seo_url_default))
         news_id = cursor.lastrowid
         cursor.execute(query_1, (news_id, id))
         cursor.execute(query_3, (news_id, 'hu', title, description, text))
         for person in persons:
             if not person['db_id'] and person['name']:
-                db_id = create_person(connection, person['name'])
+                db_id = create_person(connection, person['name'], user_id)
                 person['db_id'] = db_id
         for institution in institutions:
             if not institution['db_id'] and institution['name']:
-                db_id = create_institution(connection, institution['name'])
+                db_id = create_institution(connection, institution['name'], user_id)
                 institution['db_id'] = db_id
 
         cursor.execute(query_np, (news_id, newspaper_id))
+        cursor.execute(query_cat, (news_id, 5, "Y"))
 
         done_person_ids = set()
         done_institution_ids = set()
