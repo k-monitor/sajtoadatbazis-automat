@@ -295,6 +295,7 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
     query_2 = '''INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id) VALUES (%s, %s, %s, %s, %s, %s, %s);'''
     query_3 = '''INSERT INTO news_lang (news_id, lang, name, teaser, articletext) VALUES (%s, %s, %s, %s, %s)'''
     query_np = '''INSERT INTO news_newspapers_link (news_id, newspaper_id) VALUES (%s, %s);'''
+    query_cat = '''INSERT INTO news_categories_link (news_id, cid, head) VALUES (%s, %s, %s);'''
 
     query_p = '''INSERT INTO news_persons_link (news_id, person_id) VALUES (%s, %s)'''
     query_auto_p = '''UPDATE autokmdb_persons SET annotation_label = 1 WHERE id = %s;'''
@@ -321,6 +322,7 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
                 institution['db_id'] = db_id
 
         cursor.execute(query_np, (news_id, newspaper_id))
+        cursor.execute(query_cat, (news_id, 5, "Y"))
 
         done_person_ids = set()
         done_institution_ids = set()
