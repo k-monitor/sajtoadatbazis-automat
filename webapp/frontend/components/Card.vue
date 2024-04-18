@@ -15,7 +15,6 @@
             <UBadge v-if="article.source == 1" class="m-1" color="orange"> manuálisan hozzáadott </UBadge>
             <p class="text-base text-pretty">{{ article.description }}</p>
             <p class="text-base text-right py-1">{{ article.date }}</p>
-
             <UButton v-if="article.skip_reason > 1" color="grey" @click="retryArticle">Újra</UButton>
             <UContainer v-else-if="article.processing_step >= 4 " class="flex justify-between px-0 sm:px-0 lg:px-0">
                 <UButton v-if="article.annotation_label != 0" color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Mégis elutasít" }}</UButton>
@@ -45,9 +44,12 @@
 
                 </div>
                 <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
-                        <UButton color="gray" @click="closeModal">Mégse</UButton>
+                    <UButton color="gray" @click="closeModal">Mégse</UButton>
+                    <div class="my-2 flex justify-between">
+                        <UCheckbox class="mx-5" size="xl" v-model="is_active"  label="Aktív" />
                         <UButton @click="submitArticle">Elfogad</UButton>
-                    </UContainer>
+                    </div>
+                </UContainer>
 
             </div>
         </UModal>
@@ -71,6 +73,7 @@
     }
 
     const { article, allLabels, refresh } = defineProps(['article', 'allLabels', 'refresh']);
+    const is_active = ref(true)
 
     async function retryArticle() {
         // TODO
@@ -111,7 +114,8 @@
                 'positive_persons': positivePersonsList,
                 'positive_institutions': positiveInstitutions.value,
                 'positive_places': positivePlaces.value,
-                'tags': positiveOthers.value.map((tag) => tag),
+                'tags': positiveOthers.value,
+                'active': is_active.value,
             }
         });
         refresh()
