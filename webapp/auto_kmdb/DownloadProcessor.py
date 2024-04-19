@@ -21,10 +21,8 @@ class DownloadProcessor(Processor):
             return
 
         print('Downloading', next_row['url'])
-        article = newspaper.Article(next_row['url'])
         try:
-            article.download()
-            article.parse()
+            article = newspaper.article(next_row['url'])
         except Exception as e:
             print(e)
             with connection_pool.get_connection() as connection:
@@ -33,6 +31,8 @@ class DownloadProcessor(Processor):
 
         title = do_replacements(article.title, replacements)
         text = do_replacements(article.text, replacements)
+
+        authors = ','.join([a for a in article.authors if ' ' in a])
 
         description = article.meta_description
         for common_description in common_descriptions:
@@ -52,7 +52,7 @@ class DownloadProcessor(Processor):
 
         if same_news(title, description, text) and next_row['source'] != 1:
             with connection_pool.get_connection() as connection:
-                skip_same_news(connection, next_row['id'], text, title, description)
+                skip_same_news(connection, next_row['id'], text, title, description, authors)
         else:
             with connection_pool.get_connection() as connection:
-                save_download_step(connection, next_row['id'], text, title, description)
+                save_download_step(connection, next_row['id'], text, title, description, authors)
