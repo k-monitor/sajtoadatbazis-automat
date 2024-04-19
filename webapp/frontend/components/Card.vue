@@ -81,7 +81,8 @@
     async function deleteArticle() {
         await postUrl(baseUrl+'/api/annote/negative', {
             method: 'POST',
-            body: {'id': article.id}
+            body: {'id': article.id},
+            
         });
         refresh()
     }
@@ -91,12 +92,12 @@
             element.annotation_label = 1
         });
 
-        let positiveInstitutionsList = positiveInstitutions.value.map((institution) => institution.list).flat()
+        let positiveInstitutionsList = positiveInstitutions.value.map((institution) => institution.list ?? institution).flat()
         positiveInstitutionsList.forEach(element => {
             element.annotation_label = 1
         });
 
-        let positivePlacesList = positivePlaces.value.map((place) => place.list).flat()
+        let positivePlacesList = positivePlaces.value.map((place) => place.list ?? place).flat()
         positivePlacesList.forEach(element => {
             element.annotation_label = 1
         });
