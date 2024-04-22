@@ -2,7 +2,7 @@
     <div class="p-4">
         <div class="max-w-md rounded overflow-hidden shadow-lg mb-4 p-4">
             <p>
-                <a :href="article.url" class="font-bold text-xl mb-2">{{ article.title }}</a>
+                <a :href="article.url" target="_blank" class="font-bold text-xl mb-2">{{ article.title }}</a>
                 <UBadge class="m-1" color="gray">
                 <Icon size="1.5em" v-if="article.skip_reason > 1" name="mdi:alert-circle-outline" color="orange" />
                 <Icon size="1.5em" v-else-if="article.processing_step < 4" name="mdi:database-clock-outline" color="gray" />
