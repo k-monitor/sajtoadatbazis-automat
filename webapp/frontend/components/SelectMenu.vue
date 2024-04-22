@@ -13,7 +13,7 @@
             multiple
         >
         <template #label>
-            <span v-if="localPositiveList.length" class="truncate">{{ localPositiveList.map((item) => (item.db_name != 'null' && item.db_name) ? item.db_name : item.name).join(', ') }}</span>
+            <span v-if="localPositiveList.length">{{ localPositiveList.map((item) => (item.db_name != 'null' && item.db_name) ? item.db_name : item.name).join(', ') }}</span>
             <span v-else>Válassz ki elemeket</span>
         </template>
         <template #option-create="{ option }">
