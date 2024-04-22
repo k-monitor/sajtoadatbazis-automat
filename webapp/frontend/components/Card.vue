@@ -40,6 +40,7 @@
                         <SelectMenu class="my-2" :list="article.institutions" type="intézmény" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
                         <SelectMenu class="my-2" :list="article.places" type="helyszín" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
                         <SelectMenu class="my-2" :list="article.others" type="egyéb" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['other']" />
+                        <p>{{errorText}}</p>
                     </div>
 
                 </div>
@@ -47,7 +48,7 @@
                     <UButton color="gray" @click="closeModal">Mégse</UButton>
                     <div class="my-2 flex justify-between">
                         <UCheckbox class="mx-5" size="xl" v-model="is_active"  label="Aktív" />
-                        <UButton @click="submitArticle">Elfogad</UButton>
+                        <UButton @click="submitArticle" :loading="submitted">Elfogad</UButton>
                     </div>
                 </UContainer>
 
@@ -74,6 +75,8 @@
 
     const { article, allLabels, refresh } = defineProps(['article', 'allLabels', 'refresh']);
     const is_active = ref(true)
+    let submitted = ref(false)
+    let errorText = ref('')
 
     async function retryArticle() {
         // TODO
@@ -87,6 +90,8 @@
         refresh()
     }
     async function submitArticle() {
+        submitted.value = true
+
         let positivePersonsList = positivePersons.value.map((person) => person.list ?? person).flat()
         positivePersonsList.forEach(element => {
             element.annotation_label = 1
@@ -102,26 +107,40 @@
             element.annotation_label = 1
         });
 
+        try {
+            await postUrl(baseUrl+'/api/annote/positive', {
+                method: 'POST',
+                body: {
+                    'id': article.id,
+                    'newspaper_id': article.newspaper_id,
+                    'url': article.url,
+                    'title': article.title,
+                    'description': article.description,
+                    'text': article.text,
+                    'positive_persons': positivePersonsList,
+                    'positive_institutions': positiveInstitutions.value,
+                    'positive_places': positivePlaces.value,
+                    'tags': positiveOthers.value,
+                    'active': is_active.value,
+                },
 
-        await postUrl(baseUrl+'/api/annote/positive', {
-            method: 'POST',
-            body: {
-                'id': article.id,
-                'newspaper_id': article.newspaper_id,
-                'url': article.url,
-                'title': article.title,
-                'description': article.description,
-                'text': article.text,
-                'positive_persons': positivePersonsList,
-                'positive_institutions': positiveInstitutions.value,
-                'positive_places': positivePlaces.value,
-                'tags': positiveOthers.value,
-                'active': is_active.value,
+                onResponse({ request, response, options }) {
+                    submitted.value = false
+                    if (response.status >= 300) {
+                        errorText.value = '\n'+response.status+' Hiba: ' + response._data.error
+                        return
+                    }
+                    refresh()
+                    isOpen.value = false
+                    submitted.value = false
+                },
+            });
+        } catch (error) {
+                submitted.value = false
+                console.log(error)
+                errorText.value = error
             }
-        });
-        refresh()
-        isOpen.value = false
-    }
+        }
     const isOpen = ref(false)
 
     article.date = new Date(Date.parse(article.date)).toLocaleString()
@@ -200,11 +219,11 @@
 
     article.places = mappedPlaces
 
-    var positivePersons = ref(article.persons.filter((person) => (person.classification_label == 1)))
-    var positiveInstitutions = ref(article.institutions.filter((institution) => (institution.classification_label == 1)))
-    var positivePlaces = ref(article.places.filter((place) => (place.classification_label == 1)))
+    var positivePersons = ref(article.persons.filter((person) => (person.classification_label == 1 || person.annotation_label == 1)))
+    var positiveInstitutions = ref(article.institutions.filter((institution) => (institution.classification_label == 1 || institution.annotation_label == 1)))
+    var positivePlaces = ref(article.places.filter((place) => (place.classification_label == 1 || place.annotation_label == 1)))
 
-    var positiveOthers = ref(article.others.map((other) => (other.classification_label == 1)))
+    var positiveOthers = ref(article.others.map((other) => (other.classification_label == 1 || other.annotation_label == 1)))
 
     // Handle update event for positivePeople
     const updatePositivePersons = (newValue) => {
