@@ -248,8 +248,8 @@ def get_articles(connection, page, status, domain=-1, q=''):
         return count, cursor.fetchall()
 
 
-def annote_negative(connection, id):
-    query = '''UPDATE autokmdb_news SET annotation_label = 0, processing_step = 5 WHERE id = %s;'''
+def annote_negative(connection, id, reason):
+    query = '''UPDATE autokmdb_news SET annotation_label = 0, processing_step = 5, negative_reason = %s WHERE id = %s;'''
     query_id = '''SELECT news_id FROM autokmdb_news WHERE id = %s;'''
     query_remove = '''DELETE FROM news_news WHERE news_id = %s;'''
     query_remove_person = '''DELETE FROM news_persons_link WHERE news_id = %s;'''
@@ -257,10 +257,11 @@ def annote_negative(connection, id):
     query_remove_place = '''DELETE FROM news_places_link WHERE news_id = %s;'''
     query_remove_other = '''DELETE FROM news_others_link WHERE news_id = %s;'''
     query_remove_lang = '''DELETE FROM news_lang WHERE news_id = %s;'''
+
     with connection.cursor() as cursor:
         cursor.execute(query_id, (id,))
         news_id = cursor.fetchone()[0]
-        cursor.execute(query, (id,))
+        cursor.execute(query, (reason, id,))
         if news_id:
             cursor.execute(query_remove, (news_id,))
             cursor.execute(query_remove_person, (news_id,))

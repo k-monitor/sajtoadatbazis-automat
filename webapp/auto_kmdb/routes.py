@@ -79,8 +79,9 @@ def not_corruption():
             return jsonify({'error': 'Nem vagy bejelentkezve!'}), 401
 
     id = request.json['id']
+    reason = request.json['reason']
     with connection_pool.get_connection() as connection:
-        annote_negative(connection, id)
+        annote_negative(connection, id, reason)
     return jsonify({}), 200
 
 
