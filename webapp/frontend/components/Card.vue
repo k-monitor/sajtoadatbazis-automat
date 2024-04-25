@@ -17,7 +17,16 @@
             <p class="text-base text-right py-1">{{ article.date }}</p>
             <UButton v-if="article.skip_reason > 1" color="grey" @click="retryArticle">Újra</UButton>
             <UContainer v-else-if="article.processing_step >= 4 " class="flex justify-between px-0 sm:px-0 lg:px-0">
-                <UButton v-if="article.annotation_label != 0" color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Mégis elutasít" }}</UButton>
+                
+                <UButtonGroup size="sm" orientation="horizontal">
+                    <UButton v-if="article.annotation_label != 0" color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Mégis elutasít" }}</UButton>
+                    <UDropdown :items="items" :popper="{ placement: 'bottom-end' }">
+                        <UButton color="white" label="" trailing-icon="i-heroicons-chevron-down-20-solid" />
+                        <template #item="{ item }">
+                            <span class="">{{ item.label }}</span>
+                        </template>
+                    </UDropdown>
+                </UButtonGroup>
                 <UButton v-if="true" @click="openModal" class="ml-auto">{{ article.annotation_label == null ? "Tovább" : article.annotation_label == 0 ? "Mégis elfogad" : "Szerkeszt" }}</UButton>
             </UContainer>
         </div>
@@ -46,7 +55,17 @@
                 </div>
                 <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
                     <UButton color="gray" @click="closeModal">Mégse</UButton>
+
                     <div class="my-2 flex justify-between">
+                        <UButtonGroup size="sm" orientation="horizontal">
+                            <UButton v-if="article.annotation_label != 0" color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Mégis elutasít" }}</UButton>
+                            <UDropdown :items="items" :popper="{ placement: 'bottom-end' }">
+                                <UButton color="white" label="" trailing-icon="i-heroicons-chevron-down-20-solid" />
+                                <template #item="{ item }">
+                                    <span class="">{{ item.label }}</span>
+                                </template>
+                            </UDropdown>
+                        </UButtonGroup>
                         <UCheckbox class="mx-5" size="xl" v-model="is_active"  label="Aktív" />
                         <UButton @click="submitArticle" :loading="submitted">Elfogad</UButton>
                     </div>
@@ -61,6 +80,19 @@
 <script setup lang="ts">
     var baseUrl = 'https://autokmdb.deepdata.hu/autokmdb'
     //hostUrl = 'localhost:3000'
+
+    const items = [
+    [{
+        label: 'Átvett',
+        slot: 'item',
+        click: async () => {
+        await postUrl(baseUrl+'/api/annote/negative', {
+            method: 'POST',
+            body: {'id': article.id, 'reason': 1},
+        });
+        refresh()},
+    }]
+    ]
 
     async function postUrl(url, data) {
         return await $fetch(url, data)
@@ -84,8 +116,7 @@
     async function deleteArticle() {
         await postUrl(baseUrl+'/api/annote/negative', {
             method: 'POST',
-            body: {'id': article.id},
-            
+            body: {'id': article.id, 'reason': 0},
         });
         refresh()
     }
