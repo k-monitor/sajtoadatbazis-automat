@@ -1,0 +1,1 @@
+ALTER TABLE autokmdb_news ADD negative_reason INT, ADD is_paywalled INT;
