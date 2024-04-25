@@ -40,8 +40,16 @@
                         <UInput class="my-2" v-model="article.url"/>
                         <p>Leírás:</p>
                         <UTextarea class="my-2" v-model="article.description"/>
-                        <p>Szöveg:</p>
-                        <UTextarea class="my-2" v-model="article.text" rows="20"/>
+                        <div class="flex justify-between">
+                            <p>Szöveg:</p>
+                            <div class="flex items-center">
+                                <p>szerkeszt: </p><UToggle class="m-2" size="md" color="primary" v-model="edit" />
+                            </div>
+                        </div>
+                        <UTextarea v-if="edit" class="my-2" v-model="article.text" rows="20"/>
+                        <div v-if="!edit" style="overflow-y: scroll; height:400px;">
+                            <span class="my-2" v-html="richText"></span>
+                        </div>
                     </div>
 
                     <div class="max-w-lg mx-4 flex-grow">
@@ -80,7 +88,7 @@
 <script setup lang="ts">
     var baseUrl = 'https://autokmdb.deepdata.hu/autokmdb'
     //hostUrl = 'localhost:3000'
-
+    const edit = ref(true)
     const items = [
     [{
         label: 'Átvett',
@@ -178,6 +186,10 @@
 
     // TODO: clean this code
 
+    console.log('start')
+    console.log(article.institutions.length)
+
+
     var personsMap = {}
     for (const person of article.persons) {
         if (personsMap[person.db_id])
@@ -255,6 +267,41 @@
     var positivePlaces = ref(article.places.filter((place) => (place.classification_label == 1 || place.annotation_label == 1)))
 
     var positiveOthers = ref(article.others.map((other) => (other.classification_label == 1 || other.annotation_label == 1)))
+
+
+    let texthtml = article.text
+    
+    let allPersons = article.persons.map((person) => person.list ?? [person]).flat();
+    allPersons.forEach(element => {element.etype = 'person'})
+
+    let allInstitutions = article.institutions.map((person) => person.list ?? [person]).flat();
+    allInstitutions.forEach(element => {element.etype = 'institution'})
+
+    let allPlaces = article.places.map((person) => person.list ?? [person]).flat();
+    allPlaces.forEach(element => {element.etype = 'place'})
+
+    let allEntities = allPersons.concat(allInstitutions, allPlaces)
+
+    allEntities.sort(function(a, b) {return a.found_position - b.found_position;})
+
+    let richText = ''
+    let lastIndex = 0
+
+    for (const entity of allEntities) {
+        console.log(entity.found_position)
+        richText += texthtml.substring(lastIndex, entity.found_position)
+        if (entity.etype == 'person')
+            richText += '<span style="color:red">'+entity.found_name+'</span>'
+        else if (entity.etype == 'institution')
+            richText += '<span style="color:yellow">'+entity.found_name+'</span>'
+        else if (entity.etype == 'place')
+            richText += '<span style="color:purple">'+entity.found_name+'</span>'
+
+        lastIndex = entity.found_position+entity.found_name.length
+    }
+    richText += texthtml.substring(lastIndex)
+
+    richText = richText.split('\n').join('<br>')
 
     // Handle update event for positivePeople
     const updatePositivePersons = (newValue) => {
