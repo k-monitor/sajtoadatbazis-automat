@@ -114,19 +114,19 @@ def add_auto_other(connection, autokmdb_news_id, other_id, found_name, found_pos
     connection.commit()
 
 
-def save_download_step(connection, id, text, title, description, authors):
-    query = '''UPDATE autokmdb_news SET text = %s, title = %s, description = %s, processing_step = 1, author = %s
+def save_download_step(connection, id, text, title, description, authors, date):
+    query = '''UPDATE autokmdb_news SET text = %s, title = %s, description = %s, processing_step = 1, author = %s, article_date = %s
                WHERE id = %s;'''
     with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (text, title, description, authors, id))
+        cursor.execute(query, (text, title, description, authors, date, id))
     connection.commit()
 
 
-def skip_same_news(connection, id, text, title, description, authors):
-    query = '''UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5, text = %s, title = %s, description = %s, processing_step = 1, author = %s
+def skip_same_news(connection, id, text, title, description, authors, date):
+    query = '''UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5, text = %s, title = %s, description = %s, processing_step = 1, author = %s, article_date = %s
                WHERE id = %s'''
     with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (text, title, description, authors, id))
+        cursor.execute(query, (text, title, description, authors, date, id))
     connection.commit()
 
 

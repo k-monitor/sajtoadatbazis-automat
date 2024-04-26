@@ -45,14 +45,10 @@ class DownloadProcessor(Processor):
                 description = sl[:400]
 
         date = article.publish_date
-        if date is not None:
-            date = date.strftime('%Y. %m. %d. %H:%M:%S')
-        else:
-            date = ''
 
         if same_news(title, description, text) and next_row['source'] != 1:
             with connection_pool.get_connection() as connection:
-                skip_same_news(connection, next_row['id'], text, title, description, authors)
+                skip_same_news(connection, next_row['id'], text, title, description, authors, date)
         else:
             with connection_pool.get_connection() as connection:
-                save_download_step(connection, next_row['id'], text, title, description, authors)
+                save_download_step(connection, next_row['id'], text, title, description, authors, date)
