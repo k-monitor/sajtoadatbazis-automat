@@ -1,0 +1,1 @@
+ALTER TABLE autokmdb_news ADD category INT;
