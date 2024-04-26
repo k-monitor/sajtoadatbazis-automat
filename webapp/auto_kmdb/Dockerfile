@@ -11,7 +11,7 @@ COPY . auto_kmdb
 RUN pip install -r auto_kmdb/requirements.txt
 RUN python auto_kmdb/init_container.py
 RUN apt update
-RUN apt install wget
+RUN apt install -y wget
 RUN mkdir /models
 RUN wget 'https://huggingface.co/boapps/kmdb-category-classifier/resolve/main/svm_classifier_category.joblib?download=true' -O /models/svm_classifier_category.joblib
 
