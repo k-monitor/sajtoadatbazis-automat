@@ -114,19 +114,19 @@ def add_auto_other(connection, autokmdb_news_id, other_id, found_name, found_pos
     connection.commit()
 
 
-def save_download_step(connection, id, text, title, description, authors):
-    query = '''UPDATE autokmdb_news SET text = %s, title = %s, description = %s, processing_step = 1, author = %s
+def save_download_step(connection, id, text, title, description, authors, date):
+    query = '''UPDATE autokmdb_news SET text = %s, title = %s, description = %s, processing_step = 1, author = %s, article_date = %s
                WHERE id = %s;'''
     with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (text, title, description, authors, id))
+        cursor.execute(query, (text, title, description, authors, date, id))
     connection.commit()
 
 
-def skip_same_news(connection, id, text, title, description, authors):
-    query = '''UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5, text = %s, title = %s, description = %s, processing_step = 1, author = %s
+def skip_same_news(connection, id, text, title, description, authors, date):
+    query = '''UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5, text = %s, title = %s, description = %s, processing_step = 1, author = %s, article_date = %s
                WHERE id = %s'''
     with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (text, title, description, authors, id))
+        cursor.execute(query, (text, title, description, authors, date, id))
     connection.commit()
 
 
@@ -138,11 +138,11 @@ def skip_download_error(connection, id):
     connection.commit()
 
 
-def save_classification_step(connection, id, classification_label, classification_score):
+def save_classification_step(connection, id, classification_label, classification_score, category):
     query = '''UPDATE autokmdb_news SET classification_label = %s,
-               classification_score = %s, processing_step = 2 WHERE id = %s'''
+               classification_score = %s, processing_step = 2, category = %s WHERE id = %s'''
     with connection.cursor() as cursor:
-        cursor.execute(query, (classification_label, classification_score, id))
+        cursor.execute(query, (classification_label, classification_score, category, id))
     connection.commit()
 
 
@@ -213,7 +213,7 @@ def get_articles(connection, page, status, domain=-1, q=''):
     query = ''
 
     selection = '''SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step, skip_reason,
-            n.text AS text, n.cre_time AS date,
+            n.text AS text, n.cre_time AS date, category,
             (SELECT GROUP_CONCAT(CONCAT('{"name":"', p.name, '", "id":',p.id, ', "db_id":',COALESCE(p.person_id, 'null'), ', "db_name": "',COALESCE(p.person_name, 'null'), '", "classification_score":',p.classification_score, ', "classification_label":',p.classification_label, ', "annotation_label":',COALESCE(p.annotation_label, 'null'), ', "found_name":"',COALESCE(p.found_name, 'null'), '", "found_position":',COALESCE(p.found_position, 'null'),'}') SEPARATOR ',') FROM autokmdb_persons p WHERE n.id = p.autokmdb_news_id) AS persons,
             (SELECT GROUP_CONCAT(CONCAT('{"name":"', i.name, '", "id":',i.id, ', "db_id":',COALESCE(i.institution_id, 'null'), ', "db_name": "',COALESCE(i.institution_name, 'null'), '", "classification_score":',i.classification_score, ', "classification_label":',i.classification_label, ', "annotation_label":',COALESCE(i.annotation_label, 'null'), ', "found_name":"',COALESCE(i.found_name, 'null'), '", "found_position":',COALESCE(i.found_position, 'null'),'}') SEPARATOR ',') FROM autokmdb_institutions i WHERE n.id = i.autokmdb_news_id) AS institutions,
             (SELECT GROUP_CONCAT(CONCAT('{"name":"', pl.name, '", "id":',pl.id, ', "db_id":',COALESCE(pl.place_id, 'null'), ', "db_name": "',COALESCE(pl.place_name, 'null'), '", "classification_score":',pl.classification_score, ', "classification_label":',pl.classification_label, ', "annotation_label":',COALESCE(pl.annotation_label, 'null'), ', "found_name":"',COALESCE(pl.found_name, 'null'), '", "found_position":',COALESCE(pl.found_position, 'null'),'}') SEPARATOR ',') FROM autokmdb_places pl WHERE n.id = pl.autokmdb_news_id) AS places,
@@ -292,7 +292,7 @@ def create_institution(connection, name, user_id):
     return db_id
 
 
-def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active):
+def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active, category):
     query_1 = '''UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s WHERE id = %s;'''
     query_2 = '''INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);'''
     query_3 = '''INSERT INTO news_lang (news_id, lang, name, teaser, articletext, alias, seo_url_default) VALUES (%s, %s, %s, %s, %s, %s, %s)'''
@@ -326,7 +326,8 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
                 institution['db_id'] = db_id
 
         cursor.execute(query_np, (news_id, newspaper_id))
-        cursor.execute(query_cat, (news_id, 5, "Y"))
+        category_dict = {0: 5, 1: 6, 2:7}
+        cursor.execute(query_cat, (news_id, category_dict[category], "Y"))
 
         done_person_ids = set()
         done_institution_ids = set()
