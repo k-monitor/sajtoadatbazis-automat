@@ -103,7 +103,9 @@ def annote():
     places = request.json['positive_places']
     newspaper_id = request.json['newspaper_id']
     is_active = request.json['active']
-    category = request.json['category']
+    category = 0
+    if 'category' in request.json:
+        category = request.json['category']
 
     with connection_pool.get_connection() as connection:
         annote_positive(connection, id, url, title, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active, category)
