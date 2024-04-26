@@ -10,6 +10,8 @@ COPY . auto_kmdb
 # Install any needed packages specified in requirements.txt
 RUN pip install -r auto_kmdb/requirements.txt
 RUN python auto_kmdb/init_container.py
+RUN mkdir /models
+RUN wget 'https://huggingface.co/boapps/kmdb-category-classifier/resolve/main/svm_classifier_category.joblib?download=true' -O /models/svm_classifier_category.joblib
 
 ENV DATA_PATH="/data"
 
