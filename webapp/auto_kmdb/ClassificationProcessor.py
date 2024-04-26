@@ -24,7 +24,7 @@ class ClassificationProcessor(Processor):
         self.model = BertForSequenceClassification.from_pretrained(
             'boapps/kmdb_classification_model')
         self.tokenizer = BertTokenizer.from_pretrained('SZTAKI-HLT/hubert-base-cc', max_length=512)
-        self.svm_classifier = load('models/svm_classifier_category.joblib')
+        self.svm_classifier = load('/models/svm_classifier_category.joblib')
         self.is_done = True
         print('Class model loaded')
 
