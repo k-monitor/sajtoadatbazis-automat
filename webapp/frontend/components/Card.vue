@@ -159,6 +159,7 @@
                     'positive_persons': positivePersonsList,
                     'positive_institutions': positiveInstitutions.value,
                     'positive_places': positivePlaces.value,
+                    'category': article.category,
                     'tags': positiveOthers.value,
                     'active': is_active.value,
                 },
