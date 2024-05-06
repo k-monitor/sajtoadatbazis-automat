@@ -8,8 +8,9 @@ jsonlines
 mysql-connector-python
 transformers==4.34.0
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.1.0
+torch==2.2.0
 python-slugify[unidecode]
 joblib
 scikit-learn
 beautifulsoup4
+typing-extensions
