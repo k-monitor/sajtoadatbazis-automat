@@ -12,3 +12,4 @@ torch==2.1.0
 python-slugify[unidecode]
 joblib
 scikit-learn
+beautifulsoup4
