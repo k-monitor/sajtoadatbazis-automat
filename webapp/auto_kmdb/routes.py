@@ -52,7 +52,7 @@ def api_article_counts():
 
 
 @api.route('/article/<int:id>', methods=["GET"])
-def api_articles(id):
+def api_article(id):
     session_id = get_session_id(request)
     with connection_pool.get_connection() as connection:
         if not validate_session(connection, session_id):
