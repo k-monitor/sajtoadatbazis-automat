@@ -1,5 +1,5 @@
 from flask import jsonify, Blueprint, request
-from auto_kmdb.db import get_articles, annote_negative, connection_pool
+from auto_kmdb.db import get_article, get_articles, annote_negative, connection_pool
 from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers
 from auto_kmdb.db import check_url_exists, init_news, annote_positive, get_article_counts, validate_session
 from math import ceil
@@ -51,6 +51,19 @@ def api_article_counts():
     return jsonify(article_counts), 200
 
 
+@api.route('/article/<int:id>', methods=["GET"])
+def api_articles(id):
+    session_id = get_session_id(request)
+    with connection_pool.get_connection() as connection:
+        if not validate_session(connection, session_id):
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 401
+
+    with connection_pool.get_connection() as connection:
+        article = reformat_article(get_article(connection, id))
+
+    return jsonify(article), 200
+
+
 @api.route('/articles', methods=["GET"])
 def api_articles():
     session_id = get_session_id(request)
@@ -65,7 +78,6 @@ def api_articles():
 
     with connection_pool.get_connection() as connection:
         length, articles = get_articles(connection, page, status, domain, '%'+q+'%')
-        articles = [reformat_article(a) for a in articles]
 
     return jsonify({'pages': ceil(length/10), 'articles': articles}), 200
 
