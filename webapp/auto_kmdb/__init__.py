@@ -19,7 +19,7 @@ def create_app():
 
     #Thread(target=rss_watcher, args=(app.app_context(),), daemon=True).start()
 
-    processors = [DownloadProcessor(), ClassificationProcessor()] # [DownloadProcessor(), ClassificationProcessor(), NERProcessor(), KeywordProcessor()]
+    processors = [DownloadProcessor(), ClassificationProcessor(), NERProcessor(), KeywordProcessor()]
     for processor in processors:
         processor.load_model()
         Thread(target=processor.process_loop, args=(), daemon=True).start()
