@@ -17,7 +17,7 @@ def create_app():
         from auto_kmdb.routes import api
         app.register_blueprint(api)
 
-    #Thread(target=rss_watcher, args=(app.app_context(),), daemon=True).start()
+    Thread(target=rss_watcher, args=(app.app_context(),), daemon=True).start()
 
     processors = [DownloadProcessor(), ClassificationProcessor(), NERProcessor(), KeywordProcessor()]
     for processor in processors:
