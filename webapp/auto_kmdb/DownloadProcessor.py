@@ -35,9 +35,9 @@ class DownloadProcessor(Processor):
         text = article.text
         title = article.title
 
-        if 'Csatlakozz a Körhöz, és olvass tovább!' in article.html:
-            text = self.get_444(next_row['url'].split('/')[-1].split('?')[0])
-        elif 'hvg.hu/360/' in next_row['url']:
+        # if 'Csatlakozz a Körhöz, és olvass tovább!' in article.html:
+        # text = self.get_444(next_row['url'].split('/')[-1].split('?')[0])
+        if 'hvg.hu/360/' in next_row['url']:
             text += '\n'+self.get_hvg(next_row['url'].split('/360/')[1].split('?')[0])
 
         title = do_replacements(title, replacements)
