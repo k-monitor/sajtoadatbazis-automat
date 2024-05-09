@@ -90,16 +90,38 @@
     //hostUrl = 'localhost:3000'
     const edit = ref(true)
     const items = [
-    [{
-        label: 'Átvett',
-        slot: 'item',
-        click: async () => {
-        await postUrl(baseUrl+'/api/annote/negative', {
-            method: 'POST',
-            body: {'id': article.id, 'reason': 1},
-        });
-        refresh()},
-    }]
+    [
+        {
+            label: 'Átvett',
+            slot: 'item',
+            click: async () => {
+            await postUrl(baseUrl+'/api/annote/negative', {
+                method: 'POST',
+                body: {'id': article.id, 'reason': 1},
+            });
+            refresh()},
+        },
+        {
+            label: 'Külföldi',
+            slot: 'item',
+            click: async () => {
+            await postUrl(baseUrl+'/api/annote/negative', {
+                method: 'POST',
+                body: {'id': article.id, 'reason': 2},
+            });
+            refresh()},
+        },
+        {
+            label: 'Egyéb',
+            slot: 'item',
+            click: async () => {
+            await postUrl(baseUrl+'/api/annote/negative', {
+                method: 'POST',
+                body: {'id': article.id, 'reason': 100},
+            });
+            refresh()},
+        },
+    ]
     ]
 
     async function postUrl(url, data) {
