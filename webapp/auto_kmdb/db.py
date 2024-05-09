@@ -326,7 +326,7 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
                 institution['db_id'] = db_id
 
         cursor.execute(query_np, (news_id, newspaper_id))
-        category_dict = {0: 5, 1: 6, 2:7}
+        category_dict = {0: 5, 1: 6, 2:7, None: 5}
         cursor.execute(query_cat, (news_id, category_dict[category], "Y"))
 
         done_person_ids = set()
