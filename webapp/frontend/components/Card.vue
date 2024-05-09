@@ -30,7 +30,7 @@
                 <UButton v-if="true" @click="openModal" class="ml-auto">{{ article.annotation_label == null ? "Tovább" : article.annotation_label == 0 ? "Mégis elfogad" : "Szerkeszt" }}</UButton>
             </UContainer>
         </div>
-        <UModal v-model="isOpen"  :ui="{ width: 'sm:max-w-7xl' }">
+        <UModal v-model="isOpen" :ui="{ width: 'sm:max-w-7xl' }">
             <div class="p-4 w-full">
                 <div  class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
                     <div class="max-w-2xl mx-4 flex-grow">
@@ -46,17 +46,17 @@
                                 <p>szerkeszt: </p><UToggle class="m-2" size="md" color="primary" v-model="edit" />
                             </div>
                         </div>
-                        <UTextarea v-if="edit" class="my-2" v-model="article.text" rows="20"/>
+                        <UTextarea v-if="edit" class="my-2" v-model="article.text" rows="20" />
                         <div v-if="!edit" style="overflow-y: scroll; height:400px;">
                             <span class="my-2" v-html="richText"></span>
                         </div>
                     </div>
 
                     <div class="max-w-lg mx-4 flex-grow">
-                        <SelectMenu class="my-2" :list="article.persons" type="személy" :positive-list="positivePersons" @update:positiveList="updatePositivePersons" :labels="allLabels['person']" />
-                        <SelectMenu class="my-2" :list="article.institutions" type="intézmény" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
-                        <SelectMenu class="my-2" :list="article.places" type="helyszín" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
-                        <SelectMenu class="my-2" :list="article.others" type="egyéb" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['other']" />
+                        <SelectMenu :list="allPersons" type="személy" :positive-list="positivePersons" @update:positiveList="updatePositivePersons" :labels="allLabels['person']" />
+                        <SelectMenu :list="allInstitutions" type="intézmény" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
+                        <SelectMenu :list="allPlaces" type="helyszín" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
+                        <SelectMenu :list="article.others" type="egyéb" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['other']" />
                         <p>{{errorText}}</p>
                     </div>
 
@@ -87,7 +87,7 @@
 
 <script setup lang="ts">
     var baseUrl = 'https://autokmdb.deepdata.hu/autokmdb'
-    //hostUrl = 'localhost:3000'
+    //baseUrl = 'http://localhost:5000'
     const edit = ref(true)
     const items = [
     [
@@ -97,7 +97,7 @@
             click: async () => {
             await postUrl(baseUrl+'/api/annote/negative', {
                 method: 'POST',
-                body: {'id': article.id, 'reason': 1},
+                body: {'id': article.value.id, 'reason': 1},
             });
             refresh()},
         },
@@ -107,7 +107,7 @@
             click: async () => {
             await postUrl(baseUrl+'/api/annote/negative', {
                 method: 'POST',
-                body: {'id': article.id, 'reason': 2},
+                body: {'id': article.value.id, 'reason': 2},
             });
             refresh()},
         },
@@ -117,7 +117,7 @@
             click: async () => {
             await postUrl(baseUrl+'/api/annote/negative', {
                 method: 'POST',
-                body: {'id': article.id, 'reason': 100},
+                body: {'id': article.value.id, 'reason': 100},
             });
             refresh()},
         },
@@ -128,14 +128,79 @@
         return await $fetch(url, data)
     }
 
+    let allPersons = ref([]);
+    let allInstitutions = ref([]);
+    let allPlaces = ref([]);
+
+    let positivePersons = ref([])
+    let positiveInstitutions = ref([])
+    let positivePlaces = ref([])
+    let positiveOthers = ref([])
+
+    function mapEntities(entities) {
+        const entitiesMap = {};
+        for (const entity of entities) {
+            if (entitiesMap[entity.db_id])
+                entitiesMap[entity.db_id].push({ ...entity });
+            else
+                entitiesMap[entity.db_id] = [{ ...entity }];
+        }
+
+        const mappedEntities = [];
+        for (const id in entitiesMap) {
+            let entityList = entitiesMap[id];
+            if (id != null) {
+                let entity = { ...entityList[0] };
+                entity['list'] = [...entityList];
+                mappedEntities.push({ ...entity });
+            } else {
+                for (const entity of entityList) {
+                    entity['list'] = [{ ...entity }];
+                    mappedEntities.push({ ...entity });
+                }
+            }
+        }
+        return mappedEntities;
+    }
+
     function openModal() {
-        isOpen.value = true
+        if (article.value.isDownloaded) {
+            isOpen.value = true
+        } else {
+            $fetch(baseUrl+'/api/article/'+article.value.id, {
+                query: {},
+                onResponse({ request, response, options }) {
+                    console.log(response._data)
+                    article.value = response._data
+                    allPersons.value = mapEntities(article.value.persons)
+                    allInstitutions.value = mapEntities(article.value.institutions)
+                    allPlaces.value = mapEntities(article.value.places)
+
+                    positivePersons.value = article.value.persons.filter((person) => (person.classification_label == 1 || person.annotation_label == 1))
+                    positiveInstitutions.value = article.value.institutions.filter((institution) => (institution.classification_label == 1 || institution.annotation_label == 1))
+                    positivePlaces.value = article.value.places.filter((place) => (place.classification_label == 1 || place.annotation_label == 1))
+                    positiveOthers.value = article.value.others.map((other) => (other.classification_label == 1 || other.annotation_label == 1))
+
+                    richText.value = getRichText()
+                    isOpen.value = true
+                    article.value.isDownloaded = true
+                }},
+            )
+        }
     }
     function closeModal() {
         isOpen.value = false
     }
 
-    const { article, allLabels, refresh } = defineProps(['article', 'allLabels', 'refresh']);
+    const { article: articleValue, allLabels, refresh } = defineProps(['article', 'allLabels', 'refresh']);
+    const article = ref(articleValue)
+    article.value.text = ''
+    article.value.institutions = []
+    article.value.persons = []
+    article.value.places = []
+    article.value.others = []
+    article.value.isDownloaded = false
+
     const is_active = ref(true)
     let submitted = ref(false)
     let errorText = ref('')
@@ -146,7 +211,7 @@
     async function deleteArticle() {
         await postUrl(baseUrl+'/api/annote/negative', {
             method: 'POST',
-            body: {'id': article.id, 'reason': 0},
+            body: {'id': article.value.id, 'reason': 0},
         });
         refresh()
     }
@@ -172,16 +237,16 @@
             await postUrl(baseUrl+'/api/annote/positive', {
                 method: 'POST',
                 body: {
-                    'id': article.id,
-                    'newspaper_id': article.newspaper_id,
-                    'url': article.url,
-                    'title': article.title,
-                    'description': article.description,
-                    'text': article.text,
+                    'id': article.value.id,
+                    'newspaper_id': article.value.newspaper_id,
+                    'url': article.value.url,
+                    'title': article.value.title,
+                    'description': article.value.description,
+                    'text': article.value.text,
                     'positive_persons': positivePersonsList,
                     'positive_institutions': positiveInstitutions.value,
                     'positive_places': positivePlaces.value,
-                    'category': article.category,
+                    'category': article.value.category,
                     'tags': positiveOthers.value,
                     'active': is_active.value,
                 },
@@ -205,128 +270,44 @@
         }
     const isOpen = ref(false)
 
-    article.date = new Date(Date.parse(article.date)).toLocaleString()
+    article.value.date = new Date(Date.parse(article.value.date)).toLocaleString()
 
-    // TODO: clean this code
+    function getRichText() {
+        let texthtml = article.value.text
+        
+        let allPersons = article.value.persons.map((person) => person.list ?? [person]).flat();
+        allPersons.forEach(element => {element.etype = 'person'})
 
-    console.log('start')
-    console.log(article.institutions)
+        let allInstitutions = article.value.institutions.map((person) => person.list ?? [person]).flat();
+        allInstitutions.forEach(element => {element.etype = 'institution'})
 
+        let allPlaces = article.value.places.map((person) => person.list ?? [person]).flat();
+        allPlaces.forEach(element => {element.etype = 'place'})
 
-    var personsMap = {}
-    for (const person of article.persons) {
-        if (personsMap[person.db_id])
-            personsMap[person.db_id].push({ ...person})
-        else
-            personsMap[person.db_id] = [{ ...person}]
-    }
-    var mappedPersons = []
-    for (const id in personsMap) {
-        let personList = personsMap[id]
-        if (id != null) {
-            let person = { ...personList[0]}
-            person['list'] =  [...personList]
-            mappedPersons.push({ ...person})
-        } else {
-            for (const person of personList) {
-                person['list'] = [{ ...person}]
-                mappedPersons.push({ ...person})
-            }
+        let allEntities = allPersons.concat(allInstitutions, allPlaces)
+
+        allEntities.sort(function(a, b) {return a.found_position - b.found_position;})
+
+        let richText = ''
+        let lastIndex = 0
+
+        for (const entity of allEntities) {
+            console.log(entity.found_position)
+            richText += texthtml.substring(lastIndex, entity.found_position)
+            if (entity.etype == 'person')
+                richText += '<span style="color:red">'+entity.found_name+'</span>'
+            else if (entity.etype == 'institution')
+                richText += '<span style="color:yellow">'+entity.found_name+'</span>'
+            else if (entity.etype == 'place')
+                richText += '<span style="color:purple">'+entity.found_name+'</span>'
+
+            lastIndex = entity.found_position+entity.found_name.length
         }
+        richText += texthtml.substring(lastIndex)
+
+        return richText.split('\n').join('<br>')
     }
-
-    article.persons = mappedPersons
-    article.persons.sort(function(a, b) {return a.found_position - b.found_position;})
-
-    var institutionsMap = {}
-    for (const institution of article.institutions) {
-        if (institutionsMap[institution.db_id])
-            institutionsMap[institution.db_id].push({ ...institution})
-        else
-            institutionsMap[institution.db_id] = [{ ...institution}]
-    }
-    var mappedInstitutions = []
-    for (const id in institutionsMap) {
-        let institutionList = institutionsMap[id]
-        if (id != null) {
-            let institution = { ...institutionList[0]}
-            institution['list'] =  [...institutionList]
-            mappedInstitutions.push({ ...institution})
-        } else {
-            for (const institution of institutionList) {
-                institution['list'] = [{ ...institution}]
-                mappedInstitutions.push({ ...institution})
-            }
-        }
-    }
-
-    article.institutions = mappedInstitutions
-    article.institutions.sort(function(a, b) {return a.found_position - b.found_position;})
-
-    var placesMap = {}
-    for (const place of article.places) {
-        if (placesMap[place.db_id])
-            placesMap[place.db_id].push({ ...place})
-        else
-            placesMap[place.db_id] = [{ ...place}]
-    }
-    var mappedPlaces = []
-    for (const id in placesMap) {
-        let placeList = placesMap[id]
-        if (id != null) {
-            let place = { ...placeList[0]}
-            place['list'] =  [...placeList]
-            mappedPlaces.push({ ...place})
-        } else {
-            for (const place of placeList) {
-                place['list'] = [{ ...place}]
-                mappedPlaces.push({ ...place})
-            }
-        }
-    }
-
-    article.places = mappedPlaces
-    article.places.sort(function(a, b) {return a.found_position - b.found_position;})
-
-    var positivePersons = ref(article.persons.filter((person) => (person.classification_label == 1 || person.annotation_label == 1)))
-    var positiveInstitutions = ref(article.institutions.filter((institution) => (institution.classification_label == 1 || institution.annotation_label == 1)))
-    var positivePlaces = ref(article.places.filter((place) => (place.classification_label == 1 || place.annotation_label == 1)))
-
-    var positiveOthers = ref(article.others.map((other) => (other.classification_label == 1 || other.annotation_label == 1)))
-
-
-    let texthtml = article.text
-    
-    let allPersons = article.persons.map((person) => person.list ?? [person]).flat();
-    allPersons.forEach(element => {element.etype = 'person'})
-
-    let allInstitutions = article.institutions.map((person) => person.list ?? [person]).flat();
-    allInstitutions.forEach(element => {element.etype = 'institution'})
-
-    let allPlaces = article.places.map((person) => person.list ?? [person]).flat();
-    allPlaces.forEach(element => {element.etype = 'place'})
-
-    let allEntities = allPersons.concat(allInstitutions, allPlaces)
-
-    allEntities.sort(function(a, b) {return a.found_position - b.found_position;})
-
-    let richText = ''
-    let lastIndex = 0
-
-    for (const entity of allEntities) {
-        richText += texthtml.substring(lastIndex, entity.found_position)
-        if (entity.etype == 'person')
-            richText += '<span style="color:red">'+entity.found_name+'</span>'
-        else if (entity.etype == 'institution')
-            richText += '<span style="color:yellow">'+entity.found_name+'</span>'
-        else if (entity.etype == 'place')
-            richText += '<span style="color:purple">'+entity.found_name+'</span>'
-
-        lastIndex = entity.found_position+entity.found_name.length
-    }
-    richText += texthtml.substring(lastIndex)
-
-    richText = richText.split('\n').join('<br>')
+    const richText = ref('')
 
     // Handle update event for positivePeople
     const updatePositivePersons = (newValue) => {

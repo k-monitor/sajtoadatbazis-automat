@@ -1,16 +1,16 @@
 <template>
-    <!--  multiple by="label" option-attribute="label" @update:model-value="$emit('update:positiveList', localPositiveList)" -->
-
     <p style="text-transform: capitalize;"> {{ type }}: </p>
     <USelectMenu
             @close="() => $emit('update:positiveList', localPositiveList)"
             :searchable="search"
             searchable-placeholder="Keresés..."
             class="my-2"
-            v-model="localPositiveList" :options="localList" by="id" 
+            v-model="localPositiveList" :options="list" by="id" 
             option-attribute="name"
             creatable
             multiple
+            v-model:query="query"
+            @keypress="submit"
         >
         <template #label>
             <span v-if="localPositiveList.length">{{ localPositiveList.map((item) => (item.db_name != 'null' && item.db_name) ? item.db_name : item.name).join(', ') }}</span>
@@ -30,6 +30,9 @@
 </template>
 
 <script setup lang="ts">
+    function submit (test) {
+        console.log('test')
+    }
     function search (q: string) {
         if (q === '') {
             return list
@@ -40,9 +43,8 @@
         }).slice(0, 5).map((item: any) => {return {'id': 'db_'+item.id, 'db_id': item.id, 'name': item.name, 'db_name': item.name}})
     }
 
-    const props = defineProps(['list', 'positiveList', 'labels', 'type']);
-    var { list, positiveList, type } = props;
-    const {labels} = props;
+    const { list, positiveList, labels, type } = defineProps(['list', 'positiveList', 'labels', 'type']);
+    const query = ref('')
     // Local state
     const localList = list
     const localPositiveList = ref(positiveList);
