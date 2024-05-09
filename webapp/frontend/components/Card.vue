@@ -90,16 +90,38 @@
     //hostUrl = 'localhost:3000'
     const edit = ref(true)
     const items = [
-    [{
-        label: 'Átvett',
-        slot: 'item',
-        click: async () => {
-        await postUrl(baseUrl+'/api/annote/negative', {
-            method: 'POST',
-            body: {'id': article.id, 'reason': 1},
-        });
-        refresh()},
-    }]
+    [
+        {
+            label: 'Átvett',
+            slot: 'item',
+            click: async () => {
+            await postUrl(baseUrl+'/api/annote/negative', {
+                method: 'POST',
+                body: {'id': article.id, 'reason': 1},
+            });
+            refresh()},
+        },
+        {
+            label: 'Külföldi',
+            slot: 'item',
+            click: async () => {
+            await postUrl(baseUrl+'/api/annote/negative', {
+                method: 'POST',
+                body: {'id': article.id, 'reason': 2},
+            });
+            refresh()},
+        },
+        {
+            label: 'Egyéb',
+            slot: 'item',
+            click: async () => {
+            await postUrl(baseUrl+'/api/annote/negative', {
+                method: 'POST',
+                body: {'id': article.id, 'reason': 100},
+            });
+            refresh()},
+        },
+    ]
     ]
 
     async function postUrl(url, data) {
@@ -188,7 +210,7 @@
     // TODO: clean this code
 
     console.log('start')
-    console.log(article.institutions.length)
+    console.log(article.institutions)
 
 
     var personsMap = {}
@@ -214,6 +236,7 @@
     }
 
     article.persons = mappedPersons
+    article.persons.sort(function(a, b) {return a.found_position - b.found_position;})
 
     var institutionsMap = {}
     for (const institution of article.institutions) {
@@ -238,6 +261,7 @@
     }
 
     article.institutions = mappedInstitutions
+    article.institutions.sort(function(a, b) {return a.found_position - b.found_position;})
 
     var placesMap = {}
     for (const place of article.places) {
@@ -262,6 +286,7 @@
     }
 
     article.places = mappedPlaces
+    article.places.sort(function(a, b) {return a.found_position - b.found_position;})
 
     var positivePersons = ref(article.persons.filter((person) => (person.classification_label == 1 || person.annotation_label == 1)))
     var positiveInstitutions = ref(article.institutions.filter((institution) => (institution.classification_label == 1 || institution.annotation_label == 1)))
@@ -289,7 +314,6 @@
     let lastIndex = 0
 
     for (const entity of allEntities) {
-        console.log(entity.found_position)
         richText += texthtml.substring(lastIndex, entity.found_position)
         if (entity.etype == 'person')
             richText += '<span style="color:red">'+entity.found_name+'</span>'
@@ -306,7 +330,6 @@
 
     // Handle update event for positivePeople
     const updatePositivePersons = (newValue) => {
-        console.log(newValue)
         positivePersons.value = newValue
     };
 
