@@ -34,11 +34,14 @@ class DownloadProcessor(Processor):
 
         text = article.text
         title = article.title
+        is_paywalled = 0
 
         if 'Csatlakozz a Körhöz, és olvass tovább!' in article.html:
             text = self.get_444(next_row['url'].split('?')[0])
+            is_paywalled = 1
         elif 'hvg.hu/360/' in next_row['url']:
             text += '\n'+self.get_hvg(next_row['url'].split('/360/')[1].split('?')[0])
+            is_paywalled = 1
 
         title = do_replacements(title, replacements)
         text = do_replacements(text, replacements)
@@ -59,10 +62,10 @@ class DownloadProcessor(Processor):
 
         if same_news(title, description, text) and next_row['source'] != 1:
             with connection_pool.get_connection() as connection:
-                skip_same_news(connection, next_row['id'], text, title, description, authors, date)
+                skip_same_news(connection, next_row['id'], text, title, description, authors, date, is_paywalled)
         else:
             with connection_pool.get_connection() as connection:
-                save_download_step(connection, next_row['id'], text, title, description, authors, date)
+                save_download_step(connection, next_row['id'], text, title, description, authors, date, is_paywalled)
 
     def get_444(self, url):
         cookie = os.environ["COOKIE_444"]
