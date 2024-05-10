@@ -71,7 +71,10 @@ class DownloadProcessor(Processor):
         cookie = os.environ["COOKIE_444"]
         article_name = url.split('/')[-1]
         date = '-'.join(url.split('/')[-4:-1])
-        response = requests.get(f'https://gateway.ipa.444.hu/api/graphql?crunch=2&operationName=fetchContent&variables=%7B%22slug%22%3A%22{article_name}%22%2C%22date%22%3A%22{date}%22%2C%22buckets%22%3A%5B%22444%22%5D%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22bb4a4c69fca5577097d0c3f5c9432d5485d8ee2e2e6dfe8f6fbfb61d30e5ed6e%22%7D%7D', headers={'Cookie': cookie})
+        bucket = '444'
+        if url.count('/') == 7:
+            bucket = url.split('/')[3]
+        response = requests.get(f'https://gateway.ipa.444.hu/api/graphql?crunch=2&operationName=fetchContent&variables=%7B%22slug%22%3A%22{article_name}%22%2C%22date%22%3A%22{date}%22%2C%22buckets%22%3A%5B%22{bucket}%22%5D%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22bb4a4c69fca5577097d0c3f5c9432d5485d8ee2e2e6dfe8f6fbfb61d30e5ed6e%22%7D%7D', headers={'Cookie': cookie})
         text = '\n'.join([BeautifulSoup(f['content'], features="lxml").text for f in response.json()['data']['crunched'][-1]['content']['body'][0] if isinstance(f, dict) and 'content' in f])
         return text
 
