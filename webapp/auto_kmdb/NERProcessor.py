@@ -119,6 +119,8 @@ class NERProcessor(Processor):
         self.text = next_row['text']
         self.predict()
 
+        print('ner processing:', next_row['id'])
+
         added_persons = []
         added_institutions = []
         added_places = []
@@ -135,6 +137,8 @@ class NERProcessor(Processor):
                 pname = person_db['name'] if person_db else None
                 if pname is not None:
                     added_persons.append(pname)
+                else:
+                    added_persons.append(person['name'])
                 with connection_pool.get_connection() as connection:
                     add_auto_person(connection, next_row['id'], pname, pid, person['found_name'],
                                 person['found_position'], person['name'],
@@ -147,6 +151,8 @@ class NERProcessor(Processor):
             iname = institution_db['name'] if institution_db else None
             if iname is not None:
                 added_institutions.append(iname)
+            else:
+                added_institutions.append(institution['name'])
             with connection_pool.get_connection() as connection:
                 add_auto_institution(connection, next_row['id'], iname, iid, institution['found_name'],
                                  institution['found_position'], institution['name'],
@@ -159,6 +165,8 @@ class NERProcessor(Processor):
             plname = place_db['name'] if place_db else None
             if plname is not None:
                 added_places.append(plname)
+            else:
+                added_places.append(place['name'])
             with connection_pool.get_connection() as connection:
                 add_auto_place(connection, next_row['id'], plname, plid, place['found_name'],
                            place['found_position'], place['name'],
