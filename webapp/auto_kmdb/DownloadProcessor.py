@@ -35,9 +35,9 @@ class DownloadProcessor(Processor):
         text = article.text
         title = article.title
 
-        # if 'Csatlakozz a Körhöz, és olvass tovább!' in article.html:
-        # text = self.get_444(next_row['url'].split('/')[-1].split('?')[0])
-        if 'hvg.hu/360/' in next_row['url']:
+        if 'Csatlakozz a Körhöz, és olvass tovább!' in article.html:
+            text = self.get_444(next_row['url'].split('?')[0])
+        elif 'hvg.hu/360/' in next_row['url']:
             text += '\n'+self.get_hvg(next_row['url'].split('/360/')[1].split('?')[0])
 
         title = do_replacements(title, replacements)
@@ -64,9 +64,11 @@ class DownloadProcessor(Processor):
             with connection_pool.get_connection() as connection:
                 save_download_step(connection, next_row['id'], text, title, description, authors, date)
 
-    def get_444(self, article_name):
+    def get_444(self, url):
         cookie = os.environ["COOKIE_444"]
-        response = requests.get(f'https://gateway.ipa.444.hu/api/graphql?crunch=2&operationName=fetchContent&variables=%7B%22slug%22%3A%22{article_name}%22%2C%22date%22%3A%222024-04-26%22%2C%22buckets%22%3A%5B%22444%22%5D%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22bb4a4c69fca5577097d0c3f5c9432d5485d8ee2e2e6dfe8f6fbfb61d30e5ed6e%22%7D%7D', headers={'Cookie': cookie})
+        article_name = url.split('/')[-1]
+        date = '-'.join(url.split('/')[-4:-1])
+        response = requests.get(f'https://gateway.ipa.444.hu/api/graphql?crunch=2&operationName=fetchContent&variables=%7B%22slug%22%3A%22{article_name}%22%2C%22date%22%3A%22{date}%22%2C%22buckets%22%3A%5B%22444%22%5D%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22bb4a4c69fca5577097d0c3f5c9432d5485d8ee2e2e6dfe8f6fbfb61d30e5ed6e%22%7D%7D', headers={'Cookie': cookie})
         text = '\n'.join([BeautifulSoup(f['content'], features="lxml").text for f in response.json()['data']['crunched'][-1]['content']['body'][0] if isinstance(f, dict) and 'content' in f])
         return text
 
