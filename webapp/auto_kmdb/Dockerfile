@@ -21,4 +21,4 @@ ENV DATA_PATH="/data"
 EXPOSE 8000
 
 # Run app.py when the container launches
-CMD ["gunicorn", "auto_kmdb:app", "--bind", "0.0.0.0:8000"]
+CMD ["gunicorn", "auto_kmdb:app", "--timeout", "1000", "--bind", "0.0.0.0:8000"]
