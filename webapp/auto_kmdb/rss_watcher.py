@@ -3,14 +3,16 @@ import feedparser
 from auto_kmdb.options import skip_url_patterns
 from auto_kmdb.db import check_url_exists, init_news, connection_pool, get_rss_urls
 from auto_kmdb.preprocess import clear_url
+import logging
 
 
 def rss_watcher(app_context):
+    logging.info('Started RSS watcher')
     app_context.push()
     with connection_pool.get_connection() as connection:
         newspapers = get_rss_urls(connection)
     while True:
-        print('checking feeds')
+        logging.info('checking feeds')
         for newspaper in newspapers:
             if newspaper['rss_url']:
                 get_new_from_rss(newspaper)

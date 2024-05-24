@@ -8,26 +8,27 @@ from auto_kmdb.db import connection_pool
 import os
 import requests
 from bs4 import BeautifulSoup
+import logging
 
 
 class DownloadProcessor(Processor):
     def __init__(self):
+        logging.info('initialized download processor')
         pass
         # super().__init__()
 
     def process_next(self):
         with connection_pool.get_connection() as connection:
             next_row = get_download_queue(connection)
-        print('Downloading')
         if next_row is None:
             sleep(30)
             return
+        logging.info('download processor is processing: ' + next_row['url'])
 
-        print('Downloading', next_row['url'])
         try:
             article = newspaper.article(next_row['url'])
         except Exception as e:
-            print(e)
+            logging.error(e)
             with connection_pool.get_connection() as connection:
                 skip_download_error(connection, next_row['id'])
             return
