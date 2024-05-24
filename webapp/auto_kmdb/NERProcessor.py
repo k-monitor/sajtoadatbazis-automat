@@ -5,6 +5,7 @@ from auto_kmdb.db import save_ner_step, get_all_places
 from auto_kmdb.Processor import Processor
 from time import sleep
 from auto_kmdb.db import connection_pool
+import logging
 
 
 def join_entities(classifications):
@@ -27,20 +28,23 @@ def strip_entity(entity):
 class NERProcessor(Processor):
     def __init__(self):
         #super().__init__()
+        logging.info('initialized ner processor')
         self.done = False
 
     def load_model(self):
+        logging.info('ner processor is loading model')
         self.classifier = pipeline("ner", model="boapps/kmdb_ner_model",
                                    aggregation_strategy="first", stride=8,
                                    tokenizer=AutoTokenizer.from_pretrained("SZTAKI-HLT/hubert-base-cc", model_max_length=512))
         
         self.done = True
-        print("NER model loaded")
+        logging.info('ner processor loaded model')
 
     def is_done(self):
         return self.done
 
     def predict(self):
+        logging.info('ner processor is running prediction')
         self.people = []
         self.institutions = []
         self.places = []
@@ -108,8 +112,6 @@ class NERProcessor(Processor):
         return None
 
     def process_next(self):
-
-        
         with connection_pool.get_connection() as connection:
             next_row = get_ner_queue(connection)
         if next_row is None:
@@ -119,7 +121,8 @@ class NERProcessor(Processor):
         self.text = next_row['text']
         self.predict()
 
-        print('ner processing:', next_row['id'])
+        print('ner processing: ' + str(next_row['id']))
+        logging.info('ner processing next: ' + str(next_row['id']))
 
         added_persons = []
         added_institutions = []

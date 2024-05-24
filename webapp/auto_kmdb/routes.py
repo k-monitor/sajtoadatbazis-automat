@@ -4,6 +4,8 @@ from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, 
 from auto_kmdb.db import check_url_exists, init_news, annote_positive, get_article_counts, validate_session
 from math import ceil
 import json
+import logging
+
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
@@ -66,6 +68,7 @@ def api_article(id):
 
 @api.route('/articles', methods=["GET"])
 def api_articles():
+    logging.info('requesting api articles')
     session_id = get_session_id(request)
     with connection_pool.get_connection() as connection:
         if not validate_session(connection, session_id):

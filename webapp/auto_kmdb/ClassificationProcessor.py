@@ -6,6 +6,7 @@ import torch.nn.functional as F
 from auto_kmdb.db import connection_pool
 from joblib import load
 import torch
+import logging
 
 
 article_classification_prompt = '''{title}
@@ -15,20 +16,23 @@ article_classification_prompt = '''{title}
 class ClassificationProcessor(Processor):
     def __init__(self):
         #super().__init__()
+        logging.info('initialized classification processor')
         self.done = False
 
     def is_done(self):
         return self.done
 
     def load_model(self):
+        logging.info('loading classification model')
         self.model = BertForSequenceClassification.from_pretrained(
             'boapps/kmdb_classification_model')
         self.tokenizer = BertTokenizer.from_pretrained('SZTAKI-HLT/hubert-base-cc', max_length=512)
         self.svm_classifier = load('/models/svm_classifier_category.joblib')
         self.is_done = True
-        print('Class model loaded')
+        logging.info('loaded classification model')
 
     def predict(self):
+        logging.info('running classification prediction')
         with torch.no_grad():
             inputs = self.tokenizer(self.text, return_tensors="pt")
             output = self.model(**inputs, output_hidden_states=True)
@@ -47,6 +51,7 @@ class ClassificationProcessor(Processor):
         if next_row is None:
             sleep(30)
             return
+        logging.info('processing next classification')
         
         self.text = article_classification_prompt.format(title=next_row['title'], description=next_row['description'])
         self.article_text = next_row['text']

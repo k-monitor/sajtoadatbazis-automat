@@ -1,11 +1,13 @@
 from auto_kmdb.Processor import Processor
 from time import sleep
 from auto_kmdb.db import connection_pool, get_keyword_queue, save_keyword_step
+import logging
 
 
 class KeywordProcessor(Processor):
     def __init__(self):
         #super().__init__()
+        logging.info('initialized keyword processor')
         self.done = False
 
     def load_model(self):
@@ -25,6 +27,7 @@ class KeywordProcessor(Processor):
         if next_row is None:
             sleep(30)
             return
+        logging.info('keyword processor next')
         self.predict()
 
         # TODO

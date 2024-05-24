@@ -1,4 +1,5 @@
 from time import sleep
+import logging
 
 
 class Processor:
@@ -18,10 +19,12 @@ class Processor:
         return True
 
     def process_loop(self):
+        logging.info('started process_loop')
         while True:
             try:
                 self.process_next()
             except Exception as e:
-                print(e)
+                logging.error('encountered error in processing loop')
+                logging.error(e)
                 sleep(60)
             sleep(1)
