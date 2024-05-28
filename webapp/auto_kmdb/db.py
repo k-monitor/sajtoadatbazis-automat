@@ -209,19 +209,43 @@ def get_article_counts(connection, domain=-1, q=''):
     return article_counts
 
 
+def get_article_institutions(cursor, id):
+    query = '''SELECT name, id, institution_id AS db_id, institution_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_institutions WHERE id = %s'''
+    cursor.execute(query, (id,))
+    return cursor.fetchall()
+
+
+def get_article_persons(cursor, id):
+    query = '''SELECT name, id, person_id AS db_id, person_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_persons WHERE id = %s'''
+    cursor.execute(query, (id,))
+    return cursor.fetchall()
+
+
+def get_article_places(cursor, id):
+    query = '''SELECT name, id, place_id AS db_id, place_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_places WHERE id = %s'''
+    cursor.execute(query, (id,))
+    return cursor.fetchall()
+
+
+def get_article_others(cursor, id):
+    query = '''SELECT name, id, other_id AS db_id, classification_score, classification_label, annotation_label FROM autokmdb_others WHERE id = %s'''
+    cursor.execute(query, (id,))
+    return cursor.fetchall()
+
+
 def get_article(connection, id):
     query = '''SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step, skip_reason,
-            n.text AS text, n.cre_time AS date, category,
-            (SELECT GROUP_CONCAT(CONCAT('{"name":"', p.name, '", "id":',p.id, ', "db_id":',COALESCE(p.person_id, 'null'), ', "db_name": "',COALESCE(p.person_name, 'null'), '", "classification_score":',p.classification_score, ', "classification_label":',p.classification_label, ', "annotation_label":',COALESCE(p.annotation_label, 'null'), ', "found_name":"',COALESCE(p.found_name, 'null'), '", "found_position":',COALESCE(p.found_position, 'null'),'}') SEPARATOR ',') FROM autokmdb_persons p WHERE n.id = p.autokmdb_news_id) AS persons,
-            (SELECT GROUP_CONCAT(CONCAT('{"name":"', i.name, '", "id":',i.id, ', "db_id":',COALESCE(i.institution_id, 'null'), ', "db_name": "',COALESCE(i.institution_name, 'null'), '", "classification_score":',i.classification_score, ', "classification_label":',i.classification_label, ', "annotation_label":',COALESCE(i.annotation_label, 'null'), ', "found_name":"',COALESCE(i.found_name, 'null'), '", "found_position":',COALESCE(i.found_position, 'null'),'}') SEPARATOR ',') FROM autokmdb_institutions i WHERE n.id = i.autokmdb_news_id) AS institutions,
-            (SELECT GROUP_CONCAT(CONCAT('{"name":"', pl.name, '", "id":',pl.id, ', "db_id":',COALESCE(pl.place_id, 'null'), ', "db_name": "',COALESCE(pl.place_name, 'null'), '", "classification_score":',pl.classification_score, ', "classification_label":',pl.classification_label, ', "annotation_label":',COALESCE(pl.annotation_label, 'null'), ', "found_name":"',COALESCE(pl.found_name, 'null'), '", "found_position":',COALESCE(pl.found_position, 'null'),'}') SEPARATOR ',') FROM autokmdb_places pl WHERE n.id = pl.autokmdb_news_id) AS places,
-            (SELECT GROUP_CONCAT(CONCAT('{"name":"', o.name, '", "id":',o.id, ', "db_id":',COALESCE(o.other_id, 'null'), ', "classification_score":',o.classification_score, ', "classification_label":',o.classification_label, ', "annotation_label":',COALESCE(o.annotation_label, 'null'), '}') SEPARATOR ',') FROM autokmdb_others o WHERE n.id = o.autokmdb_news_id) AS others
-        FROM autokmdb_news n WHERE id = %s
+            n.text AS text, n.cre_time AS date, category FROM autokmdb_news n WHERE id = %s
         '''
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute('SET SESSION group_concat_max_len = 30000;')
         cursor.execute(query, (id,))
-        return cursor.fetchone()
+        article = cursor.fetchone()
+        article['persons'] = get_article_persons(cursor, id)
+        article['institutions'] = get_article_institutions(cursor, id)
+        article['places'] = get_article_places(cursor, id)
+        article['others'] = get_article_others(cursor, id)
+        return article
 
 def get_articles(connection, page, status, domain=-1, q=''):
     query = ''
