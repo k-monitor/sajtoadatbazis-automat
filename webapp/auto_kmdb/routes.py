@@ -61,7 +61,7 @@ def api_article(id):
             return jsonify({'error': 'Nem vagy bejelentkezve!'}), 401
 
     with connection_pool.get_connection() as connection:
-        article = reformat_article(get_article(connection, id))
+        article = get_article(connection, id)
 
     return jsonify(article), 200
 
