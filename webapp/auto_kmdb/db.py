@@ -210,25 +210,25 @@ def get_article_counts(connection, domain=-1, q=''):
 
 
 def get_article_institutions(cursor, id):
-    query = '''SELECT name, id, institution_id AS db_id, institution_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_institutions WHERE id = %s'''
+    query = '''SELECT name, id, institution_id AS db_id, institution_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_institutions WHERE autokmdb_news_id = %s'''
     cursor.execute(query, (id,))
     return cursor.fetchall()
 
 
 def get_article_persons(cursor, id):
-    query = '''SELECT name, id, person_id AS db_id, person_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_persons WHERE id = %s'''
+    query = '''SELECT name, id, person_id AS db_id, person_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_persons WHERE autokmdb_news_id = %s'''
     cursor.execute(query, (id,))
     return cursor.fetchall()
 
 
 def get_article_places(cursor, id):
-    query = '''SELECT name, id, place_id AS db_id, place_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_places WHERE id = %s'''
+    query = '''SELECT name, id, place_id AS db_id, place_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_places WHERE autokmdb_news_id = %s'''
     cursor.execute(query, (id,))
     return cursor.fetchall()
 
 
 def get_article_others(cursor, id):
-    query = '''SELECT name, id, other_id AS db_id, classification_score, classification_label, annotation_label FROM autokmdb_others WHERE id = %s'''
+    query = '''SELECT name, id, other_id AS db_id, classification_score, classification_label, annotation_label FROM autokmdb_others WHERE autokmdb_news_id = %s'''
     cursor.execute(query, (id,))
     return cursor.fetchall()
 
