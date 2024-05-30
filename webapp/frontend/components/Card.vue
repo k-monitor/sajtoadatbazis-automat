@@ -17,7 +17,6 @@
             <p class="text-base text-right py-1">{{ article.date }}</p>
             <UButton v-if="article.skip_reason > 1" color="grey" @click="retryArticle">Újra</UButton>
             <UContainer v-else-if="article.processing_step >= 4 " class="flex justify-between px-0 sm:px-0 lg:px-0">
-                
                 <UButtonGroup size="sm" orientation="horizontal">
                     <UButton v-if="article.annotation_label != 0" color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Mégis elutasít" }}</UButton>
                     <UDropdown :items="items" :popper="{ placement: 'bottom-end' }">
@@ -90,7 +89,7 @@
     var baseUrl = 'https://autokmdb.deepdata.hu/autokmdb'
     // baseUrl = 'http://127.0.0.1:8000'
     //baseUrl = 'http://localhost:5000'
-    const edit = ref(true)
+    const edit = ref(false)
     const items = [
     [
         {
