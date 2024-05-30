@@ -87,6 +87,7 @@
 
 <script setup lang="ts">
     var baseUrl = 'https://autokmdb.deepdata.hu/autokmdb'
+    //baseUrl = 'http://127.0.0.1:8000'
     //baseUrl = 'http://localhost:5000'
     const edit = ref(true)
     const items = [
@@ -176,9 +177,9 @@
                     allInstitutions.value = mapEntities(article.value.institutions)
                     allPlaces.value = mapEntities(article.value.places)
 
-                    positivePersons.value = article.value.persons.filter((person) => (person.classification_label == 1 || person.annotation_label == 1))
-                    positiveInstitutions.value = article.value.institutions.filter((institution) => (institution.classification_label == 1 || institution.annotation_label == 1))
-                    positivePlaces.value = article.value.places.filter((place) => (place.classification_label == 1 || place.annotation_label == 1))
+                    positivePersons.value = allPersons.value.filter((person) => (person.classification_label == 1 || person.annotation_label == 1))
+                    positiveInstitutions.value = allInstitutions.value.filter((institution) => (institution.classification_label == 1 || institution.annotation_label == 1))
+                    positivePlaces.value = allPlaces.value.filter((place) => (place.classification_label == 1 || place.annotation_label == 1))
                     positiveOthers.value = article.value.others.map((other) => (other.classification_label == 1 || other.annotation_label == 1))
 
                     richText.value = getRichText()
