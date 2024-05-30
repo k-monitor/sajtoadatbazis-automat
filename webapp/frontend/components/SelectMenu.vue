@@ -13,7 +13,7 @@
             @keypress="submit"
         >
         <template #label>
-            <span v-if="localPositiveList.length">{{ localPositiveList.map((item) => (item.db_name != 'null' && item.db_name) ? item.db_name : item.name).join(', ') }}</span>
+            <span v-if="localPositiveList.length">{{ localPositiveList.map((item) => (item.db_name != null && item.db_name) ? item.db_name : item.name).join(', ') }}</span>
             <span v-else>Válassz ki elemeket</span>
         </template>
         <template #option-create="{ option }">
@@ -21,7 +21,7 @@
             <span class="block truncate">{{ option.name }}</span>
         </template>
         <template #option="{ option }">
-                <span class="block truncate"> <Icon v-if="option.db_name != 'null'" name="mdi:database-outline" color="green" /> {{ option.db_name != 'null' ? option.db_name : option.name }}  {{option.classification_score != null ? '('+(option.classification_score*100).toFixed(0)+'%' : ''}} <Icon v-if="option.classification_label == 1 && option.classification_score != null" name="mdi:emoticon-devil" color="red"/> <Icon v-else-if="option.classification_score != null" name="mdi:account-cowboy-hat" color="gold" /> {{ option.classification_score != null ? ')' : '' }} </span>
+                <span class="block truncate"> <Icon v-if="true" name="mdi:database-outline" color="green" /> {{ option.db_name != null ? option.db_name : option.name }}  {{option.classification_score != null ? '('+(option.classification_score*100).toFixed(0)+'%' : ''}} <Icon v-if="option.classification_label == 1 && option.classification_score != null" name="mdi:emoticon-devil" color="red"/> <Icon v-else-if="option.classification_score != null" name="mdi:account-cowboy-hat" color="gold" /> {{ option.classification_score != null ? ')' : '' }} </span>
         </template>
         <template #empty>
             Nincs {{ type }}
@@ -35,7 +35,8 @@
     }
     function search (q: string) {
         if (q === '') {
-            return list
+            return list.concat(localPositiveList.value).filter((obj1, i, arr) => 
+  arr.findIndex(obj2 => (obj2.id === obj1.id)) === i)
         }
 
         return labels.filter((item: any) => {
@@ -44,6 +45,8 @@
     }
 
     const { list, positiveList, labels, type } = defineProps(['list', 'positiveList', 'labels', 'type']);
+    console.log(list)
+    console.log(positiveList)
     const query = ref('')
     // Local state
     const localList = list
