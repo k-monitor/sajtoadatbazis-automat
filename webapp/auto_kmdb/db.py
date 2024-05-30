@@ -235,7 +235,7 @@ def get_article_others(cursor, id):
 
 def get_article(connection, id):
     query = '''SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step, skip_reason,
-            n.text AS text, n.cre_time AS date, category FROM autokmdb_news n WHERE id = %s
+            n.text AS text, n.cre_time AS date, category, article_date FROM autokmdb_news n WHERE id = %s
         '''
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute('SET SESSION group_concat_max_len = 30000;')

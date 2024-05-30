@@ -5,7 +5,7 @@
             :searchable="search"
             searchable-placeholder="Keresés..."
             class="my-2"
-            v-model="localPositiveList" :options="list" by="id" 
+            v-model="localPositiveList" :options="list"
             option-attribute="name"
             creatable
             multiple
@@ -36,7 +36,7 @@
     function search (q: string) {
         if (q === '') {
             return list.concat(localPositiveList.value).filter((obj1, i, arr) => 
-  arr.findIndex(obj2 => (obj2.id === obj1.id)) === i)
+                arr.findIndex(obj2 => (obj2.id === obj1.id)) === i || !("found_name" in obj1))
         }
 
         return labels.filter((item: any) => {
