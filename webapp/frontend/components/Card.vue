@@ -57,6 +57,7 @@
                         <SelectMenu :list="allInstitutions" type="intézmény" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
                         <SelectMenu :list="allPlaces" type="helyszín" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
                         <SelectMenu :list="article.others" type="egyéb" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['other']" />
+                        <p>publikálás: {{ article.article_date }}</p>
                         <p>{{errorText}}</p>
                     </div>
 
@@ -87,7 +88,7 @@
 
 <script setup lang="ts">
     var baseUrl = 'https://autokmdb.deepdata.hu/autokmdb'
-    //baseUrl = 'http://127.0.0.1:8000'
+    // baseUrl = 'http://127.0.0.1:8000'
     //baseUrl = 'http://localhost:5000'
     const edit = ref(true)
     const items = [
@@ -176,6 +177,8 @@
                     allPersons.value = mapEntities(article.value.persons)
                     allInstitutions.value = mapEntities(article.value.institutions)
                     allPlaces.value = mapEntities(article.value.places)
+                    article.value.date = new Date(Date.parse(article.value.date)).toLocaleString()
+                    article.value.article_date = new Date(Date.parse(article.value.article_date)).toLocaleString()
 
                     positivePersons.value = allPersons.value.filter((person) => (person.classification_label == 1 || person.annotation_label == 1))
                     positiveInstitutions.value = allInstitutions.value.filter((institution) => (institution.classification_label == 1 || institution.annotation_label == 1))
@@ -272,6 +275,7 @@
     const isOpen = ref(false)
 
     article.value.date = new Date(Date.parse(article.value.date)).toLocaleString()
+    article.value.article_date = new Date(Date.parse(article.value.article_date)).toLocaleString()
 
     function getRichText() {
         let texthtml = article.value.text
