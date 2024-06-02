@@ -26,7 +26,7 @@
                         </template>
                     </UDropdown>
                 </UButtonGroup>
-                <UButton v-if="true" @click="openModal" class="ml-auto">{{ article.annotation_label == null ? "Tovább" : article.annotation_label == 0 ? "Mégis elfogad" : "Szerkeszt" }}</UButton>
+                <UButton v-if="true" @click="openModal" :loading="isOpening" class="ml-auto">{{ article.annotation_label == null ? "Tovább" : article.annotation_label == 0 ? "Mégis elfogad" : "Szerkeszt" }}</UButton>
             </UContainer>
         </div>
         <UModal v-model="isOpen" :ui="{ width: 'sm:max-w-7xl' }">
@@ -165,8 +165,10 @@
     }
 
     function openModal() {
+        isOpening.value = true
         if (article.value.isDownloaded) {
             isOpen.value = true
+            isOpening.value = false
         } else {
             $fetch(baseUrl+'/api/article/'+article.value.id, {
                 query: {},
@@ -181,11 +183,12 @@
 
                     positivePersons.value = allPersons.value.filter((person) => (person.classification_label == 1 || person.annotation_label == 1))
                     positiveInstitutions.value = allInstitutions.value.filter((institution) => (institution.classification_label == 1 || institution.annotation_label == 1))
-                    positivePlaces.value = allPlaces.value.filter((place) => (place.classification_label == 1 || place.annotation_label == 1))
-                    positiveOthers.value = article.value.others.map((other) => (other.classification_label == 1 || other.annotation_label == 1))
+                    positivePlaces.value = allPlaces.value.filter((place) => (place.classification_label == 1 || place.annotation_label == 1) && place.db_id)
+                    positiveOthers.value = article.value.others.map((other) => (other.classification_label == 1 || other.annotation_label == 1) && other.db_id)
 
                     richText.value = getRichText()
                     isOpen.value = true
+                    isOpening.value = false
                     article.value.isDownloaded = true
                 }},
             )
@@ -272,6 +275,7 @@
             }
         }
     const isOpen = ref(false)
+    const isOpening = ref(false)
 
     article.value.date = new Date(Date.parse(article.value.date)).toLocaleString()
     article.value.article_date = new Date(Date.parse(article.value.article_date)).toLocaleString()
@@ -299,11 +303,11 @@
             console.log(entity.found_position)
             richText += texthtml.substring(lastIndex, entity.found_position)
             if (entity.etype == 'person')
-                richText += '<span style="color:red">'+entity.found_name+'</span>'
+                richText += '<span style="color:red; font-weight:bold">'+entity.found_name+'</span>'
             else if (entity.etype == 'institution')
-                richText += '<span style="color:yellow">'+entity.found_name+'</span>'
+                richText += '<span style="color:blue; font-weight:bold">'+entity.found_name+'</span>'
             else if (entity.etype == 'place')
-                richText += '<span style="color:purple">'+entity.found_name+'</span>'
+                richText += '<span style="color:purple; font-weight:bold">'+entity.found_name+'</span>'
 
             lastIndex = entity.found_position+entity.found_name.length
         }
