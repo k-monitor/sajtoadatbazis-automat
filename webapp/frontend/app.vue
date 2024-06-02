@@ -10,7 +10,7 @@
     let q = ref('')
 
     var baseUrl = 'https://autokmdb.deepdata.hu/autokmdb'
-    //baseUrl = 'http://127.0.0.1:8000'
+    // baseUrl = 'http://127.0.0.1:8000'
 
     const allLabels = useFetch(baseUrl+'/api/all_labels').data;
     let allDomains = computed(() => allLabels.value == null ? [] : [{name: 'mind', id: -1}].concat(allLabels.value?.domains))

@@ -52,10 +52,10 @@
                     </div>
 
                     <div class="max-w-lg mx-4 flex-grow">
-                        <SelectMenu :list="allPersons" type="személy" :positive-list="positivePersons" @update:positiveList="updatePositivePersons" :labels="allLabels['person']" />
-                        <SelectMenu :list="allInstitutions" type="intézmény" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
-                        <SelectMenu :list="allPlaces" type="helyszín" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
-                        <SelectMenu :list="article.others" type="egyéb" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['other']" />
+                        <SelectMenu :list="allPersons" type="személy" :creatable="true" :positive-list="positivePersons" @update:positiveList="updatePositivePersons" :labels="allLabels['person']" />
+                        <SelectMenu :list="allInstitutions" type="intézmény" :creatable="true" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
+                        <SelectMenu :list="allPlaces" type="helyszín" :creatable="false" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
+                        <SelectMenu :list="article.others" type="egyéb" :creatable="false" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['keywords']" />
                         <p>publikálás: {{ article.article_date }}</p>
                         <p>{{errorText}}</p>
                     </div>
