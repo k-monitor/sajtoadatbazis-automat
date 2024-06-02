@@ -31,7 +31,7 @@
         </div>
         <UModal v-model="isOpen" :ui="{ width: 'sm:max-w-7xl' }">
             <div class="p-4 w-full">
-                <div  class="my-2 flex justify-between px-0 sm:px-0 lg:px-0 flex-wrap:wrap">
+                <div  class="my-2 flex justify-between px-0 sm:px-0 lg:px-0 flex-wrap">
                     <div class="max-w-2xl mx-4 flex-grow">
                         <p>Cím:</p>
                         <UInput class="my-2" v-model="article.title"/>
@@ -56,6 +56,8 @@
                         <SelectMenu :list="allInstitutions" type="intézmény" :creatable="true" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
                         <SelectMenu :list="allPlaces" type="helyszín" :creatable="false" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
                         <SelectMenu :list="article.others" type="egyéb" :creatable="false" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['keywords']" />
+                        <p>Kategória:</p>
+                        <USelect v-model="category" :options="categories" option-attribute="name" value-attribute="id" />
                         <p>publikálás: {{ article.article_date }}</p>
                         <p>{{errorText}}</p>
                     </div>
@@ -90,6 +92,12 @@
     // baseUrl = 'http://127.0.0.1:8000'
     //baseUrl = 'http://localhost:5000'
     const edit = ref(false)
+    let category = ref(0)
+    let categories = ref([
+        {name: 'Hírek/Magyar hírek', id: 0},
+        {name: 'Hírek/EU hírek', id: 1},
+        {name: 'Hírek/Világ hírek', id: 2},
+    ])
     const items = [
     [
         {
@@ -186,6 +194,7 @@
                     positivePlaces.value = allPlaces.value.filter((place) => (place.classification_label == 1 || place.annotation_label == 1) && place.db_id)
                     positiveOthers.value = article.value.others.map((other) => (other.classification_label == 1 || other.annotation_label == 1) && other.db_id)
 
+                    category.value = article.value.category
                     richText.value = getRichText()
                     isOpen.value = true
                     isOpening.value = false
@@ -252,7 +261,7 @@
                     'positive_persons': positivePersonsList,
                     'positive_institutions': positiveInstitutions.value,
                     'positive_places': positivePlaces.value,
-                    'category': article.value.category,
+                    'category': parseInt(category.value),
                     'tags': positiveOthers.value,
                     'active': is_active.value,
                 },
