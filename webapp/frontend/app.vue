@@ -8,6 +8,7 @@
     const page = ref(1)
     const statusId = ref(0)
     let q = ref('')
+    let loadingDelete = ref(false)
 
     var baseUrl = 'https://autokmdb.deepdata.hu/autokmdb'
     // baseUrl = 'http://127.0.0.1:8000'
@@ -81,6 +82,22 @@
         isOpen.value = true
     }
 
+    async function deleteArticles() {
+        console.log('hello')
+        console.log(articles.value[0].selected)
+        loadingDelete.value = true
+        for (const article of articles.value) {
+            if (article.selected) {
+                await $fetch(baseUrl+'/api/annote/negative', {
+                    method: 'POST',
+                    body: {'id': article.id, 'reason': 0},
+                });
+            }
+        }
+        loadingDelete.value = false
+        resetPageRefresh()
+    }
+
     async function addUrl () {
         isOpen.value = false
         try {
@@ -120,6 +137,7 @@
                 </template>
             </UInputMenu>
             <UInput class="px-4" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
+            <UButton v-if="articles && articles.some((v) => v.selected)" color="red" :loading="loadingDelete" @click="deleteArticles">{{"Kijelöltet elutasít ("+articles.filter((v)=> v.selected).length+")"}}</UButton>
         </UContainer>
     </div>
     </UContainer>
@@ -143,6 +161,7 @@
         <UButton @click="isOpenError = false">Bezárás</UButton>
       </div>
     </UModal>
+
 
     <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh">
         <template #item="{ item }" v-if="!pending">

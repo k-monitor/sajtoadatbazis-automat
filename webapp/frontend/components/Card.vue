@@ -26,6 +26,7 @@
                         </template>
                     </UDropdown>
                 </UButtonGroup>
+                <UCheckbox @change="selected" class="items-center p-2 scale-125" color="red" v-model="selection" name="selection" label="" />
                 <UButton v-if="true" @click="openModal" :loading="isOpening" class="ml-auto">{{ article.annotation_label == null ? "Tovább" : article.annotation_label == 0 ? "Mégis elfogad" : "Szerkeszt" }}</UButton>
             </UContainer>
         </div>
@@ -92,12 +93,18 @@
     // baseUrl = 'http://127.0.0.1:8000'
     //baseUrl = 'http://localhost:5000'
     const edit = ref(false)
+    const selection = ref(false)
     let category = ref(0)
     let categories = ref([
         {name: 'Hírek/Magyar hírek', id: 0},
         {name: 'Hírek/EU hírek', id: 1},
         {name: 'Hírek/Világ hírek', id: 2},
     ])
+    function selected() {
+        console.log('selected '+selection.value)
+        article.value.selected = selection.value
+    }
+
     const items = [
     [
         {
