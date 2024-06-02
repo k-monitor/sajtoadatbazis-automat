@@ -17,7 +17,6 @@
             <p class="text-base text-right py-1">{{ article.date }}</p>
             <UButton v-if="article.skip_reason > 1" color="grey" @click="retryArticle">Újra</UButton>
             <UContainer v-else-if="article.processing_step >= 4 " class="flex justify-between px-0 sm:px-0 lg:px-0">
-                
                 <UButtonGroup size="sm" orientation="horizontal">
                     <UButton v-if="article.annotation_label != 0" color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Mégis elutasít" }}</UButton>
                     <UDropdown :items="items" :popper="{ placement: 'bottom-end' }">
@@ -53,10 +52,10 @@
                     </div>
 
                     <div class="max-w-lg mx-4 flex-grow">
-                        <SelectMenu :list="allPersons" type="személy" :positive-list="positivePersons" @update:positiveList="updatePositivePersons" :labels="allLabels['person']" />
-                        <SelectMenu :list="allInstitutions" type="intézmény" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
-                        <SelectMenu :list="allPlaces" type="helyszín" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
-                        <SelectMenu :list="article.others" type="egyéb" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['other']" />
+                        <SelectMenu :list="allPersons" type="személy" :creatable="true" :positive-list="positivePersons" @update:positiveList="updatePositivePersons" :labels="allLabels['person']" />
+                        <SelectMenu :list="allInstitutions" type="intézmény" :creatable="true" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
+                        <SelectMenu :list="allPlaces" type="helyszín" :creatable="false" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
+                        <SelectMenu :list="article.others" type="egyéb" :creatable="false" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['keywords']" />
                         <p>publikálás: {{ article.article_date }}</p>
                         <p>{{errorText}}</p>
                     </div>
@@ -90,7 +89,7 @@
     var baseUrl = 'https://autokmdb.deepdata.hu/autokmdb'
     // baseUrl = 'http://127.0.0.1:8000'
     //baseUrl = 'http://localhost:5000'
-    const edit = ref(true)
+    const edit = ref(false)
     const items = [
     [
         {

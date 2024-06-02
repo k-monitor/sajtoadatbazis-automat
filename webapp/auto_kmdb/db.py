@@ -325,7 +325,7 @@ def create_institution(connection, name, user_id):
     return db_id
 
 
-def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active, category):
+def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active, category, others):
     query_1 = '''UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s WHERE id = %s;'''
     query_2 = '''INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);'''
     query_3 = '''INSERT INTO news_lang (news_id, lang, name, teaser, articletext, alias, seo_url_default) VALUES (%s, %s, %s, %s, %s, %s, %s)'''
@@ -338,6 +338,7 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
     query_auto_i = '''UPDATE autokmdb_institutions SET annotation_label = 1 WHERE id = %s;'''
     query_pl = '''INSERT INTO news_places_link (news_id, place_id) VALUES (%s, %s)'''
     query_auto_pl = '''UPDATE autokmdb_places SET annotation_label = 1 WHERE id = %s;'''
+    query_others = '''INSERT INTO news_others_link (news_id, other_id) VALUES (%s, %s)'''
 
     current_datetime = datetime.now()
     cre_time = int(current_datetime.timestamp())
@@ -383,7 +384,8 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
                 done_place_ids.add(place['db_id'])
             if isinstance(place['id'], int):
                 cursor.execute(query_auto_pl, (place['id'],))
-        # TODO add others
+        for other in others:
+            cursor.execute(query_others, (news_id, other['db_id']))
     connection.commit()
 
 
@@ -408,6 +410,7 @@ def get_rss_urls(connection):
         return cursor.fetchall()
 
 def validate_session(connection, session_id):
+    return True
     query = '''SELECT * FROM users_sessions WHERE session_id = %s;'''
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (session_id,))

@@ -7,7 +7,7 @@
             class="my-2"
             v-model="localPositiveList" :options="list"
             option-attribute="name"
-            creatable
+            :creatable="creatable"
             multiple
             v-model:query="query"
             @keypress="submit"
@@ -44,7 +44,7 @@
         }).slice(0, 5).map((item: any) => {return {'id': 'db_'+item.id, 'db_id': item.id, 'name': item.name, 'db_name': item.name}})
     }
 
-    const { list, positiveList, labels, type } = defineProps(['list', 'positiveList', 'labels', 'type']);
+    const { list, creatable, positiveList, labels, type } = defineProps(['list', 'creatable', 'positiveList', 'labels', 'type']);
     console.log(list)
     console.log(positiveList)
     const query = ref('')
