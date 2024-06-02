@@ -7,6 +7,7 @@
             class="my-2"
             v-model="localPositiveList" :options="list"
             option-attribute="name"
+            show-create-option-when="always"
             :creatable="creatable"
             multiple
             v-model:query="query"
@@ -21,7 +22,7 @@
             <span class="block truncate">{{ option.name }}</span>
         </template>
         <template #option="{ option }">
-                <span class="block truncate"> <Icon v-if="true" name="mdi:database-outline" color="green" /> {{ option.db_name != null ? option.db_name : option.name }}  {{option.classification_score != null ? '('+(option.classification_score*100).toFixed(0)+'%' : ''}} <Icon v-if="option.classification_label == 1 && option.classification_score != null" name="mdi:emoticon-devil" color="red"/> <Icon v-else-if="option.classification_score != null" name="mdi:account-cowboy-hat" color="gold" /> {{ option.classification_score != null ? ')' : '' }} </span>
+                <span class="block truncate"> <Icon v-if="option.db_name" name="mdi:database-outline" color="green" /> {{ option.db_name != null ? option.db_name : option.name }}  {{option.classification_score != null ? '('+(option.classification_score*100).toFixed(0)+'%' : ''}} <Icon v-if="option.classification_label == 1 && option.classification_score != null" name="mdi:emoticon-devil" color="red"/> <Icon v-else-if="option.classification_score != null" name="mdi:account-cowboy-hat" color="gold" /> {{ option.classification_score != null ? ')' : '' }} </span>
         </template>
         <template #empty>
             Nincs {{ type }}
