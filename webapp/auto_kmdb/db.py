@@ -410,7 +410,6 @@ def get_rss_urls(connection):
         return cursor.fetchall()
 
 def validate_session(connection, session_id):
-    return True
     query = '''SELECT * FROM users_sessions WHERE session_id = %s;'''
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (session_id,))
