@@ -7,6 +7,7 @@ from auto_kmdb.db import connection_pool
 from joblib import load
 import torch
 import logging
+import gc
 
 
 article_classification_prompt = '''{title}
@@ -35,10 +36,10 @@ class ClassificationProcessor(Processor):
         logging.info('running classification prediction')
         with torch.no_grad():
             inputs = self.tokenizer(self.text, return_tensors="pt")
-            output = self.model(**inputs, output_hidden_states=True)
-            cls_embedding = output.hidden_states[-1][:, 0, :].squeeze().numpy()
+            self.output = self.model(**inputs, output_hidden_states=True)
+            cls_embedding = self.output.hidden_states[-1][:, 0, :].squeeze().numpy()
 
-            logits = output.logits
+            logits = self.output.logits
             probabilities = F.softmax(logits[0], dim=-1)
             self.score = float(probabilities[1])
             self.label = 1 if self.score > 0.42 else 0
@@ -65,3 +66,7 @@ class ClassificationProcessor(Processor):
 
         with connection_pool.get_connection() as connection:
             save_classification_step(connection, next_row['id'], self.label, self.score, self.category)
+
+        del self.output
+        torch.cuda.empty_cache()
+        gc.collect()
