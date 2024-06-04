@@ -60,7 +60,7 @@
                         <p>Kategória:</p>
                         <USelect v-model="category" :options="categories" option-attribute="name" value-attribute="id" />
                         <p>Akta:</p>
-                        <USelect v-model="file_id" :options="allLabels['files']" option-attribute="name_hu" value-attribute="file_id" />
+                        <USelectMenu searchable v-model="file" :options="allFiles" option-attribute="name" value-attribute="id"></USelectMenu>
                         <p>publikálás: {{ article.article_date }}</p>
                         <p>{{errorText}}</p>
                     </div>
@@ -216,7 +216,7 @@
         isOpen.value = false
     }
 
-    const { article: articleValue, allLabels, refresh } = defineProps(['article', 'allLabels', 'refresh']);
+    const { article: articleValue, allLabels, allFiles, refresh } = defineProps(['article', 'allLabels', 'allFiles', 'refresh']);
     const article = ref(articleValue)
     article.value.text = ''
     article.value.institutions = []
@@ -226,7 +226,7 @@
     article.value.isDownloaded = false
 
     const is_active = ref(true)
-    let file_id = ref(-1)
+    let file = ref(-1)
     let submitted = ref(false)
     let errorText = ref('')
 
@@ -274,7 +274,7 @@
                     'category': parseInt(category.value),
                     'tags': positiveOthers.value,
                     'active': is_active.value,
-                    'file_id': file_id.value,
+                    'file_id': file.value,
                 },
 
                 onResponse({ request, response, options }) {

@@ -15,6 +15,7 @@
 
     const allLabels = useFetch(baseUrl+'/api/all_labels').data;
     let allDomains = computed(() => allLabels.value == null ? [] : [{name: 'mind', id: -1}].concat(allLabels.value?.domains))
+    let allFiles = computed(() => allLabels.value == null ? [] : [{name: 'semmi', id: -1}].concat(allLabels.value?.files))
     const selectedDomain = ref(allDomains[0])
 
     const { data: articleCounts, refresh: refreshArticleCounts } = useLazyFetch(baseUrl+'/api/article_counts', {
@@ -165,7 +166,7 @@
 
     <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh">
         <template #item="{ item }" v-if="!pending">
-            <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" :refresh="refresh" />
+            <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" :allFiles="allFiles" :refresh="refresh" />
             <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="refresh" />
         </template>
         <template #item="{ item }" v-else>
