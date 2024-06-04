@@ -6,6 +6,7 @@ from auto_kmdb.Processor import Processor
 from time import sleep
 from auto_kmdb.db import connection_pool
 import logging
+import torch
 
 
 def join_entities(classifications):
@@ -117,6 +118,7 @@ class NERProcessor(Processor):
         if next_row is None:
             sleep(30)
             return
+        torch.cuda.empty_cache()
 
         self.text = next_row['text']
         self.predict()

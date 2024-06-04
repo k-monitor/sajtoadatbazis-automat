@@ -59,6 +59,8 @@
                         <SelectMenu :list="article.others" type="egyéb" :creatable="false" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['keywords']" />
                         <p>Kategória:</p>
                         <USelect v-model="category" :options="categories" option-attribute="name" value-attribute="id" />
+                        <p>Akta:</p>
+                        <USelect v-model="file_id" :options="allLabels['files']" option-attribute="name_hu" value-attribute="file_id" />
                         <p>publikálás: {{ article.article_date }}</p>
                         <p>{{errorText}}</p>
                     </div>
@@ -224,6 +226,7 @@
     article.value.isDownloaded = false
 
     const is_active = ref(true)
+    let file_id = ref(-1)
     let submitted = ref(false)
     let errorText = ref('')
 
@@ -271,6 +274,7 @@
                     'category': parseInt(category.value),
                     'tags': positiveOthers.value,
                     'active': is_active.value,
+                    'file_id': file_id.value,
                 },
 
                 onResponse({ request, response, options }) {

@@ -1,6 +1,6 @@
 from flask import jsonify, Blueprint, request
 from auto_kmdb.db import get_article, get_articles, annote_negative, connection_pool
-from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers
+from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers, get_all_files
 from auto_kmdb.db import check_url_exists, init_news, annote_positive, get_article_counts, validate_session
 from math import ceil
 import json
@@ -122,9 +122,12 @@ def annote():
     category = 0
     if 'category' in request.json:
         category = request.json['category']
+    file_id = -1
+    if 'file_id' in request.json:
+        file_id = request.json['file_id']
 
     with connection_pool.get_connection() as connection:
-        annote_positive(connection, id, url, title, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active, category, others)
+        annote_positive(connection, id, url, title, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active, category, others, file_id)
     return jsonify({}), 200
 
 
@@ -158,6 +161,7 @@ def all_labels():
             'place': get_all_places(connection),
             'keywords': get_all_others(connection),
             'domains': get_all_newspapers(connection),
+            'files': get_all_files(connection),
         }), 200
 
 
