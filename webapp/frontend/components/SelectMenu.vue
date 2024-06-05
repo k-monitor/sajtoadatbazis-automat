@@ -11,7 +11,7 @@
             :creatable="creatable"
             multiple
             v-model:query="query"
-            @keypress="submit"
+            @update:model-value="handleUpdate"
         >
         <template #label>
             <span v-if="localPositiveList.length">{{ localPositiveList.map((item) => (item.db_name != null && item.db_name) ? item.db_name : item.name).join(', ') }}</span>
@@ -31,18 +31,25 @@
 </template>
 
 <script setup lang="ts">
-    function submit (test) {
-        console.log('test')
-    }
+    const handleUpdate = (event) => {
+        query.value = ''
+    };
+
     function search (q: string) {
         if (q === '') {
             return list.concat(localPositiveList.value).filter((obj1, i, arr) => 
                 arr.findIndex(obj2 => (obj2.id === obj1.id)) === i || !("found_name" in obj1))
         }
 
-        return labels.filter((item: any) => {
-            return item.name != null && item.name.toLowerCase().includes(q.toLowerCase())
-        }).slice(0, 5).map((item: any) => {return {'id': 'db_'+item.id, 'db_id': item.id, 'name': item.name, 'db_name': item.name}})
+        return list.concat(localPositiveList.value).filter((obj1, i, arr) => 
+                arr.findIndex(obj2 => (obj2.id === obj1.id)) === i || !("found_name" in obj1)).concat(labels
+        .filter((item: any) => {return item.name != null && item.name.toLowerCase().includes(q.toLowerCase())})
+        .slice(0, 5)
+        .map((item: any) => {return {'id': 'db_'+item.id, 'db_id': item.id, 'name': item.name, 'db_name': item.name}}))
+        .filter((obj1, i, arr) => arr.findIndex(obj2 => (obj2.db_id === obj1.db_id)) === i || !("db_id" in obj1))
+        .filter((obj1, i, arr) => arr.findIndex(obj2 => (obj2.name === obj1.name)) === i || !("name" in obj1))
+        .filter((item: any) => {return item.name != null && item.name.toLowerCase().includes(q.toLowerCase())})
+        .slice(0, 5)
     }
 
     const { list, creatable, positiveList, labels, type } = defineProps(['list', 'creatable', 'positiveList', 'labels', 'type']);
