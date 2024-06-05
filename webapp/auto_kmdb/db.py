@@ -39,7 +39,7 @@ def get_all_places(connection):
 
 
 def get_all_others(connection):
-    return get_all(connection, 'news_others', 'other_id', 'name')
+    return get_all(connection, 'news_others', 'other_id', 'name_hu')
 
 
 def get_all_files(connection):
