@@ -360,7 +360,7 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
                 db_id = create_person(connection, person['name'], user_id)
                 person['db_id'] = db_id
         for institution in institutions:
-            if not institution['db_id'] and institution['name']:
+            if ('db_id' not in institution or not institution['db_id']) and institution['name']:
                 db_id = create_institution(connection, institution['name'], user_id)
                 institution['db_id'] = db_id
 
