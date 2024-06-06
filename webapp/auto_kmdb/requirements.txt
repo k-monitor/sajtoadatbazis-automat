@@ -1,7 +1,6 @@
 Flask-SQLAlchemy==3.1.1
 Flask==3.0.0
-lxml[html_clean]==5.2.0
-newspaper4k
+git+https://github.com/boapps/newspaper4k.git
 uvicorn[standard]==0.24.0
 gunicorn
 jsonlines
