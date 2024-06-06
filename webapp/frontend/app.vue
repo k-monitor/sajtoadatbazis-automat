@@ -69,7 +69,7 @@
     let articles = computed(() => articleQuery.value?.articles);
     let pages = computed(() => articleQuery.value?.pages);
     let itemsCount = computed(() => articleQuery.value == null ? null : (pages.value*10));
-    
+
     const selectedDomainAdd = ref(null)
 
     function resetPageRefresh() {
@@ -127,50 +127,51 @@
 </script>
 
 <template>
-    <UContainer class="my-1 justify-between flex lg:px-0 px-4 sm:px-0 ml-1 max-w-full">
-        <UButton class="mr-1" @click="openNewUrl">Új cikk</UButton>
-        <div>
-        <UContainer class="my-1 flex lg:px-0 px-4 sm:px-0 ml-1">
-            <p>Kiválasztott hírportál: &nbsp;</p>
-            <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" value-attribute="id" :options="allDomains" @change="refresh">
-                <template #option="{ option }">
-                    <span><Icon v-if="option.has_rss" name="mdi:rss" color="orange"/> {{ option.name }}</span>
-                </template>
-            </UInputMenu>
-            <UInput class="px-4" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
-            <UButton v-if="articles && articles.some((v) => v.selected)" color="red" :loading="loadingDelete" @click="deleteArticles">{{"Kijelöltet elutasít ("+articles.filter((v)=> v.selected).length+")"}}</UButton>
-        </UContainer>
-    </div>
-    </UContainer>
-
-    <UModal v-model="isOpen">
-        <div class="p-4 h-80">
-            <p>Új cikk</p>
-            <UInput class="my-2" v-model="newUrl" placeholder="https://telex.hu/..."/>
-            <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
-                <UInputMenu class="w-48" placeholder="válassz egy hírportált" v-model="selectedDomainAdd" option-attribute="name" :options="allLabels['domains']">
+    <div>
+        <UContainer class="my-1 justify-between flex lg:px-0 px-4 sm:px-0 ml-1 max-w-full">
+            <UButton class="mr-1" @click="openNewUrl">Új cikk</UButton>
+            <div>
+            <UContainer class="my-1 flex lg:px-0 px-4 sm:px-0 ml-1">
+                <p>Kiválasztott hírportál: &nbsp;</p>
+                <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" value-attribute="id" :options="allDomains" @change="refresh">
+                    <template #option="{ option }">
+                        <span><Icon v-if="option.has_rss" name="mdi:rss" color="orange"/> {{ option.name }}</span>
+                    </template>
                 </UInputMenu>
-                <UButton @click="addUrl">Hozzáad</UButton>
+                <UInput class="px-4" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
+                <UButton class="right-5 bottom-5 fixed" v-if="articles && articles.some((v) => v.selected)" color="red" :loading="loadingDelete" @click="deleteArticles">{{"Kijelöltet elutasít ("+articles.filter((v)=> v.selected).length+")"}}</UButton>
             </UContainer>
         </div>
-    </UModal>
+        </UContainer>
 
-    <UModal v-model="isOpenError">
-      <div class="p-4">
-        <h2>{{ errorTitle }}</h2>
-        <p>{{ errorText }}</p>
-        <UButton @click="isOpenError = false">Bezárás</UButton>
-      </div>
-    </UModal>
+        <UModal v-model="isOpen">
+            <div class="p-4 h-80">
+                <p>Új cikk</p>
+                <UInput class="my-2" v-model="newUrl" placeholder="https://telex.hu/..."/>
+                <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
+                    <UInputMenu class="w-48" placeholder="válassz egy hírportált" v-model="selectedDomainAdd" option-attribute="name" :options="allLabels['domains']">
+                    </UInputMenu>
+                    <UButton @click="addUrl">Hozzáad</UButton>
+                </UContainer>
+            </div>
+        </UModal>
 
+        <UModal v-model="isOpenError">
+        <div class="p-4">
+            <h2>{{ errorTitle }}</h2>
+            <p>{{ errorText }}</p>
+            <UButton @click="isOpenError = false">Bezárás</UButton>
+        </div>
+        </UModal>
 
-    <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh">
-        <template #item="{ item }" v-if="!pending">
-            <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" :allFiles="allFiles" :refresh="refresh" />
-            <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="refresh" />
-        </template>
-        <template #item="{ item }" v-else>
-            <UProgress animation="elastic" v-if="pending" />
-        </template>
-    </UTabs>
+        <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh">
+            <template #item="{ item }" v-if="!pending">
+                <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" :allFiles="allFiles" :refresh="refresh" />
+                <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="refresh" />
+            </template>
+            <template #item="{ item }" v-else>
+                <UProgress animation="elastic" v-if="pending" />
+            </template>
+        </UTabs>
+    </div>
 </template>
