@@ -139,7 +139,7 @@
                     </template>
                 </UInputMenu>
                 <UInput class="px-4" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
-                <UButton class="right-5 bottom-5 fixed" v-if="articles && articles.some((v) => v.selected)" color="red" :loading="loadingDelete" @click="deleteArticles">{{"Kijelöltet elutasít ("+articles.filter((v)=> v.selected).length+")"}}</UButton>
+                <UButton class="right-5 bottom-5 fixed z-10" v-if="articles && articles.some((v) => v.selected)" color="red" :loading="loadingDelete" @click="deleteArticles">{{"Kijelöltet elutasít ("+articles.filter((v)=> v.selected).length+")"}}</UButton>
             </UContainer>
         </div>
         </UContainer>
