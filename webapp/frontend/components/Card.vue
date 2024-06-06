@@ -105,6 +105,8 @@
     function selected() {
         console.log('selected '+selection.value)
         article.value.selected = selection.value
+        if (article.value.original)
+            article.value.original.selected = selection.value
     }
 
     const items = [
@@ -191,7 +193,9 @@
                 query: {},
                 onResponse({ request, response, options }) {
                     console.log(response._data)
+                    let original = article.value
                     article.value = response._data
+                    article.value.original = original
                     allPersons.value = mapEntities(article.value.persons)
                     allInstitutions.value = mapEntities(article.value.institutions)
                     allPlaces.value = mapEntities(article.value.places)
