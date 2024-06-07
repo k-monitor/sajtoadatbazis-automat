@@ -17,8 +17,8 @@
             <p class="text-base text-right py-1">{{ article.date }}</p>
             <UButton v-if="article.skip_reason > 1" color="grey" @click="retryArticle">Újra</UButton>
             <UContainer v-else-if="article.processing_step >= 4 " class="flex justify-between px-0 sm:px-0 lg:px-0">
-                <UButtonGroup size="sm" orientation="horizontal">
-                    <UButton v-if="article.annotation_label != 0" color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Mégis elutasít" }}</UButton>
+                <UButtonGroup v-if="article.annotation_label != 0" size="sm" orientation="horizontal">
+                    <UButton color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Mégis elutasít" }}</UButton>
                     <UDropdown :items="items" :popper="{ placement: 'bottom-end' }">
                         <UButton color="white" label="" trailing-icon="i-heroicons-chevron-down-20-solid" />
                         <template #item="{ item }">
@@ -26,7 +26,7 @@
                         </template>
                     </UDropdown>
                 </UButtonGroup>
-                <UCheckbox @change="selected" class="items-center p-2 scale-125" color="red" v-model="selection" name="selection" label="" />
+                <UCheckbox v-if="article.annotation_label != 0" @change="selected" class="items-center p-2 scale-125" color="red" v-model="selection" name="selection" label="" />
                 <UButton v-if="true" @click="openModal" :loading="isOpening" class="ml-auto">{{ article.annotation_label == null ? "Tovább" : article.annotation_label == 0 ? "Mégis elfogad" : "Szerkeszt" }}</UButton>
             </UContainer>
         </div>
@@ -70,8 +70,8 @@
                     <UButton color="gray" @click="closeModal">Mégse</UButton>
 
                     <div class="my-2 flex justify-between">
-                        <UButtonGroup size="sm" orientation="horizontal">
-                            <UButton v-if="article.annotation_label != 0" color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Mégis elutasít" }}</UButton>
+                        <UButtonGroup v-if="article.annotation_label != 0" size="sm" orientation="horizontal">
+                            <UButton color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Mégis elutasít" }}</UButton>
                             <UDropdown :items="items" :popper="{ placement: 'bottom-end' }">
                                 <UButton color="white" label="" trailing-icon="i-heroicons-chevron-down-20-solid" />
                                 <template #item="{ item }">
@@ -293,11 +293,11 @@
                 },
             });
         } catch (error) {
-                submitted.value = false
-                console.log(error)
-                errorText.value = error
-            }
+            submitted.value = false
+            console.log(error)
+            errorText.value = error
         }
+    }
     const isOpen = ref(false)
     const isOpening = ref(false)
 
