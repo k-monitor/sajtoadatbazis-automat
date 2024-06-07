@@ -1,6 +1,6 @@
 <template>
     <div class="p-4">
-        <div class="max-w-md rounded overflow-hidden shadow-lg mb-4 p-4">
+        <div class="max-w-2xl rounded overflow-hidden shadow-lg mb-4 p-4">
             <p>
                 <a :href="article.url" target="_blank" class="font-bold text-xl mb-2">{{ article.title }}</a>
                 <UBadge class="m-1" color="gray">
@@ -122,6 +122,16 @@
             refresh()},
         },
         {
+            label: 'Már szerepel',
+            slot: 'item',
+            click: async () => {
+            await postUrl(baseUrl+'/api/annote/negative', {
+                method: 'POST',
+                body: {'id': article.value.id, 'reason': 3},
+            });
+            refresh()},
+        },
+        {
             label: 'Külföldi',
             slot: 'item',
             click: async () => {
@@ -141,6 +151,7 @@
             });
             refresh()},
         },
+
     ]
     ]
 
