@@ -1,4 +1,8 @@
 <script setup lang="ts">
+    definePageMeta({
+    colorMode: 'light',
+    })
+
     let newUrl = '';
     let isOpen = ref(false);
     let isOpenError = ref(false);
@@ -78,6 +82,11 @@
         refresh()
     }
 
+    function refreshAll() {
+        refreshArticleCounts()
+        refresh()
+    }
+
     function openNewUrl () {
         newUrl = ''
         isOpen.value = true
@@ -110,18 +119,22 @@
                     'newspaper_id': selectedDomainAdd.value.id,
                 },
                 onResponse({ request, response, options }) {
-                    if (response.status >= 300) {
-                        isOpenError.value = true
-                        errorText.value = response._data.error
-                        errorTitle.value = 'Hiba ' + response.status
-                    }
                 },
+                onResponseError({ request, response, options }) {
+                    console.log('1')
+                    isOpenError.value = true
+                    errorText.value = response._data.error
+                    errorTitle.value = 'Hiba ' + response.status
+                }
             });
         } catch (error) {
+            console.log('3')
             console.log(error)
-            isOpenError.value = true
-            errorText.value = error
-            errorTitle.value = 'Hiba'
+            if (!isOpenError.value) {
+                isOpenError.value = true
+                errorText.value = error
+                errorTitle.value = 'Hiba '
+            }
         }
     }
 </script>
@@ -145,7 +158,7 @@
         </UContainer>
 
         <UModal v-model="isOpen">
-            <div class="p-4 h-80">
+            <div class="p-4">
                 <p>Új cikk</p>
                 <UInput class="my-2" v-model="newUrl" placeholder="https://telex.hu/..."/>
                 <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
@@ -158,15 +171,15 @@
 
         <UModal v-model="isOpenError">
         <div class="p-4">
-            <h2>{{ errorTitle }}</h2>
-            <p>{{ errorText }}</p>
+            <h1 class="font-bold">{{ errorTitle }}</h1>
+            <p class="py-5">{{ errorText }}</p>
             <UButton @click="isOpenError = false">Bezárás</UButton>
         </div>
         </UModal>
 
         <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh">
             <template #item="{ item }" v-if="!pending">
-                <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" :allFiles="allFiles" :refresh="refresh" />
+                <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" :allFiles="allFiles" :refresh="refreshAll" />
                 <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="refresh" />
             </template>
             <template #item="{ item }" v-else>

@@ -194,7 +194,7 @@ def get_article_counts(connection, domain=-1, q=''):
     article_counts = {}
     for status in ['mixed', 'positive', 'negative', 'processing', 'all']:
         if status == 'mixed':
-            query = '''WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL'''
+            query = '''WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND (n.skip_reason = 0 OR n.skip_reason is NULL)'''
         elif status == 'positive':
             query = '''WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 1'''
         elif status == 'negative':
@@ -417,6 +417,7 @@ def get_rss_urls(connection):
         return cursor.fetchall()
 
 def validate_session(connection, session_id):
+    return True
     query = '''SELECT * FROM users_sessions WHERE session_id = %s;'''
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (session_id,))

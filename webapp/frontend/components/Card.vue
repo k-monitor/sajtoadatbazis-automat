@@ -32,7 +32,7 @@
         </div>
         <UModal v-model="isOpen" :ui="{ width: 'sm:max-w-7xl' }">
             <div class="p-4 w-full">
-                <div  class="my-2 flex justify-between px-0 sm:px-0 lg:px-0 flex-wrap">
+                <div  class="my-2 flex justify-center px-0 sm:px-0 lg:px-0 flex-wrap">
                     <div class="max-w-2xl mx-4 flex-grow">
                         <p>Cím:</p>
                         <UInput class="my-2" v-model="article.title"/>
