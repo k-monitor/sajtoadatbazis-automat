@@ -313,12 +313,14 @@ def annote_negative(connection, id, reason):
 def create_person(connection, name, user_id):
     print('adding', name)
     query = '''INSERT INTO news_persons (status, name, cre_id, mod_id, import_id, cre_time, mod_time) VALUES (%s, %s, %s, %s, %s, %s, %s);'''
+    query_seo = '''INSERT INTO tags_seo_data (seo_name, tag_type, item_id) VALUES (%s, %s, %s);'''
     current_datetime = datetime.now()
     cre_time = int(current_datetime.timestamp())
 
     with connection.cursor() as cursor:
         cursor.execute(query, ('Y', name, user_id, user_id, 0, cre_time, cre_time))
         db_id = cursor.lastrowid
+        cursor.execute(query_seo, (slugify(name), 'persons', db_id))
         print(db_id)
     connection.commit()
     return db_id
@@ -326,12 +328,14 @@ def create_person(connection, name, user_id):
 
 def create_institution(connection, name, user_id):
     query = '''INSERT INTO news_institutions (status, name, cre_id, mod_id, import_id, cre_time, mod_time) VALUES (%s, %s, %s, %s, %s, %s, %s);'''
+    query_seo = '''INSERT INTO tags_seo_data (seo_name, tag_type, item_id) VALUES (%s, %s, %s);'''
     current_datetime = datetime.now()
     cre_time = int(current_datetime.timestamp())
 
     with connection.cursor() as cursor:
         cursor.execute(query, ('Y', name, user_id, user_id, 0, cre_time, cre_time))
         db_id = cursor.lastrowid
+        cursor.execute(query_seo, (slugify(name), 'institutions', db_id))
     connection.commit()
     return db_id
 
