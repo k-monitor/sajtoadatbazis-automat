@@ -312,9 +312,12 @@ def annote_negative(connection, id, reason):
 
 def create_person(connection, name, user_id):
     print('adding', name)
-    query = '''INSERT INTO news_persons (status, name, cre_id, mod_id, import_id) VALUES (%s, %s, %s, %s, %s);'''
+    query = '''INSERT INTO news_persons (status, name, cre_id, mod_id, import_id, cre_time, mod_time) VALUES (%s, %s, %s, %s, %s, %s, %s);'''
+    current_datetime = datetime.now()
+    cre_time = int(current_datetime.timestamp())
+
     with connection.cursor() as cursor:
-        cursor.execute(query, ('Y', name, user_id, user_id, 0))
+        cursor.execute(query, ('Y', name, user_id, user_id, 0, cre_time, cre_time))
         db_id = cursor.lastrowid
         print(db_id)
     connection.commit()
@@ -322,9 +325,12 @@ def create_person(connection, name, user_id):
 
 
 def create_institution(connection, name, user_id):
-    query = '''INSERT INTO news_institutions (status, name, cre_id, mod_id, import_id) VALUES (%s, %s, %s, %s, %s);'''
+    query = '''INSERT INTO news_institutions (status, name, cre_id, mod_id, import_id, cre_time, mod_time) VALUES (%s, %s, %s, %s, %s, %s, %s);'''
+    current_datetime = datetime.now()
+    cre_time = int(current_datetime.timestamp())
+
     with connection.cursor() as cursor:
-        cursor.execute(query, ('Y', name, user_id, user_id, 0))
+        cursor.execute(query, ('Y', name, user_id, user_id, 0, cre_time, cre_time))
         db_id = cursor.lastrowid
     connection.commit()
     return db_id
@@ -419,7 +425,8 @@ def get_rss_urls(connection):
 
 
 def validate_session(connection, session_id):
-    # return True
+    if 'NO_LOGIN' in os.environ:
+        return True
     query = '''SELECT * FROM users_sessions WHERE session_id = %s;'''
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (session_id,))
