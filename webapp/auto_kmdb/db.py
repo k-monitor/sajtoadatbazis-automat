@@ -251,10 +251,11 @@ def get_article(connection, id):
         article['others'] = get_article_others(cursor, id)
         return article
 
+
 def get_articles(connection, page, status, domain=-1, q=''):
     query = ''
 
-    selection = '''SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step, skip_reason,
+    selection = '''SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step, skip_reason, negative_reason,
             n.cre_time AS date, category
         FROM autokmdb_news n
         '''
@@ -275,7 +276,7 @@ def get_articles(connection, page, status, domain=-1, q=''):
         return
     if domain and domain != -1 and isinstance(domain, int):
         query += ' AND n.newspaper_id = '+str(domain)
-    
+
     query += ' AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)'
 
     with connection.cursor(dictionary=True) as cursor:
@@ -416,8 +417,9 @@ def get_rss_urls(connection):
         cursor.execute(query)
         return cursor.fetchall()
 
+
 def validate_session(connection, session_id):
-    return True
+    # return True
     query = '''SELECT * FROM users_sessions WHERE session_id = %s;'''
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (session_id,))
@@ -426,6 +428,7 @@ def validate_session(connection, session_id):
         return None
     return session['registered']
 
+
 def get_roles(connection, session_id):
     query = '''SELECT * FROM users_sessions WHERE session_id = %s;'''
     with connection.cursor(dictionary=True) as cursor:
@@ -433,7 +436,7 @@ def get_roles(connection, session_id):
     session = cursor.fetchone()
     if session is None or session['registered'] == 0:
         return []
-    
+
     user_id = session['registered']
 
     query_u = '''SELECT * FROM users_modul_rights WHERE user_id = %s;'''
