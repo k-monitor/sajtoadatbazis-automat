@@ -6,11 +6,12 @@ from tqdm import tqdm
 import get_wayback_machine
 import validators
 
-dataset = load_dataset("csv", data_files='kmdb-export-20240205.csv')['train']
+dataset = load_dataset("json", data_files='urls.jsonl')['train']
 
 dataset = dataset.filter(lambda row: row['source_url'] is not None and validators.url(row['source_url']))
 
 shuffled_dataset = dataset.shuffle(seed=42)
+
 
 def get_html(url):
     retries = 0
@@ -29,7 +30,7 @@ def get_html(url):
             print('ConnectionError:', url)
         except Exception:
             break
-    
+
     response = get_wayback_machine.get(url)
     if response and response.ok:
         return response.text
@@ -37,14 +38,6 @@ def get_html(url):
     return ''
 
 
-objs = []
-with jsonlines.open('kmdb_html.jsonl') as reader:
-    for obj in reader:
-        objs.append(obj)
-
-with jsonlines.open('kmdb_html.jsonl', mode='w') as writer:
-    for obj in objs:
-        writer.write(obj)
-    for url in tqdm(shuffled_dataset['source_url'][len(objs):]):
+with jsonlines.open('kmdb_html_new.jsonl', mode='w') as writer:
+    for url in tqdm(shuffled_dataset['source_url']):
         writer.write({'url': url, 'html': get_html(url)})
-
