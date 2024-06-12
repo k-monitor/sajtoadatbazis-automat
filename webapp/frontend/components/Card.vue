@@ -191,7 +191,7 @@
                 }
             }
         }
-        return mappedEntities;
+        return mappedEntities.flatMap((e) => e.db_id == null ? e.list : [e]);
     }
 
     function openModal() {
