@@ -13,6 +13,7 @@ api = Blueprint('api', __name__, url_prefix='/api')
 def get_session_id(request):
     return request.cookies.get('PHPSESSID')
 
+
 def reformat_article(article):
     try:
         article['persons'] = json.loads('['+article['persons']+']') if article['persons'] else []
@@ -47,8 +48,11 @@ def api_article_counts():
 
     domain = request.args.get('domain', -1, type=int)
     q = request.args.get('q', '', type=str)
+    start = request.args.get('from', '2000-01-01', type=str)
+    end = request.args.get('to', '2050-01-01', type=str)
+
     with connection_pool.get_connection() as connection:
-        article_counts = get_article_counts(connection, domain, '%'+q+'%')
+        article_counts = get_article_counts(connection, domain, '%'+q+'%', start, end)
 
     return jsonify(article_counts), 200
 
@@ -76,11 +80,13 @@ def api_articles():
 
     page = request.args.get('page', 1, type=int)
     status = request.args.get('status', 'mixed', type=str)
+    start = request.args.get('from', '2000-01-01', type=str)
+    end = request.args.get('to', '2050-01-01', type=str)
     domain = request.args.get('domain', -1, type=int)
     q = request.args.get('q', '', type=str)
 
     with connection_pool.get_connection() as connection:
-        length, articles = get_articles(connection, page, status, domain, '%'+q+'%')
+        length, articles = get_articles(connection, page, status, domain, '%'+q+'%', start, end)
 
     return jsonify({'pages': ceil(length/10), 'articles': articles}), 200
 

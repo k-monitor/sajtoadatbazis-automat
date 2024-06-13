@@ -190,7 +190,7 @@ def paginate_query(query, page_size, page_number):
     return query + f" LIMIT {page_size} OFFSET {offset}"
 
 
-def get_article_counts(connection, domain=-1, q=''):
+def get_article_counts(connection, domain=-1, q='', start='2000-01-01', end='2050-01-01'):
     article_counts = {}
     for status in ['mixed', 'positive', 'negative', 'processing', 'all']:
         if status == 'mixed':
@@ -206,8 +206,9 @@ def get_article_counts(connection, domain=-1, q=''):
         if domain and domain != -1 and isinstance(domain, int):
             query += ' AND n.newspaper_id = '+str(domain)
         query += ' AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)'
+        query += ' AND n.cre_time BETWEEN %s AND %s'
         with connection.cursor(dictionary=True) as cursor:
-            cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query, (q,q,q,q))
+            cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query, (q,q,q,q,start,end))
             count = cursor.fetchone()['COUNT(id)']
             article_counts[status] = count
     return article_counts
@@ -252,7 +253,7 @@ def get_article(connection, id):
         return article
 
 
-def get_articles(connection, page, status, domain=-1, q=''):
+def get_articles(connection, page, status, domain=-1, q='', start='2000-01-01', end='2050-01-01'):
     query = ''
 
     selection = '''SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step, skip_reason, negative_reason,
@@ -279,10 +280,12 @@ def get_articles(connection, page, status, domain=-1, q=''):
 
     query += ' AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)'
 
+    query += ' AND n.cre_time BETWEEN %s AND %s'
+
     with connection.cursor(dictionary=True) as cursor:
-        cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query, (q,q,q,q))
+        cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query, (q,q,q,q,start,end))
         count = cursor.fetchone()['COUNT(id)']
-        cursor.execute(paginate_query(selection + query + group, 10, page), (q,q,q,q))
+        cursor.execute(paginate_query(selection + query + group, 10, page), (q,q,q,q,start,end))
         return count, cursor.fetchall()
 
 
