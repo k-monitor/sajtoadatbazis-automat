@@ -65,6 +65,21 @@ def get_all_institutions_freq(connection):
 def get_all_places_freq(connection):
     return get_all_freq(connection, 'news_places', 'place_id', 'name_hu')
 
+
+def get_places_alias(connection):
+    query = '''
+    SELECT
+        np.name_hu AS place_name,
+        ap.alias_name
+    FROM
+        news_places np
+        JOIN autokmdb_alias_place ap ON np.place_id = ap.place_id;
+    '''
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query)
+        return list(cursor.fetchall())
+
+
 @cache
 def get_all_newspapers(connection):
     query = '''SELECT n.newspaper_id AS id, n.name AS name, n.rss_url AS rss_url, COUNT(a.newspaper_id) AS article_count FROM news_newspapers n

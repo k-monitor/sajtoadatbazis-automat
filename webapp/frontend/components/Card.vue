@@ -98,7 +98,7 @@
 
 <script setup lang="ts">
     var baseUrl = 'https://autokmdb.deepdata.hu/autokmdb'
-    baseUrl = 'http://127.0.0.1:8000'
+    // baseUrl = 'http://127.0.0.1:8000'
     //baseUrl = 'http://localhost:5000'
     const edit = ref(false)
     const selection = ref(false)
