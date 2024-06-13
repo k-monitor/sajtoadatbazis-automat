@@ -9,15 +9,48 @@ import logging
 import torch
 
 
-def join_entities(classifications):
+def join_entities(classifications: list[dir]):
+    """
+    Joins detected entities if entity_i and entity_i+1 are beside eachother in the text. This is
+    necessary as BERT sometimes mistakenly splits some entities e.g. in case of detached ending:
+    "Budapest" "-en").
+
+    Args:
+        classifications: list of dirs, each dir must contain the following infos of detected
+        entity: word (string) e.g. 'Budapest', start(int) e.g. 10, end(int) e.g. 18 , score(float)
+        e.g. 0.998, entity_group(str) e.g. 'POS-LOC'
+
+    Returns:
+        list of dirs, where the infos of the neighbouring entities have been merged:
+            - word: concatenated
+            - start: taken from the first entity
+            - end: taken from the last entity
+            - score: mean of the score of the two entities
+            - entity_group: classification is POS if any of the entities is POS, entity type is
+            taken from the first entity
+    """
     new_classifications = []
     last_end = -1
     for classification in classifications:
-        if classification['start'] == last_end:
-            new_classifications[-1]['word'] += classification['word']
+        if classification["start"] == last_end:
+            new_classifications[-1]["word"] += classification["word"]
+            new_classifications[-1]["end"] = classification["end"]
+            new_classifications[-1]["score"] = (
+                new_classifications[-1]["score"] + classification["score"]
+            ) / 2
+            new_classifications[-1]["entity_group"] = (
+                new_classifications[-1]["entity_group"].split("-")[0]
+                + "-"
+                + (
+                    "POS"
+                    if ("POS" in new_classifications[-1]["entity_group"])
+                    | ("POS" in classification["entity_group"])
+                    else "NEG"
+                )
+            )
         else:
             new_classifications.append(classification)
-        last_end = classification['end']
+        last_end = classification["end"]
     return new_classifications
 
 
