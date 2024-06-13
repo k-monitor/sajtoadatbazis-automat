@@ -63,6 +63,12 @@
                         <USelectMenu searchable v-model="file" :options="allFiles" option-attribute="name" value-attribute="id"></USelectMenu>
                         <p>publikálás: {{ article.article_date }}</p>
                         <p>{{errorText}}</p>
+                        <UButton class="my-5"
+                            v-if="article.annotation_label == 1" 
+                            target="_blank" 
+                            :to="`https://autokmdb.deepdata.hu/admin.php?mod=news&action=news&do=news&news_id=${article.news_id}`">
+                            szerkesztés az adminban
+                        </UButton>
                     </div>
 
                 </div>
@@ -92,7 +98,7 @@
 
 <script setup lang="ts">
     var baseUrl = 'https://autokmdb.deepdata.hu/autokmdb'
-    // baseUrl = 'http://127.0.0.1:8000'
+    baseUrl = 'http://127.0.0.1:8000'
     //baseUrl = 'http://localhost:5000'
     const edit = ref(false)
     const selection = ref(false)

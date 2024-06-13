@@ -47,6 +47,25 @@ def get_all_files(connection):
 
 
 @cache
+def get_all_freq(connection, table, id_column, name_column):
+    query = f'SELECT p.{id_column} AS id, p.{name_column} AS name, COUNT(npl.news_id) AS count FROM {table} p JOIN {table}_link npl ON p.{id_column} = npl.{id_column} WHERE status = "Y" GROUP BY p.{id_column};'
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query)
+        return list(cursor.fetchall())
+
+
+def get_all_persons_freq(connection):
+    return get_all_freq(connection, 'news_persons', 'person_id', 'name')
+
+
+def get_all_institutions_freq(connection):
+    return get_all_freq(connection, 'news_institutions', 'institution_id', 'name')
+
+
+def get_all_places_freq(connection):
+    return get_all_freq(connection, 'news_places', 'place_id', 'name_hu')
+
+@cache
 def get_all_newspapers(connection):
     query = '''SELECT n.newspaper_id AS id, n.name AS name, n.rss_url AS rss_url, COUNT(a.newspaper_id) AS article_count FROM news_newspapers n
     LEFT JOIN autokmdb_news a ON n.newspaper_id = a.newspaper_id WHERE n.status = "Y"
@@ -239,7 +258,7 @@ def get_article_others(cursor, id):
 
 
 def get_article(connection, id):
-    query = '''SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step, skip_reason,
+    query = '''SELECT n.id AS id, news_id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step, skip_reason,
             n.text AS text, n.cre_time AS date, category, article_date FROM autokmdb_news n WHERE id = %s
         '''
     with connection.cursor(dictionary=True) as cursor:
@@ -260,7 +279,7 @@ def get_articles(connection, page, status, domain=-1, q='', start='2000-01-01', 
             n.cre_time AS date, category
         FROM autokmdb_news n
         '''
-    group = ' GROUP BY id ORDER BY source DESC, n.mod_time DESC'
+    group = ' GROUP BY id ORDER BY source DESC, n.mod_time DESC' if status != 'positive' else ' GROUP BY id ORDER BY n.mod_time DESC'
 
     if status == 'mixed':
         query = '''WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND (n.skip_reason = 0 OR n.skip_reason is NULL)'''
