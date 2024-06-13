@@ -47,6 +47,25 @@ def get_all_files(connection):
 
 
 @cache
+def get_all_freq(connection, table, id_column, name_column):
+    query = f'SELECT p.{id_column} AS id, p.{name_column} AS name, COUNT(npl.news_id) AS count FROM {table} p JOIN {table}_link npl ON p.{id_column} = npl.{id_column} WHERE status = "Y" GROUP BY p.{id_column};'
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query)
+        return list(cursor.fetchall())
+
+
+def get_all_persons_freq(connection):
+    return get_all_freq(connection, 'news_persons', 'person_id', 'name')
+
+
+def get_all_institutions_freq(connection):
+    return get_all_freq(connection, 'news_institutions', 'institution_id', 'name')
+
+
+def get_all_places_freq(connection):
+    return get_all_freq(connection, 'news_places', 'place_id', 'name_hu')
+
+@cache
 def get_all_newspapers(connection):
     query = '''SELECT n.newspaper_id AS id, n.name AS name, n.rss_url AS rss_url, COUNT(a.newspaper_id) AS article_count FROM news_newspapers n
     LEFT JOIN autokmdb_news a ON n.newspaper_id = a.newspaper_id WHERE n.status = "Y"
