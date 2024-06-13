@@ -260,7 +260,7 @@ def get_articles(connection, page, status, domain=-1, q='', start='2000-01-01', 
             n.cre_time AS date, category
         FROM autokmdb_news n
         '''
-    group = ' GROUP BY id ORDER BY source DESC, n.mod_time DESC'
+    group = ' GROUP BY id ORDER BY source DESC, n.mod_time DESC' if status != 'positive' else ' GROUP BY id ORDER BY n.mod_time DESC'
 
     if status == 'mixed':
         query = '''WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND (n.skip_reason = 0 OR n.skip_reason is NULL)'''
