@@ -3,7 +3,22 @@
     colorMode: 'light',
     })
 
-    let newUrl = '';
+    import { sub, format, isSameDay, type Duration } from 'date-fns'
+
+    const ranges = [
+    { label: 'Last 7 days', duration: { days: 7 } },
+    { label: 'Last 14 days', duration: { days: 14 } },
+    { label: 'Last 30 days', duration: { days: 30 } },
+    { label: 'Last 3 months', duration: { months: 3 } },
+    { label: 'Last 6 months', duration: { months: 6 } },
+    { label: 'Last year', duration: { years: 1 } }
+    ]
+    const selected = ref({ start: sub(new Date(), { days: 14 }), end: new Date() })
+
+    function isRangeSelected (duration: Duration) {
+        return isSameDay(selected.value.start, sub(new Date(), duration)) && isSameDay(selected.value.end, new Date())
+    }
+        let newUrl = '';
     let isOpen = ref(false);
     let isOpenError = ref(false);
     let errorText = ref('');
@@ -22,9 +37,15 @@
     let allFiles = computed(() => allLabels.value == null ? [] : [{name: 'semmi', id: -1}].concat(allLabels.value?.files))
     const selectedDomain = ref(allDomains[0])
 
+    const status = computed(() => statusItems.value[statusId.value].key)
+    const from = computed(() => format(selected.value.start, 'yyyy-MM-dd'))
+    const to = computed(() => format(selected.value.end, 'yyyy-MM-dd'))
+
     const { data: articleCounts, refresh: refreshArticleCounts } = useLazyFetch(baseUrl+'/api/article_counts', {
         query: {
             domain: selectedDomain,
+            from: from,
+            to: to,
             q: q,
         },
         onResponse({ request, response, options }) {
@@ -52,13 +73,14 @@
         label: `Mindegyik (${articleCounts.value ? articleCounts.value['all'] : '...'})`,
         key: 'all'
     }]);
-    const status = computed(() => statusItems.value[statusId.value].key)
 
     const { pending, data: articleQuery, refresh } = useLazyFetch(baseUrl+'/api/articles', {
         query: {
             page: page,
             status: status,
             domain: selectedDomain,
+            from: from,
+            to: to,
             q: q,
         },
         onResponse({ request, response, options }) {
@@ -144,14 +166,43 @@
         <UContainer class="my-1 justify-between flex lg:px-0 px-4 sm:px-0 ml-1 max-w-full">
             <UButton class="mr-1" @click="openNewUrl">Új cikk</UButton>
             <div>
-            <UContainer class="my-1 flex lg:px-0 px-4 sm:px-0 ml-1">
+            <UContainer class="my-1 flex lg:px-0 px-2 sm:px-0 ml-1">
+                <div class="flex px-1">
                 <p>Kiválasztott hírportál: &nbsp;</p>
                 <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" value-attribute="id" :options="allDomains" @change="refresh">
                     <template #option="{ option }">
                         <span><Icon v-if="option.has_rss" name="mdi:rss" color="orange"/> {{ option.name }}</span>
                     </template>
                 </UInputMenu>
-                <UInput class="px-4" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
+                </div>
+
+                <UPopover class="px-1" :popper="{ placement: 'bottom-start' }">
+                    <UButton icon="i-heroicons-calendar-days-20-solid">
+                    {{ format(selected.start, 'yyyy. MM. dd.') }} - {{ format(selected.end, 'yyyy. MM. dd.') }}
+                    </UButton>
+
+                    <template #panel="{ close }">
+                    <div class="flex items-center sm:divide-x divide-gray-200 dark:divide-gray-800">
+                        <!-- <div class="hidden sm:flex flex-col py-4">
+                        <UButton
+                            v-for="(range, index) in ranges"
+                            :key="index"
+                            :label="range.label"
+                            color="gray"
+                            variant="ghost"
+                            class="rounded-none px-6"
+                            :class="[isRangeSelected(range.duration) ? 'bg-gray-100 dark:bg-gray-800' : 'hover:bg-gray-50 dark:hover:bg-gray-800/50']"
+                            truncate
+                            @click="selectRange(range.duration)"
+                        />
+                        </div> -->
+
+                        <DatePicker v-model="selected" is-required @close="() => {close(); refresh()}" />
+                    </div>
+                    </template>
+                </UPopover>
+
+                <UInput class="px-1" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
                 <UButton class="right-5 bottom-5 fixed z-10" v-if="articles && articles.some((v) => v.selected)" color="red" :loading="loadingDelete" @click="deleteArticles">{{"Kijelöltet elutasít ("+articles.filter((v)=> v.selected).length+")"}}</UButton>
             </UContainer>
         </div>
