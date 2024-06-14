@@ -213,8 +213,8 @@
                     let original = article.value
                     article.value = response._data
                     article.value.original = original
-                    allPersons.value = mapEntities(article.value.persons)
-                    allInstitutions.value = mapEntities(article.value.institutions)
+                    allPersons.value = mapEntities(article.value.persons).filter((obj1, i, arr) => arr.findIndex(obj2 => (obj2.name === obj1.name)) === i || !("name" in obj1))
+                    allInstitutions.value = mapEntities(article.value.institutions).filter((obj1, i, arr) => arr.findIndex(obj2 => (obj2.name === obj1.name)) === i || !("name" in obj1))
                     allPlaces.value = mapEntities(article.value.places)
                     article.value.date = new Date(Date.parse(article.value.date)).toLocaleString()
                     article.value.article_date = new Date(Date.parse(article.value.article_date)).toLocaleString()
@@ -267,11 +267,15 @@
         let positivePersonsList = positivePersons.value.map((person) => person.list ?? person).flat()
         positivePersonsList.forEach(element => {
             element.annotation_label = 1
+            if (element.name == null)
+                element.name = element.label
         });
 
         let positiveInstitutionsList = positiveInstitutions.value.map((institution) => institution.list ?? institution).flat()
         positiveInstitutionsList.forEach(element => {
             element.annotation_label = 1
+            if (element.name == null)
+                element.name = element.label
         });
 
         let positivePlacesList = positivePlaces.value.map((place) => place.list ?? place).flat()
@@ -334,6 +338,7 @@
         allPlaces.forEach(element => {element.etype = 'place'})
 
         let allEntities = allPersons.concat(allInstitutions, allPlaces)
+        .filter((obj1, i, arr) => arr.findIndex(obj2 => (obj2.found_position === obj1.found_position)) === i || !("found_position" in obj1))
 
         allEntities.sort(function(a, b) {return a.found_position - b.found_position;})
 
@@ -342,6 +347,7 @@
 
         for (const entity of allEntities) {
             console.log(entity.found_position)
+            console.log(entity.found_name)
             richText += texthtml.substring(lastIndex, entity.found_position)
             if (entity.etype == 'person')
                 richText += '<span style="color:red; font-weight:bold">'+entity.found_name+'</span>'
