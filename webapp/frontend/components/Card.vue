@@ -213,8 +213,8 @@
                     let original = article.value
                     article.value = response._data
                     article.value.original = original
-                    allPersons.value = mapEntities(article.value.persons)
-                    allInstitutions.value = mapEntities(article.value.institutions)
+                    allPersons.value = mapEntities(article.value.persons).filter((obj1, i, arr) => arr.findIndex(obj2 => (obj2.name === obj1.name)) === i || !("name" in obj1))
+                    allInstitutions.value = mapEntities(article.value.institutions).filter((obj1, i, arr) => arr.findIndex(obj2 => (obj2.name === obj1.name)) === i || !("name" in obj1))
                     allPlaces.value = mapEntities(article.value.places)
                     article.value.date = new Date(Date.parse(article.value.date)).toLocaleString()
                     article.value.article_date = new Date(Date.parse(article.value.article_date)).toLocaleString()
