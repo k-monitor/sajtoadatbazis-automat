@@ -338,6 +338,7 @@
         allPlaces.forEach(element => {element.etype = 'place'})
 
         let allEntities = allPersons.concat(allInstitutions, allPlaces)
+        .filter((obj1, i, arr) => arr.findIndex(obj2 => (obj2.found_position === obj1.found_position)) === i || !("found_position" in obj1))
 
         allEntities.sort(function(a, b) {return a.found_position - b.found_position;})
 
@@ -346,6 +347,7 @@
 
         for (const entity of allEntities) {
             console.log(entity.found_position)
+            console.log(entity.found_name)
             richText += texthtml.substring(lastIndex, entity.found_position)
             if (entity.etype == 'person')
                 richText += '<span style="color:red; font-weight:bold">'+entity.found_name+'</span>'
