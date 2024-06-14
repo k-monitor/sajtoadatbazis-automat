@@ -1,11 +1,13 @@
 from dotenv import load_dotenv
+
 load_dotenv()
 
 from flask import Flask
 from threading import Thread
 import os
 from time import sleep
-sleep(10) # TODO better wait handling
+
+sleep(10)  # TODO better wait handling
 from auto_kmdb.DownloadProcessor import DownloadProcessor, do_retries, login_444
 from auto_kmdb.ClassificationProcessor import ClassificationProcessor
 from auto_kmdb.NERProcessor import NERProcessor
@@ -18,18 +20,22 @@ logger = logging.getLogger(__name__)
 
 
 def create_app():
-    logfile = 'autokmdb.log'
-    if 'LOGFILE' in os.environ:
-        logfile = os.environ['LOGFILE']
+    logfile = "autokmdb.log"
+    if "LOGFILE" in os.environ:
+        logfile = os.environ["LOGFILE"]
     logging.basicConfig(filename=logfile, level=logging.INFO)
-    logger.info('Started')
+    logger.info("Started")
 
-    app = Flask(__name__, instance_relative_config=True, )
+    app = Flask(
+        __name__,
+        instance_relative_config=True,
+    )
 
     with app.app_context():
         from auto_kmdb.routes import api
+
         app.register_blueprint(api)
-        logger.info('registered api')
+        logger.info("registered api")
 
     login_444()
     # logging.info(get_444('https://444.hu/2024/06/21/milliard-euros-hitelt-adhat-magyarorszag-eszak-macedonianak-azutan-hogy-orban-szovetsegese-visszatert-a-hatalomba'))
@@ -37,14 +43,19 @@ def create_app():
     Thread(target=rss_watcher, args=(app.app_context(),), daemon=True).start()
     Thread(target=do_retries, args=(app.app_context(),), daemon=True).start()
 
-    processors = [DownloadProcessor(), ClassificationProcessor(), NERProcessor(), KeywordProcessor()]
+    processors = [
+        DownloadProcessor(),
+        ClassificationProcessor(),
+        NERProcessor(),
+        KeywordProcessor(),
+    ]
     for processor in processors:
         processor.load_model()
         Thread(target=processor.process_loop, args=(), daemon=True).start()
 
-    @app.route('/hello')
+    @app.route("/hello")
     def hello():
-        return 'Hello, World!'
+        return "Hello, World!"
 
     return app
 
