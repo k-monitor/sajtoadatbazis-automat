@@ -56,7 +56,7 @@
                         <SelectMenu :list="allPersons" type="személy" :creatable="true" :positive-list="positivePersons" @update:positiveList="updatePositivePersons" :labels="allLabels['person']" />
                         <SelectMenu :list="allInstitutions" type="intézmény" :creatable="true" :positive-list="positiveInstitutions" @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
                         <SelectMenu :list="allPlaces" type="helyszín" :creatable="false" :positive-list="positivePlaces" @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
-                        <SelectMenu :list="article.others" type="egyéb" :creatable="false" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['keywords']" />
+                        <SelectMenu :list="allOthers" type="egyéb" :creatable="false" :positive-list="positiveOthers" @update:positiveList="updatePositiveOthers" :labels="allLabels['keywords']" />
                         <p>Kategória:</p>
                         <USelect v-model="category" :options="categories" option-attribute="name" value-attribute="id" />
                         <p>Akta:</p>
@@ -168,6 +168,7 @@
     let allPersons = ref([]);
     let allInstitutions = ref([]);
     let allPlaces = ref([]);
+    let allOthers = ref([]);
 
     let positivePersons = ref([])
     let positiveInstitutions = ref([])
@@ -216,10 +217,11 @@
                     allPersons.value = mapEntities(article.value.persons).filter((obj1, i, arr) => arr.findIndex(obj2 => (obj2.name === obj1.name)) === i || !("name" in obj1))
                     allInstitutions.value = mapEntities(article.value.institutions).filter((obj1, i, arr) => arr.findIndex(obj2 => (obj2.name === obj1.name)) === i || !("name" in obj1))
                     allPlaces.value = mapEntities(article.value.places)
+                    allOthers.value = article.value.others
                     article.value.date = new Date(Date.parse(article.value.date)).toLocaleString()
                     article.value.article_date = new Date(Date.parse(article.value.article_date)).toLocaleString()
-                    console.log('allPersons.value')
-                    console.log(allPersons.value)
+                    console.log('allOthers.value')
+                    console.log(allOthers.value)
 
                     if (article.value.annotation_label == 1) {
                         positivePersons.value = allPersons.value.filter((person) => 
