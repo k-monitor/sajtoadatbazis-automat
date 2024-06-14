@@ -267,11 +267,15 @@
         let positivePersonsList = positivePersons.value.map((person) => person.list ?? person).flat()
         positivePersonsList.forEach(element => {
             element.annotation_label = 1
+            if (element.name == null)
+                element.name = element.label
         });
 
         let positiveInstitutionsList = positiveInstitutions.value.map((institution) => institution.list ?? institution).flat()
         positiveInstitutionsList.forEach(element => {
             element.annotation_label = 1
+            if (element.name == null)
+                element.name = element.label
         });
 
         let positivePlacesList = positivePlaces.value.map((place) => place.list ?? place).flat()
