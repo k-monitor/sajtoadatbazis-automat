@@ -218,11 +218,23 @@
                     allPlaces.value = mapEntities(article.value.places)
                     article.value.date = new Date(Date.parse(article.value.date)).toLocaleString()
                     article.value.article_date = new Date(Date.parse(article.value.article_date)).toLocaleString()
+                    console.log('allPersons.value')
+                    console.log(allPersons.value)
 
-                    positivePersons.value = allPersons.value.filter((person) => (person.classification_label == 1 || person.annotation_label == 1))
-                    positiveInstitutions.value = allInstitutions.value.filter((institution) => (institution.classification_label == 1 || institution.annotation_label == 1))
-                    positivePlaces.value = allPlaces.value.filter((place) => (place.classification_label == 1 || place.annotation_label == 1) && place.db_id)
-                    positiveOthers.value = article.value.others.map((other) => (other.classification_label == 1 || other.annotation_label == 1) && other.db_id)
+                    if (article.value.annotation_label == 1) {
+                        positivePersons.value = allPersons.value.filter((person) => 
+                            (article.value.annotation_label != 1 && person.classification_label == 1) ||
+                            (article.value.annotation_label == 1 && person.annotation_label == 1))
+                        positiveInstitutions.value = allInstitutions.value.filter((institution) =>
+                            (article.value.annotation_label != 1 && institution.classification_label == 1) || 
+                            (article.value.annotation_label == 1 && institution.annotation_label == 1))
+                        positivePlaces.value = allPlaces.value.filter((place) => 
+                            ((article.value.annotation_label != 1 && place.classification_label == 1) ||
+                            (article.value.annotation_label == 1 && place.annotation_label == 1)) && place.db_id)
+                        positiveOthers.value = article.value.others.map((other) => 
+                            ((article.value.annotation_label != 1 && other.classification_label == 1) || 
+                            (article.value.annotation_label == 1 && other.annotation_label == 1)) && other.db_id)
+                    }
 
                     category.value = article.value.category
                     richText.value = getRichText()
@@ -328,13 +340,13 @@
     function getRichText() {
         let texthtml = article.value.text
         
-        let allPersons = article.value.persons.map((person) => person.list ?? [person]).flat();
+        let allPersons = article.value.persons.filter((obj) => obj.found_position).map((person) => person.list ?? [person]).flat();
         allPersons.forEach(element => {element.etype = 'person'})
 
-        let allInstitutions = article.value.institutions.map((person) => person.list ?? [person]).flat();
+        let allInstitutions = article.value.institutions.filter((obj) => obj.found_position).map((person) => person.list ?? [person]).flat();
         allInstitutions.forEach(element => {element.etype = 'institution'})
 
-        let allPlaces = article.value.places.map((person) => person.list ?? [person]).flat();
+        let allPlaces = article.value.places.filter((obj) => obj.found_position).map((person) => person.list ?? [person]).flat();
         allPlaces.forEach(element => {element.etype = 'place'})
 
         let allEntities = allPersons.concat(allInstitutions, allPlaces)

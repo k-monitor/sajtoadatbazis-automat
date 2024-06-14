@@ -46,6 +46,17 @@ def get_all_files(connection):
     return get_all(connection, 'news_files', 'file_id', 'name_hu')
 
 
+with connection_pool.get_connection() as connection:
+    all_persons = get_all_persons(connection)
+    all_institutions = get_all_institutions(connection)
+    all_places = get_all_places(connection)
+    all_others = get_all_others(connection)
+    all_persons_by_id = {person['id']: person['name'] for person in all_persons}
+    all_institutions_by_id = {institution['id']: institution['name'] for institution in all_institutions}
+    all_places_by_id = {place['id']: place['name'] for place in all_places}
+    all_others_by_id = {other['id']: other['name'] for other in all_others}
+
+
 @cache
 def get_all_freq(connection, table, id_column, name_column):
     query = f'SELECT p.{id_column} AS id, p.{name_column} AS name, COUNT(npl.news_id) AS count FROM {table} p JOIN {table}_link npl ON p.{id_column} = npl.{id_column} WHERE status = "Y" GROUP BY p.{id_column};'
@@ -240,7 +251,7 @@ def get_article_counts(connection, domain=-1, q='', start='2000-01-01', end='205
         if domain and domain != -1 and isinstance(domain, int):
             query += ' AND n.newspaper_id = '+str(domain)
         query += ' AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)'
-        query += ' AND n.cre_time BETWEEN %s AND %s'
+        query += ' AND DATE(n.cre_time) BETWEEN %s AND %s'
         with connection.cursor(dictionary=True) as cursor:
             cursor.execute('SELECT COUNT(id) FROM autokmdb_news n '+query, (q,q,q,q,start,end))
             count = cursor.fetchone()['COUNT(id)']
@@ -248,14 +259,38 @@ def get_article_counts(connection, domain=-1, q='', start='2000-01-01', end='205
     return article_counts
 
 
-def get_article_institutions(cursor, id):
-    query = '''SELECT name, id, institution_id AS db_id, institution_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_institutions WHERE autokmdb_news_id = %s'''
+def get_article_persons_kmdb(cursor, id):
+    query = '''SELECT news_id, person_id AS id FROM news_persons_link WHERE news_id = %s'''
     cursor.execute(query, (id,))
-    return cursor.fetchall()
+    return [{'annotation_label': 1, 'db_id': row['id'], 'name': all_persons_by_id[row['id']], 'db_name': all_persons_by_id[row['id']]} for row in cursor.fetchall()]
+
+
+def get_article_institutions_kmdb(cursor, id):
+    query = '''SELECT news_id, institution_id AS id FROM news_institutions_link WHERE news_id = %s'''
+    cursor.execute(query, (id,))
+    return [{'annotation_label': 1, 'db_id': row['id'], 'name': all_institutions_by_id[row['id']], 'db_name': all_institutions_by_id[row['id']]} for row in cursor.fetchall()]
+
+
+def get_article_places_kmdb(cursor, id):
+    query = '''SELECT news_id, place_id AS id FROM news_places_link WHERE news_id = %s'''
+    cursor.execute(query, (id,))
+    return [{'annotation_label': 1, 'db_id': row['id'], 'name': all_places_by_id[row['id']], 'db_name': all_places_by_id[row['id']]} for row in cursor.fetchall()]
+
+
+def get_article_others_kmdb(cursor, id):
+    query = '''SELECT news_id, other_id AS id FROM news_others_link WHERE news_id = %s'''
+    cursor.execute(query, (id,))
+    return [{'annotation_label': 1, 'db_id': row['id'], 'name': all_others_by_id[row['id']], 'db_name': all_others_by_id[row['id']]} for row in cursor.fetchall()]
 
 
 def get_article_persons(cursor, id):
     query = '''SELECT name, id, person_id AS db_id, person_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_persons WHERE autokmdb_news_id = %s'''
+    cursor.execute(query, (id,))
+    return cursor.fetchall()
+
+
+def get_article_institutions(cursor, id):
+    query = '''SELECT name, id, institution_id AS db_id, institution_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_institutions WHERE autokmdb_news_id = %s'''
     cursor.execute(query, (id,))
     return cursor.fetchall()
 
@@ -277,13 +312,18 @@ def get_article(connection, id):
             n.text AS text, n.cre_time AS date, category, article_date FROM autokmdb_news n WHERE id = %s
         '''
     with connection.cursor(dictionary=True) as cursor:
-        cursor.execute('SET SESSION group_concat_max_len = 30000;')
         cursor.execute(query, (id,))
         article = cursor.fetchone()
-        article['persons'] = get_article_persons(cursor, id)
-        article['institutions'] = get_article_institutions(cursor, id)
-        article['places'] = get_article_places(cursor, id)
-        article['others'] = get_article_others(cursor, id)
+        if article['news_id']:
+            article['persons'] = get_article_persons_kmdb(cursor, article['news_id']) + get_article_persons(cursor, id)
+            article['institutions'] = get_article_institutions_kmdb(cursor, article['news_id']) + get_article_institutions(cursor, id)
+            article['places'] = get_article_places_kmdb(cursor, article['news_id']) + get_article_places(cursor, id)
+            article['others'] = get_article_others_kmdb(cursor, article['news_id']) + get_article_others(cursor, id)
+        else:
+            article['persons'] = get_article_persons(cursor, id)
+            article['institutions'] = get_article_institutions(cursor, id)
+            article['places'] = get_article_places(cursor, id)
+            article['others'] = get_article_others(cursor, id)
         return article
 
 
