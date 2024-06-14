@@ -23,7 +23,7 @@
                 <span class="block truncate">{{ option.label }}</span>
             </template>
             <template #option="{ option }">
-                    <span class="block truncate"> <Icon v-if="option.db_name" name="mdi:database-outline" color="green" /> {{ option.db_name != null ? option.db_name : option.name != null ? option.name : option.label }}  {{option.classification_score != null ? '('+(option.classification_score*100).toFixed(0)+'%' : ''}} <Icon v-if="option.classification_label == 1 && option.classification_score != null" name="mdi:emoticon-devil" color="red"/> <Icon v-else-if="option.classification_score != null" name="mdi:account-cowboy-hat" color="gold" /> {{ option.classification_score != null ? ')' : '' }} </span>
+                <span class="block truncate"> <Icon v-if="option.db_id" name="mdi:database-outline" color="green" /> {{ option.db_name != null ? option.db_name : option.name != null ? option.name : option.label }}  {{option.classification_score != null ? '('+(option.classification_score*100).toFixed(0)+'%' : ''}} <Icon v-if="option.classification_label == 1 && option.classification_score != null" name="mdi:emoticon-devil" color="red"/> <Icon v-else-if="option.classification_score != null" name="mdi:account-cowboy-hat" color="gold" /> {{ option.classification_score != null ? ')' : '' }} </span>
             </template>
             <template #empty>
                 Nincs {{ type }}
@@ -41,6 +41,7 @@
         if (q === '') {
             return list.concat(localPositiveList.value).filter((obj1, i, arr) => 
                 arr.findIndex(obj2 => (obj2.id === obj1.id)) === i || !("found_name" in obj1))
+                .filter((obj1, i, arr) => arr.findIndex(obj2 => (obj2.db_id === obj1.db_id)) === i || !("db_id" in obj1))
         }
 
         return list.concat(localPositiveList.value).filter((obj1, i, arr) => 
@@ -61,4 +62,7 @@
     // Local state
     const localList = list
     const localPositiveList = ref(positiveList);
+    console.log('localPositiveList.value')
+    console.log(localPositiveList.value)
+
 </script>
