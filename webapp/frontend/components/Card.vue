@@ -35,11 +35,11 @@
                 <div  class="my-2 flex justify-center px-0 sm:px-0 lg:px-0 flex-wrap">
                     <div class="max-w-2xl mx-4 flex-grow">
                         <p>Cím:</p>
-                        <UInput class="my-2" v-model="article.title"/>
+                        <UTextarea class="my-2 min-h-0" rows="1" autoresize v-model="article.title"/>
                         <p>URL:</p>
                         <UInput class="my-2" v-model="article.url"/>
                         <p>Leírás:</p>
-                        <UTextarea class="my-2" v-model="article.description"/>
+                        <UTextarea class="my-2" resize v-model="article.description"/>
                         <div class="flex justify-between">
                             <p>Szöveg:</p>
                             <div class="flex items-center">
