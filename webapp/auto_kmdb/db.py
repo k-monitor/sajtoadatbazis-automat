@@ -257,7 +257,8 @@ def get_article_counts(connection, domains, q='', start='2000-01-01', end='2050-
         elif status == 'all':
             query = '''WHERE processing_step >= 0'''
         if domains and domains[0] != -1 and isinstance(domains, list):
-            query += f' AND n.newspaper_id IN ({','.join([str(domain) for domain in domains])})'
+            domain_list = ','.join([str(domain) for domain in domains])
+            query += f' AND n.newspaper_id IN ({domain_list})'
         query += ' AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)'
         query += ' AND DATE(n.cre_time) BETWEEN %s AND %s'
         with connection.cursor(dictionary=True) as cursor:
@@ -358,7 +359,8 @@ def get_articles(connection, page, status, domains, q='', start='2000-01-01', en
         print('Invalid status provided!')
         return
     if domains and domains[0] != -1 and isinstance(domains, list):
-        query += f' AND n.newspaper_id IN ({','.join([str(domain) for domain in domains])})'
+        domain_list = ','.join([str(domain) for domain in domains])
+        query += f' AND n.newspaper_id IN ({domain_list})'
 
     query += ' AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)'
 
