@@ -39,20 +39,23 @@ def reformat_article(article):
     return article
 
 
-@api.route('/article_counts', methods=["GET"])
+@api.route('/article_counts', methods=["POST"])
 def api_article_counts():
     session_id = get_session_id(request)
     with connection_pool.get_connection() as connection:
         if not validate_session(connection, session_id):
             return jsonify({'error': 'Nem vagy bejelentkezve!'}), 401
 
-    domain = request.args.get('domain', -1, type=int)
-    q = request.args.get('q', '', type=str)
-    start = request.args.get('from', '2000-01-01', type=str)
-    end = request.args.get('to', '2050-01-01', type=str)
+    content: map = request.json
+
+    start = content.get('from', '2000-01-01')
+    end = content.get('to', '2050-01-01')
+    q = content.get('q', '')
+    domains = content['domain']
+    domain_ids = [domain['id'] for domain in domains]
 
     with connection_pool.get_connection() as connection:
-        article_counts = get_article_counts(connection, domain, '%'+q+'%', start, end)
+        article_counts = get_article_counts(connection, domain_ids, '%'+q+'%', start, end)
 
     return jsonify(article_counts), 200
 
@@ -70,7 +73,7 @@ def api_article(id):
     return jsonify(article), 200
 
 
-@api.route('/articles', methods=["GET"])
+@api.route('/articles', methods=["POST"])
 def api_articles():
     logging.info('requesting api articles')
     session_id = get_session_id(request)
@@ -78,15 +81,18 @@ def api_articles():
         if not validate_session(connection, session_id):
             return jsonify({'error': 'Nem vagy bejelentkezve!'}), 401
 
-    page = request.args.get('page', 1, type=int)
-    status = request.args.get('status', 'mixed', type=str)
-    start = request.args.get('from', '2000-01-01', type=str)
-    end = request.args.get('to', '2050-01-01', type=str)
-    domain = request.args.get('domain', -1, type=int)
-    q = request.args.get('q', '', type=str)
+    content: map = request.json
+
+    page = content.get('page', 1)
+    status = content.get('status', 'mixed')
+    start = content.get('from', '2000-01-01')
+    end = content.get('to', '2050-01-01')
+    q = content.get('q', '')
+    domains = content['domain']
+    domain_ids = [domain['id'] for domain in domains]
 
     with connection_pool.get_connection() as connection:
-        length, articles = get_articles(connection, page, status, domain, '%'+q+'%', start, end)
+        length, articles = get_articles(connection, page, status, domain_ids, '%'+q+'%', start, end)
 
     return jsonify({'pages': ceil(length/10), 'articles': articles}), 200
 

@@ -38,17 +38,33 @@
     // baseUrl = 'http://127.0.0.1:8000'
 
     const allLabels = useFetch(baseUrl+'/api/all_labels').data;
-    let allDomains = computed(() => allLabels.value == null ? [] : [{name: 'mind', id: -1}].concat(allLabels.value?.domains))
     let allFiles = computed(() => allLabels.value == null ? [] : [{name: 'semmi', id: -1}].concat(allLabels.value?.files))
-    const selectedDomain = ref(allDomains[0])
+    let allDomains = computed(() => allLabels.value == null ? [] : [{name: 'mind', id: -1}].concat(allLabels.value?.domains))
+    const selectedDomains = ref([{name: 'mind', id: -1}])
+    // Watch a selectedDomains változásaira
+    watch(selectedDomains, (newVal) => {
+    const mindIndex = newVal.findIndex(domain => domain.id === -1);
+    const hasOtherSelections = newVal.some(domain => domain.id !== -1);
+
+    // Ha van másik kiválasztás és a 'mind' is benne van, távolítsuk el a 'mind'-t
+    if (hasOtherSelections && mindIndex !== -1) {
+        selectedDomains.value = newVal.filter(domain => domain.id !== -1);
+    }
+
+    // Ha nincs semmi kiválasztva, válasszuk ki a 'mind'-t
+    if (!hasOtherSelections && mindIndex === -1) {
+        selectedDomains.value = [{ name: 'mind', id: -1 }];
+    }
+    }, { immediate: true });
 
     const status = computed(() => statusItems.value[statusId.value].key)
     const from = computed(() => format(selected.value.start, 'yyyy-MM-dd'))
     const to = computed(() => format(selected.value.end, 'yyyy-MM-dd'))
 
     const { data: articleCounts, refresh: refreshArticleCounts } = useLazyFetch(baseUrl+'/api/article_counts', {
-        query: {
-            domain: selectedDomain,
+        method: 'POST',
+        body: {
+            domain: selectedDomains,
             from: from,
             to: to,
             q: q,
@@ -80,10 +96,11 @@
     }]);
 
     const { pending, data: articleQuery, refresh } = useLazyFetch(baseUrl+'/api/articles', {
-        query: {
+        method: 'POST',
+        body: {
             page: page,
             status: status,
-            domain: selectedDomain,
+            domain: selectedDomains,
             from: from,
             to: to,
             q: q,
@@ -174,11 +191,17 @@
             <UContainer class="my-1 flex lg:px-0 px-2 sm:px-0 ml-1">
                 <div class="flex px-1">
                 <p>Kiválasztott hírportál: &nbsp;</p>
-                <UInputMenu class="w-48" v-model="selectedDomain" option-attribute="name" value-attribute="id" :options="allDomains" @change="refresh">
+                <USelectMenu multiple class="w-48" v-model="selectedDomains" by="id" :options="allDomains" @change="refresh">
                     <template #option="{ option }">
                         <span><Icon v-if="option.has_rss" name="mdi:rss" color="orange"/> {{ option.name }}</span>
                     </template>
-                </UInputMenu>
+                    <template #empty>
+                        betöltés...
+                    </template>
+                    <template #label>
+                        <span>{{ selectedDomains.map((item) => ('name' in item) ? item.name : 'mind').join(', ') }}</span>
+                    </template>
+                </USelectMenu>
                 </div>
 
                 <UPopover class="px-1" :popper="{ placement: 'bottom-start' }">

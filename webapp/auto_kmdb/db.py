@@ -243,7 +243,7 @@ def paginate_query(query, page_size, page_number):
     return query + f" LIMIT {page_size} OFFSET {offset}"
 
 
-def get_article_counts(connection, domain=-1, q='', start='2000-01-01', end='2050-01-01'):
+def get_article_counts(connection, domains, q='', start='2000-01-01', end='2050-01-01'):
     article_counts = {}
     for status in ['mixed', 'positive', 'negative', 'processing', 'all']:
         if status == 'mixed':
@@ -256,8 +256,8 @@ def get_article_counts(connection, domain=-1, q='', start='2000-01-01', end='205
             query = '''WHERE processing_step < 4'''
         elif status == 'all':
             query = '''WHERE processing_step >= 0'''
-        if domain and domain != -1 and isinstance(domain, int):
-            query += ' AND n.newspaper_id = '+str(domain)
+        if domains and domains[0] != -1 and isinstance(domains, list):
+            query += f' AND n.newspaper_id IN ({','.join([str(domain) for domain in domains])})'
         query += ' AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)'
         query += ' AND DATE(n.cre_time) BETWEEN %s AND %s'
         with connection.cursor(dictionary=True) as cursor:
@@ -335,7 +335,7 @@ def get_article(connection, id):
         return article
 
 
-def get_articles(connection, page, status, domain=-1, q='', start='2000-01-01', end='2050-01-01'):
+def get_articles(connection, page, status, domains, q='', start='2000-01-01', end='2050-01-01'):
     query = ''
 
     selection = '''SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step, skip_reason, negative_reason,
@@ -357,8 +357,8 @@ def get_articles(connection, page, status, domain=-1, q='', start='2000-01-01', 
     else:
         print('Invalid status provided!')
         return
-    if domain and domain != -1 and isinstance(domain, int):
-        query += ' AND n.newspaper_id = '+str(domain)
+    if domains and domains[0] != -1 and isinstance(domains, list):
+        query += f' AND n.newspaper_id IN ({','.join([str(domain) for domain in domains])})'
 
     query += ' AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)'
 
