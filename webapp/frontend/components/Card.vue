@@ -233,7 +233,7 @@
                         positivePlaces.value = allPlaces.value.filter((place) => 
                             ((article.value.annotation_label != 1 && place.classification_label == 1) ||
                             (article.value.annotation_label == 1 && place.annotation_label == 1)) && place.db_id)
-                        positiveOthers.value = article.value.others.map((other) => 
+                        positiveOthers.value = article.value.others.filter((other) => 
                             ((article.value.annotation_label != 1 && other.classification_label == 1) || 
                             (article.value.annotation_label == 1 && other.annotation_label == 1)) && other.db_id)
                     }
