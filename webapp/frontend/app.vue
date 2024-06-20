@@ -11,14 +11,19 @@
     { label: 'Last 30 days', duration: { days: 30 } },
     { label: 'Last 3 months', duration: { months: 3 } },
     { label: 'Last 6 months', duration: { months: 6 } },
-    { label: 'Last year', duration: { years: 1 } }
+    { label: 'Last year', duration: { years: 1 } },
+    { label: '2 years', duration: { years: 2 } },
+    { label: '3 years', duration: { years: 3 } }
     ]
     const selected = ref({ start: sub(new Date(), { days: 14 }), end: new Date() })
+    function selectRange (duration: Duration) {
+        selected.value = { start: sub(new Date(), duration), end: new Date() }
+    }
 
     function isRangeSelected (duration: Duration) {
         return isSameDay(selected.value.start, sub(new Date(), duration)) && isSameDay(selected.value.end, new Date())
     }
-        let newUrl = '';
+    let newUrl = '';
     let isOpen = ref(false);
     let isOpenError = ref(false);
     let errorText = ref('');
@@ -183,7 +188,7 @@
 
                     <template #panel="{ close }">
                     <div class="flex items-center sm:divide-x divide-gray-200 dark:divide-gray-800">
-                        <!-- <div class="hidden sm:flex flex-col py-4">
+                        <div class="hidden sm:flex flex-col py-4">
                         <UButton
                             v-for="(range, index) in ranges"
                             :key="index"
@@ -195,7 +200,7 @@
                             truncate
                             @click="selectRange(range.duration)"
                         />
-                        </div> -->
+                        </div>
 
                         <DatePicker v-model="selected" is-required @close="() => {close(); refresh()}" />
                     </div>

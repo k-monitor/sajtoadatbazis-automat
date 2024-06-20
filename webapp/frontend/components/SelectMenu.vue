@@ -56,6 +56,7 @@
     }
 
     const { list, creatable, positiveList, labels, type } = defineProps(['list', 'creatable', 'positiveList', 'labels', 'type']);
+    console.log('list')
     console.log(list)
     console.log(positiveList)
     const query = ref('')
