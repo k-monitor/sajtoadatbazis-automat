@@ -110,4 +110,4 @@ class DownloadProcessor(Processor):
             sleep(30)
             return
         logging.info('download processor is processing: ' + next_row['url'])
-        self.process_article(next_row['id'], next_row['url'], next_row['source'])
+        process_article(next_row['id'], next_row['url'], next_row['source'])
