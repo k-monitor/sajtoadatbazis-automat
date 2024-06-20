@@ -446,37 +446,85 @@ def create_institution(connection, name, user_id):
 
 
 def annote_positive(connection, id, source_url, source_url_string, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active, category, others, file_id):
-    query_0 = '''SELECT news_id FROM autokmdb_news WHERE news_id = %s'''
-    query_1 = '''UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s WHERE id = %s;'''
+    query_0 = '''SELECT news_id FROM autokmdb_news WHERE id = %s LIMIT 1'''
+    query_1 = '''UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s, title = %s, description = %s, text = %s WHERE id = %s;'''
     query_2 = '''INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);'''
-    query_2_update = '''UPDATE news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);'''
+    query_2_update = '''UPDATE news_news
+SET
+    source_url = %s,
+    source_url_string = %s,
+    mod_time = %s,
+    pub_time = %s,
+    mod_id = %s,
+    status = %s
+WHERE
+    cre_time = %s
+    AND cre_id = %s;'''
     query_3 = '''INSERT INTO news_lang (news_id, lang, name, teaser, articletext, alias, seo_url_default) VALUES (%s, %s, %s, %s, %s, %s, %s)'''
+    query_3_update = '''UPDATE news_lang
+SET 
+    lang = %s, 
+    name = %s, 
+    teaser = %s, 
+    articletext = %s, 
+    alias = %s, 
+    seo_url_default = %s
+WHERE 
+    news_id = %s;'''
     query_np = '''INSERT INTO news_newspapers_link (news_id, newspaper_id) VALUES (%s, %s);'''
+    query_np_update = '''UPDATE news_newspapers_link
+SET 
+    newspaper_id = %s
+WHERE 
+    news_id = %s;'''
     query_cat = '''INSERT INTO news_categories_link (news_id, cid, head) VALUES (%s, %s, %s);'''
-
+    query_cat_update = '''UPDATE news_categories_link
+SET 
+    cid = %s, 
+    head = %s
+WHERE 
+    news_id = %s;'''
     query_p = '''INSERT INTO news_persons_link (news_id, person_id) VALUES (%s, %s)'''
+    delete_p = '''DELETE FROM news_persons_link WHERE news_id = %s'''
     query_auto_p = '''UPDATE autokmdb_persons SET annotation_label = 1 WHERE id = %s;'''
     query_i = '''INSERT INTO news_institutions_link (news_id, institution_id) VALUES (%s, %s)'''
+    delete_i = '''DELETE FROM news_institutions_link WHERE news_id = %s'''
     query_auto_i = '''UPDATE autokmdb_institutions SET annotation_label = 1 WHERE id = %s;'''
     query_pl = '''INSERT INTO news_places_link (news_id, place_id) VALUES (%s, %s)'''
+    delete_pl = '''DELETE FROM news_places_link WHERE news_id = %s'''
     query_auto_pl = '''UPDATE autokmdb_places SET annotation_label = 1 WHERE id = %s;'''
     query_others = '''INSERT INTO news_others_link (news_id, other_id) VALUES (%s, %s)'''
+    delete_others = '''DELETE FROM news_others_link WHERE news_id = %s;'''
     query_file = '''INSERT INTO news_files_link (news_id, file_id) VALUES (%s, %s)'''
+    delete_file = '''DELETE FROM news_files_link WHERE news_id = %s;'''
 
     current_datetime = datetime.now()
     cre_time = int(current_datetime.timestamp())
 
     with connection.cursor() as cursor:
+        category_dict = {0: 5, 1: 6, 2: 7, None: 5}
+        is_update = False
         alias = slugify(title)
         seo_url_default = 'hirek/magyar-hirek/'+alias
+
         cursor.execute(query_0, (id,))
-        if cursor.fetchall():
+        news_id = cursor.fetchone()
+
+        if news_id:
+            is_update = True
+            logging.info('news_id exists: ' + str(news_id[0]))
+            news_id = news_id[0]
             cursor.execute(query_2_update, (source_url, source_url_string, cre_time, cre_time, cre_time, user_id, user_id, 'Y' if is_active else 'N'))
         else:
             cursor.execute(query_2, (source_url, source_url_string, cre_time, cre_time, cre_time, user_id, user_id, 'Y' if is_active else 'N'))
-        news_id = cursor.lastrowid
-        cursor.execute(query_1, (news_id, id))
-        cursor.execute(query_3, (news_id, 'hu', title, description, text.replace('\n', '<br>'), alias, seo_url_default))
+            news_id = cursor.lastrowid
+        cursor.execute(query_1, (news_id, title, description, text, id))
+
+        if is_update:
+            cursor.execute(query_3_update, ('hu', title, description, text.replace('\n', '<br>'), alias, seo_url_default, news_id))
+        else:
+            cursor.execute(query_3, (news_id, 'hu', title, description, text.replace('\n', '<br>'), alias, seo_url_default))
+
         for person in persons:
             if ('db_id' not in person or not person['db_id']) and person['name']:
                 db_id = create_person(connection, person['name'], user_id)
@@ -486,35 +534,55 @@ def annote_positive(connection, id, source_url, source_url_string, title, descri
                 db_id = create_institution(connection, institution['name'], user_id)
                 institution['db_id'] = db_id
 
-        cursor.execute(query_np, (news_id, newspaper_id))
-        category_dict = {0: 5, 1: 6, 2:7, None: 5}
-        cursor.execute(query_cat, (news_id, category_dict[category], "Y"))
+        if is_update:
+            cursor.execute(query_np_update, (newspaper_id, news_id))
+        else:
+            cursor.execute(query_np, (news_id, newspaper_id))
+
+        if is_update:
+            cursor.execute(query_cat_update, (category_dict[category], "Y", news_id))
+        else:
+            cursor.execute(query_cat, (news_id, category_dict[category], "Y"))
 
         done_person_ids = set()
         done_institution_ids = set()
         done_place_ids = set()
+
+        if is_update:
+            cursor.execute(delete_p, (news_id,))
         for person in persons:
             if person['db_id'] not in done_person_ids:
                 cursor.execute(query_p, (news_id, person['db_id']))
                 done_person_ids.add(person['db_id'])
             if 'id' in person and isinstance(person['id'], int):
                 cursor.execute(query_auto_p, (person['id'],))
+        if is_update:
+            cursor.execute(delete_i, (news_id,))
         for institution in institutions:
             if institution['db_id'] not in done_institution_ids:
                 cursor.execute(query_i, (news_id, institution['db_id']))
                 done_institution_ids.add(institution['db_id'])
             if 'id' in institution and isinstance(institution['id'], int):
                 cursor.execute(query_auto_i, (institution['id'],))
+        if is_update:
+            cursor.execute(delete_pl, (news_id,))
         for place in places:
             if place['db_id'] not in done_place_ids:
                 cursor.execute(query_pl, (news_id, place['db_id']))
                 done_place_ids.add(place['db_id'])
             if 'id' in place and isinstance(place['id'], int):
                 cursor.execute(query_auto_pl, (place['id'],))
+
+        if is_update:
+            cursor.execute(delete_others, (news_id,))
         for other in others:
             cursor.execute(query_others, (news_id, other['db_id']))
+
+        if is_update:
+            cursor.execute(delete_file, (news_id,))
         if file_id > 0:
             cursor.execute(query_file, (news_id, file_id))
+
     connection.commit()
 
 
