@@ -4,6 +4,7 @@ import os
 from contextlib import closing
 from datetime import datetime
 from slugify import slugify
+import logging
 
 connection_pool = mysql.connector.pooling.MySQLConnectionPool(
   pool_name="cnx_pool",
@@ -395,28 +396,46 @@ def annote_negative(connection, id, reason):
 
 
 def create_person(connection, name, user_id):
-    print('adding', name)
+    logging.info('adding new person: ' + name)
     query = '''INSERT INTO news_persons (status, name, cre_id, mod_id, import_id, cre_time, mod_time) VALUES (%s, %s, %s, %s, %s, %s, %s);'''
     query_seo = '''INSERT INTO tags_seo_data (seo_name, tag_type, item_id) VALUES (%s, %s, %s);'''
+    query_check_person = '''SELECT person_id FROM news_persons WHERE name = %s;'''
+
     current_datetime = datetime.now()
     cre_time = int(current_datetime.timestamp())
 
     with connection.cursor() as cursor:
+        cursor.execute(query_check_person, (name,))
+        result = cursor.fetchone()
+        if result:
+            person_id = result[0]
+            logging.info(f'Person already exists with ID: {person_id}')
+            return person_id
+
         cursor.execute(query, ('Y', name, user_id, user_id, 0, cre_time, cre_time))
         db_id = cursor.lastrowid
         cursor.execute(query_seo, (slugify(name), 'persons', db_id))
-        print(db_id)
     connection.commit()
     return db_id
 
 
 def create_institution(connection, name, user_id):
+    logging.info('adding new institution: ' + name)
     query = '''INSERT INTO news_institutions (status, name, cre_id, mod_id, import_id, cre_time, mod_time) VALUES (%s, %s, %s, %s, %s, %s, %s);'''
     query_seo = '''INSERT INTO tags_seo_data (seo_name, tag_type, item_id) VALUES (%s, %s, %s);'''
+    query_check_institution = '''SELECT institution_id FROM news_institutions WHERE name = %s;'''
+
     current_datetime = datetime.now()
     cre_time = int(current_datetime.timestamp())
 
     with connection.cursor() as cursor:
+        cursor.execute(query_check_institution, (name,))
+        result = cursor.fetchone()
+        if result:
+            institution_id = result[0]
+            logging.info(f'Institution already exists with ID: {institution_id}')
+            return institution_id
+
         cursor.execute(query, ('Y', name, user_id, user_id, 0, cre_time, cre_time))
         db_id = cursor.lastrowid
         cursor.execute(query_seo, (slugify(name), 'institutions', db_id))
