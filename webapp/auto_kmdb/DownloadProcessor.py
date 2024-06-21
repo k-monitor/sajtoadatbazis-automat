@@ -13,6 +13,10 @@ from auto_kmdb.db import get_retries_from
 from datetime import datetime, timedelta
 
 
+jeti_session = ''
+gateway_session = ''
+
+
 def process_article(id, url, source):
     try:
         response = requests.get(url)
@@ -61,8 +65,74 @@ def process_article(id, url, source):
             save_download_step(connection, id, text, title, description, authors, date, is_paywalled)
 
 
+def login_444():
+    global jeti_session, gateway_session
+    url_1 = 'https://magyarjeti.hu/bejelentkezes?redirect=https%3A%2F%2F444.hu&state=%257B%2522route%2522%253A%2522--reader.index%2522%252C%2522params%2522%253A%255B%255D%257D'
+    headers_1 = {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Origin': 'https://magyarjeti.hu',
+        'Connection': 'keep-alive',
+        'Referer': 'https://magyarjeti.hu/bejelentkezes?redirect=https%3A%2F%2F444.hu&state=%257B%2522route%2522%253A%2522--reader.index%2522%252C%2522params%2522%253A%255B%255D%257D',
+        'Cookie': '_nss=1; PHPSESSID=kr1trgr9ivb20qjf3dkl9h4v54',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'same-origin',
+        'Sec-Fetch-User': '?1',
+        'Priority': 'u=1',
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache',
+        'TE': 'trailers',
+    }
+    data_1 = {
+        'username': os.environ['USER_444'],
+        'password': os.environ['PASS_444'],
+        'send': 'Belépek',
+        '_token_': 'gvpg9qzncfeWNlIublxX6T1HXLiT65rfXfRfg=',
+        'redirect': 'https://444.hu/',
+        'state': '%257B%2522route%2522%253A%2522--reader.index%2522%252C%2522params%2522%253A%255B%255D%257D',
+        'list_id': '',
+        'callback': '',
+        '_do': 'signInForm-submit'
+    }
+
+    session = requests.Session()
+    session.cookies = requests.cookies.RequestsCookieJar()
+    session.post(url_1, headers=headers_1, data=data_1)
+    payload = os.environ['PAYL_444']
+
+    url_2 = f'https://gateway.ipa.444.hu/session?payload={payload}%3D%3D&redirect=https%3A%2F%2F444.hu%2F%3Fstate%3D%25257B%252522route%252522%25253A%252522--reader.index%252522%25252C%252522params%252522%25253A%25255B%25255D%25257D'
+    headers_2 = {
+        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate, br, zstd',
+        'Referer': 'https://magyarjeti.hu/',
+        'Connection': 'keep-alive',
+        'Cookie': 'abgroup=4;',
+        'Upgrade-Insecure-Requests': '1',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'cross-site',
+        'Sec-Fetch-User': '?1',
+        'Priority': 'u=1',
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache',
+        'TE': 'trailers',
+    }
+
+    session.get(url_2, headers=headers_2)
+    cookies = session.cookies
+    jeti_session = cookies.get('jeti-session')
+    gateway_session = cookies.get('gateway_session')
+
+
 def get_444(url):
-    cookie = os.environ["COOKIE_444"]
+    cookie = f'gateway_session={gateway_session}; jeti-session={jeti_session}'
+    logging.info(cookie)
     article_name = url.split('/')[-1]
     date = '-'.join(url.split('/')[-4:-1])
     bucket = '444'
