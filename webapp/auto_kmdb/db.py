@@ -508,12 +508,12 @@ WHERE
         seo_url_default = 'hirek/magyar-hirek/'+alias
 
         cursor.execute(query_0, (id,))
-        news_id = cursor.fetchone()
+        news_id = cursor.fetchone()[0]
 
         if news_id:
             is_update = True
-            logging.info('news_id exists: ' + str(news_id[0]))
-            news_id = news_id[0]
+            logging.info('news_id exists: ' + str(news_id))
+            news_id = news_id
             cursor.execute(query_2_update, (source_url, source_url_string, cre_time, cre_time, cre_time, user_id, user_id, 'Y' if is_active else 'N'))
         else:
             cursor.execute(query_2, (source_url, source_url_string, cre_time, cre_time, cre_time, user_id, user_id, 'Y' if is_active else 'N'))
