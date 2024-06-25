@@ -7,7 +7,7 @@ from threading import Thread
 import os
 from time import sleep
 
-# sleep(10)  # TODO better wait handling
+sleep(10)  # TODO better wait handling
 from auto_kmdb.DownloadProcessor import DownloadProcessor, do_retries, login_444
 from auto_kmdb.ClassificationProcessor import ClassificationProcessor
 from auto_kmdb.NERProcessor import NERProcessor
@@ -38,7 +38,6 @@ def create_app():
         logger.info("registered api")
 
     login_444()
-    # logging.info(get_444('https://444.hu/2024/06/21/milliard-euros-hitelt-adhat-magyarorszag-eszak-macedonianak-azutan-hogy-orban-szovetsegese-visszatert-a-hatalomba'))
 
     Thread(target=rss_watcher, args=(app.app_context(),), daemon=True).start()
     Thread(target=do_retries, args=(app.app_context(),), daemon=True).start()
