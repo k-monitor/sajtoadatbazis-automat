@@ -2,11 +2,18 @@ from transformers import pipeline, AutoTokenizer
 from auto_kmdb.db import get_ner_queue, add_auto_person, add_auto_institution
 from auto_kmdb.db import add_auto_place, get_all_persons, get_all_institutions
 from auto_kmdb.db import save_ner_step, get_all_places
+from auto_kmdb.entity_linking import (
+    get_entities_freq,
+    get_mapping,
+    comb_mappings,
+)
 from auto_kmdb.Processor import Processor
 from time import sleep
 from auto_kmdb.db import connection_pool
+import pandas as pd
 import logging
 import torch
+from typing import Literal
 
 
 def join_entities(classifications: list[dir]):
@@ -113,61 +120,36 @@ class NERProcessor(Processor):
 
             # TODO: add_auto_person(autokmdb_news_id, person_id, found_name, found_position, name, classification_score, classification_label)
 
-    def get_person(self, person):
-        with connection_pool.get_connection() as connection:
-            all_people = get_all_persons(connection)
-        names_in = [p for p in all_people if p["name"] and p["name"] in person["name"]]
-        in_names = [p for p in all_people if p["name"] and person["name"] in p["name"]]
-        same_names = [
-            p for p in all_people if p["name"] and p["name"] == person["name"]
-        ]
-        if len(same_names) == 1:
-            return same_names[0]
-        if len(in_names) == 1:
-            return in_names[0]
-        if len(names_in) == 1:
-            return names_in[0]
-        return None
+    def get_db_entity_linking(
+        self,
+        detected_entities: list[dir],
+        entity_type: Literal["people", "places", "institutions"],
+    ) -> pd.DataFrame:
+        """
+        Given the set of detected entities, it returns tha mapped db keywords.
 
-    def get_institution(self, institution):
-        with connection_pool.get_connection() as connection:
-            all_institutions = get_all_institutions(connection)
-        names_in = [
-            p
-            for p in all_institutions
-            if p["name"] and p["name"] in institution["name"]
-        ]
-        in_names = [
-            p
-            for p in all_institutions
-            if p["name"] and institution["name"] in p["name"]
-        ]
-        same_names = [
-            p
-            for p in all_institutions
-            if p["name"] and p["name"] == institution["name"]
-        ]
-        if len(same_names) == 1:
-            return same_names[0]
-        if len(in_names) == 1:
-            return in_names[0]
-        if len(names_in) == 1:
-            return names_in[0]
-        return None
-
-    def get_place(self, place):
-        with connection_pool.get_connection() as connection:
-            all_places = get_all_places(connection)
-        names_in = [p for p in all_places if p["name"] and p["name"] in place["name"]]
-        in_names = [p for p in all_places if p["name"] and place["name"] in p["name"]]
-        same_names = [p for p in all_places if p["name"] and p["name"] == place["name"]]
-        if len(same_names) == 1:
-            return same_names[0]
-        if len(in_names) == 1:
-            return in_names[0]
-        if len(names_in) == 1:
-            return names_in[0]
-        return None
+        Args:
+            detected_entities: list of dirs, each dir must contain the following infos of a detected
+                entity: word (string) e.g. 'Budapest', score(float) e.g. 0.998, entity_group(str) e.g.
+                'POS-LOC'
+            entity_type: the type of entities we want to link to db, value must be either set to 'people',
+                'places' or 'institutions'
+        Returns:
+            Dataframe containing the mappings, indexed by db keyword ids. Contains the following infos:
+                'detections': number of detected entities from the article that have been linked to
+                this db keyword
+                'class': 1 if positive, 0 if negative. It takes value of 1 if any of the detected
+                entities linked to this db keyword has been classified as positive
+                'score': classification score, takes the highest score from the score of the detected
+                entities linked to this db keyword that have the same class
+                'start': position of the first character of the detected entity that the 'score'
+                belongs to
+                'detected_ent_raw': the detected entity in the form it appears in text
+                'detected_ent': the detected entity after stemming
+        """
+        keywords = get_entities_freq(entity_type)
+        mapping = get_mapping(detected_entities, keywords.index)
+        return comb_mappings(mapping, keywords)
 
     def process_next(self):
         with connection_pool.get_connection() as connection:
@@ -183,78 +165,31 @@ class NERProcessor(Processor):
         print("ner processing: " + str(next_row["id"]))
         logging.info("ner processing next: " + str(next_row["id"]))
 
-        added_persons = []
-        added_institutions = []
-        added_places = []
-
-        for person in self.people:
-            if " " not in person["name"]:
-                continue
-            for added_person in added_persons:
-                if person["name"] in added_person:
-                    break
-            else:
-                person_db = self.get_person(person)
-                pid = person_db["id"] if person_db else None
-                pname = person_db["name"] if person_db else None
-                if pname is not None:
-                    added_persons.append(pname)
-                else:
-                    added_persons.append(person["name"])
-                with connection_pool.get_connection() as connection:
-                    add_auto_person(
-                        connection,
-                        next_row["id"],
-                        pname,
-                        pid,
-                        person["found_name"],
-                        person["found_position"],
-                        person["name"],
-                        person["classification_score"],
-                        person["classification_label"],
-                    )
-
-        for institution in self.institutions:
-            institution_db = self.get_institution(institution)
-            iid = institution_db["id"] if institution_db else None
-            iname = institution_db["name"] if institution_db else None
-            if iname is not None:
-                added_institutions.append(iname)
-            else:
-                added_institutions.append(institution["name"])
-            with connection_pool.get_connection() as connection:
-                add_auto_institution(
-                    connection,
-                    next_row["id"],
-                    iname,
-                    iid,
-                    institution["found_name"],
-                    institution["found_position"],
-                    institution["name"],
-                    institution["classification_score"],
-                    institution["classification_label"],
+        for type, detected_entities, db_function in [
+            ("people", self.people, add_auto_person),
+            ("places", self.places, add_auto_place),
+            ("institutions", self.institutions, add_auto_place),
+        ]:
+            if len(detected_entities) > 0:
+                mapping = self.get_db_entity_linking(detected_entities, type)
+                print(mapping)
+                assert mapping.index.is_unique, (
+                    "Database " + type + " keywords to be added should be unique"
                 )
-
-        for place in self.places:
-            place_db = self.get_place(place)
-            plid = place_db["id"] if place_db else None
-            plname = place_db["name"] if place_db else None
-            if plname is not None:
-                added_places.append(plname)
-            else:
-                added_places.append(place["name"])
-            with connection_pool.get_connection() as connection:
-                add_auto_place(
-                    connection,
-                    next_row["id"],
-                    plname,
-                    plid,
-                    place["found_name"],
-                    place["found_position"],
-                    place["name"],
-                    place["classification_score"],
-                    place["classification_label"],
-                )
+                for entity_id in mapping.index.values:
+                    entity_infos = mapping.loc[entity_id]
+                    with connection_pool.get_connection() as connection:
+                        db_function(
+                            connection,
+                            next_row["id"],
+                            entity_infos.loc["combed_mapping"],
+                            str(entity_id),
+                            entity_infos.loc["detected_ent_raw"],
+                            str(entity_infos.loc["start"]),
+                            entity_infos.loc["detected_ent"],
+                            str(entity_infos.loc["score"]),
+                            str(entity_infos.loc["class"]),
+                        )
 
         with connection_pool.get_connection() as connection:
             save_ner_step(connection, next_row["id"])

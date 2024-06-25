@@ -1,6 +1,6 @@
 from time import sleep
 import logging
-
+import traceback
 
 class Processor:
     def __init__(self):
@@ -24,6 +24,7 @@ class Processor:
             try:
                 self.process_next()
             except Exception as e:
+                print(traceback.format_exc())
                 logging.error('encountered error in processing loop')
                 logging.error(e)
                 sleep(60)

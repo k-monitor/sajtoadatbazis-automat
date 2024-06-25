@@ -32,6 +32,8 @@ def get_new_from_rss(newspaper):
     if newspaper['rss_url'] == 'atv':
         logging.info('checking atv')
         response = requests.get(f'https://api.atv.hu/cms/layout-version/published')
+        if 'generator' not in [slot for slot in response.json()['__boxes__'] if slot['name'] == 'Itthon'][0]['slotContents'][0]:
+            return
         items = [slot for slot in response.json()['__boxes__'] if slot['name'] == 'Itthon'][0]['slotContents'][0]['generator']['items']
         urls = ['https://www.atv.hu/' + article['slug'] for article in items]
         for url in urls:
