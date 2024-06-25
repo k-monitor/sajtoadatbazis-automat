@@ -168,7 +168,7 @@ class NERProcessor(Processor):
         for type, detected_entities, db_function in [
             ("people", self.people, add_auto_person),
             ("places", self.places, add_auto_place),
-            ("institutions", self.institutions, add_auto_place),
+            ("institutions", self.institutions, add_auto_institution),
         ]:
             if len(detected_entities) > 0:
                 mapping = self.get_db_entity_linking(detected_entities, type)
