@@ -6,6 +6,7 @@ from auto_kmdb.entity_linking import (
     get_entities_freq,
     get_mapping,
     comb_mappings,
+    get_synonyms_file,
 )
 from auto_kmdb.Processor import Processor
 from time import sleep
@@ -147,8 +148,11 @@ class NERProcessor(Processor):
                 'detected_ent_raw': the detected entity in the form it appears in text
                 'detected_ent': the detected entity after stemming
         """
+        synonym_mapping = (
+                get_synonyms_file(entity_type) if (entity_type in ["places", "institutions"]) else None
+        )
         keywords = get_entities_freq(entity_type)
-        mapping = get_mapping(detected_entities, keywords.index)
+        mapping = get_mapping(detected_entities, keywords.index, synonym_mapping)
         return comb_mappings(mapping, keywords)
 
     def process_next(self):

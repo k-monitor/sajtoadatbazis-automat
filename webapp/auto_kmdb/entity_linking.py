@@ -23,6 +23,45 @@ from auto_kmdb.db import (
 )
 
 
+def get_synonyms_file(entity_type: Literal["places", "institutions"] = "places") -> pd.DataFrame:
+    """
+    Loads synonym aliases for places or institutions from csv files.
+
+    Args:
+        entity_type: must be of value "places" or "institutions" because we do not have synonym
+            files for people
+    
+    Returns:
+        Dataframe indexed by aliases and contianing a column 'db_keyword' the alias belongs to.
+        Aliases must be unique.
+    """
+    if entity_type == "places":
+        synonym_file = pd.read_csv("places_synonym.csv", index_col=[0])
+    if entity_type == "institutions":
+        synonym_file = (
+            pd.read_csv("institutions_synonym.csv", index_col=[0])
+            .drop(
+                columns=[
+                    "no_detections",
+                    "no_db_keywords",
+                    "number_of_missed_detections",
+                    "címkézési szabály",
+                ]
+            )
+            .T
+        )
+
+    synonym_mapping = pd.DataFrame(columns=["db_keyword"])
+    synonym_mapping.index.name = "entity"
+
+    for col in synonym_file.columns:
+        synonyms = synonym_file[col].dropna().values
+        for word in synonyms:
+            synonym_mapping.loc[word.strip()] = col.strip()
+    assert synonym_mapping.index.duplicated().sum() == 0
+    return synonym_mapping
+
+
 def get_entities_freq(
     type: Literal["people", "places", "institutions"]
 ) -> pd.DataFrame:
