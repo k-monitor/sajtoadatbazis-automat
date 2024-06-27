@@ -799,12 +799,10 @@ SET
     source_url = %s,
     source_url_string = %s,
     mod_time = %s,
-    pub_time = %s,
     mod_id = %s,
     status = %s
 WHERE
-    cre_time = %s
-    AND cre_id = %s;"""
+    AND news_id = %s;"""
     query_3 = """INSERT INTO news_lang (news_id, lang, name, teaser, articletext, alias, seo_url_default) VALUES (%s, %s, %s, %s, %s, %s, %s)"""
     query_3_update = """UPDATE news_lang
 SET 
@@ -873,11 +871,10 @@ WHERE
                     source_url,
                     source_url_string,
                     cre_time,
-                    cre_time,
-                    cre_time,
-                    user_id,
                     user_id,
                     "Y" if is_active else "N",
+                    user_id,
+                    news_id,
                 ),
             )
         else:
