@@ -13,6 +13,7 @@
     "@nuxt/ui": "^2.13.0",
     "@vuepic/vue-datepicker": "^8.8.0",
     "date-fns": "^3.6.0",
+    "fastest-levenshtein": "^1.0.16",
     "nuxt": "^3.10.2",
     "v-calendar": "^3.1.2",
     "vue": "^3.4.19",
