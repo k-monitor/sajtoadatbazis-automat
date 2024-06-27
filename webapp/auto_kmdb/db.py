@@ -518,7 +518,7 @@ def get_article_counts(
         if domain and domain != -1 and isinstance(domain, int):
             query += " AND n.newspaper_id = " + str(domain)
         query += " AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)"
-        query += " AND n.cre_time BETWEEN %s AND %s"
+        query += ' AND DATE(n.cre_time) BETWEEN %s AND %s'
         with connection.cursor(dictionary=True) as cursor:
             cursor.execute(
                 "SELECT COUNT(id) FROM autokmdb_news n " + query,
