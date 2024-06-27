@@ -498,7 +498,7 @@ def paginate_query(query, page_size, page_number):
 
 def get_article_counts(
     connection: PooledMySQLConnection,
-    domain=-1,
+    domains,
     q="",
     start="2000-01-01",
     end="2050-01-01",
@@ -515,8 +515,9 @@ def get_article_counts(
             query = """WHERE processing_step < 4"""
         elif status == "all":
             query = """WHERE processing_step >= 0"""
-        if domain and domain != -1 and isinstance(domain, int):
-            query += " AND n.newspaper_id = " + str(domain)
+        if domains and domains[0] != -1 and isinstance(domains, list):
+            domain_list = ",".join([str(domain) for domain in domains])
+            query += f" AND n.newspaper_id IN ({domain_list})"
         query += " AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)"
         query += ' AND DATE(n.cre_time) BETWEEN %s AND %s'
         with connection.cursor(dictionary=True) as cursor:
