@@ -191,7 +191,7 @@
             <UContainer class="my-1 flex lg:px-0 px-2 sm:px-0 ml-1">
                 <div class="flex px-1">
                 <p>Kiválasztott hírportál: &nbsp;</p>
-                <USelectMenu multiple class="w-48" v-model="selectedDomains" by="id" :options="allDomains" @change="refresh">
+                <USelectMenu searchable :search-attributes="['name']" searchable-placeholder="Keresés..." clear-search-on-close multiple class="w-48" v-model="selectedDomains" by="id" :options="allDomains" @change="refresh">
                     <template #option="{ option }">
                         <span><Icon v-if="option.has_rss" name="mdi:rss" color="orange"/> {{ option.name }}</span>
                     </template>
@@ -258,6 +258,7 @@
 
         <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh">
             <template #item="{ item }" v-if="!pending">
+                <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="refresh" />
                 <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" :allFiles="allFiles" :refresh="refreshAll" />
                 <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="refresh" />
             </template>

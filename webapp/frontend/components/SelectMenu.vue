@@ -37,6 +37,13 @@
         query.value = ''
     };
 
+    import {distance} from 'fastest-levenshtein'
+
+    console.log("distance('Tar', 'Katar')")
+    console.log(distance('Tar', 'Katar'))
+    console.log("distance('Tar', 'Tar')")
+    console.log(distance('Tar', 'Tar'))
+
     function search (q: string) {
         if (q === '') {
             return list.concat(localPositiveList.value).filter((obj1, i, arr) => 
@@ -47,6 +54,9 @@
         return list.concat(localPositiveList.value).filter((obj1, i, arr) => 
                 arr.findIndex(obj2 => (obj2.id === obj1.id)) === i || !("found_name" in obj1)).concat(labels
         .filter((item: any) => {return item.name != null && item.name.toLowerCase().includes(q.toLowerCase())})
+        .sort(function(a, b) {
+            return distance(a.name.toLowerCase(), q.toLowerCase()) - distance(b.name.toLowerCase(), q.toLowerCase());
+        })
         .slice(0, 5)
         .map((item: any) => {return {'id': 'db_'+item.id, 'db_id': item.id, 'name': item.name, 'db_name': item.name}}))
         .filter((obj1, i, arr) => arr.findIndex(obj2 => (obj2.db_id === obj1.db_id)) === i || !("db_id" in obj1))
