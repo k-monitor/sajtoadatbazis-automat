@@ -258,6 +258,7 @@
 
         <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh">
             <template #item="{ item }" v-if="!pending">
+                <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="refresh" />
                 <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article" :allLabels="allLabels" :allFiles="allFiles" :refresh="refreshAll" />
                 <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @click="refresh" />
             </template>
