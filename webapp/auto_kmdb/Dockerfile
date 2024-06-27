@@ -13,7 +13,7 @@ RUN mkdir /models
 RUN wget 'https://huggingface.co/boapps/kmdb-category-classifier/resolve/main/svm_classifier_category.joblib?download=true' -O /models/svm_classifier_category.joblib
 RUN wget 'https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux-aarch64.tar.gz' -O /geckodriver.tar.gz
 RUN tar xvfz /geckodriver.tar.gz
-RUN mv geckodriver ~/.local/bin/
+RUN mv geckodriver /data/geckodriver
 
 ENV DATA_PATH="/data"
 

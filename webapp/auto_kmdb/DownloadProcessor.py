@@ -75,7 +75,7 @@ def login_24():
     global cookies_24
     options = Options()
     options.headless = True
-    driver = webdriver.Firefox(options=options)
+    driver = webdriver.Firefox(options=options, executable_path=os.environ['DATA_PATH']+'/geckodriver')
     driver.get("https://24.hu/")
     assert "24.hu" in driver.title
     elem = driver.find_element(By.CLASS_NAME, "m-login__iconBtn")
