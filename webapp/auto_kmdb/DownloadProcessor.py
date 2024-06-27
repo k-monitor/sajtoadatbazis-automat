@@ -11,16 +11,21 @@ from bs4 import BeautifulSoup
 import logging
 from auto_kmdb.db import get_retries_from
 from datetime import datetime, timedelta
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.by import By
+from selenium.webdriver.firefox.options import Options
 
 
 jeti_session = ''
 gateway_session = ''
+cookies_24 = {}
 
 
 def process_article(id, url, source):
     try:
         headers = {'User-Agent': 'autokmdb'}
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, cookies=cookies_24)
         article = newspaper.Article(url=url)
         article.download(input_html=response.content)
         article.parse()
@@ -65,6 +70,34 @@ def process_article(id, url, source):
         with connection_pool.get_connection() as connection:
             save_download_step(connection, id, text, title, description, authors, date, is_paywalled)
 
+
+def login_24():
+    global cookies_24
+    options = Options()
+    options.headless = True
+    driver = webdriver.Firefox(options=options)
+    driver.get("https://24.hu/")
+    assert "24.hu" in driver.title
+    elem = driver.find_element(By.CLASS_NAME, "m-login__iconBtn")
+    elem.send_keys(Keys.ESCAPE)
+    elem.click()
+    elem = driver.find_element(By.ID, "landing-email")
+    elem.send_keys(os.environ['USER_24'])
+    sleep(1)
+    elem = driver.find_element(By.ID, "btn-next")
+    elem.click()
+    elem = driver.find_element(By.ID, "password")
+    elem.send_keys(os.environ['PASS_24'])
+    elem = driver.find_element(By.ID, "kc-login")
+    elem.click()
+
+    all_cookies=driver.get_cookies();
+
+    for cookie in all_cookies:
+        cookies_24[cookie['name']] = cookie['value']
+
+    logging.info(cookies_24)
+    driver.close()
 
 def login_444():
     global jeti_session, gateway_session
