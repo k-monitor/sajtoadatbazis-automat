@@ -19,7 +19,8 @@ gateway_session = ''
 
 def process_article(id, url, source):
     try:
-        response = requests.get(url)
+        headers = {'User-Agent': 'autokmdb'}
+        response = requests.get(url, headers=headers)
         article = newspaper.Article(url=url)
         article.download(input_html=response.content)
         article.parse()
