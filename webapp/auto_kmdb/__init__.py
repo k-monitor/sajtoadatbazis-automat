@@ -41,7 +41,6 @@ def create_app():
     try:
         login_444()
         login_24()
-        print(3/0)
     except Exception as e:
         tb = sys.exception().__traceback__
         logging.error(e.with_traceback(tb))
