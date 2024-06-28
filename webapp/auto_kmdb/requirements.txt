@@ -17,4 +17,4 @@ python-dotenv
 https://huggingface.co/huspacy/hu_core_news_lg/resolve/main/hu_core_news_lg-any-py3-none-any.whl
 typing
 pandas
-selenium
+playwright

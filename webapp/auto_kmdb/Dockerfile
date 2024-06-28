@@ -5,7 +5,7 @@ WORKDIR /usr/src/app
 COPY . auto_kmdb
 
 RUN apt update
-RUN apt install -y wget git tar chromium chromium-driver
+RUN apt install -y wget git tar chromium
 RUN ln -s /usr/bin/chromium /usr/bin/google-chrome
 
 RUN pip install -r auto_kmdb/requirements.txt
@@ -13,6 +13,8 @@ RUN python auto_kmdb/init_container.py
 RUN mkdir /data
 RUN mkdir /models
 RUN wget 'https://huggingface.co/boapps/kmdb-category-classifier/resolve/main/svm_classifier_category.joblib?download=true' -O /models/svm_classifier_category.joblib
+
+RUN playwright install chromium || true
 
 ENV DATA_PATH="/data"
 
