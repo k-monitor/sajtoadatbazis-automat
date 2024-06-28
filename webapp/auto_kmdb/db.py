@@ -798,6 +798,7 @@ def annote_positive(
     category,
     others,
     file_id,
+    pub_date,
 ):
     query_0 = """SELECT news_id FROM autokmdb_news WHERE id = %s LIMIT 1"""
     query_1 = """UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s, title = %s, description = %s, text = %s WHERE id = %s;"""
@@ -893,7 +894,7 @@ WHERE
                     source_url_string,
                     cre_time,
                     cre_time,
-                    cre_time,
+                    int(pub_date.timestamp()),
                     user_id,
                     user_id,
                     "Y" if is_active else "N",

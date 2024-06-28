@@ -5,6 +5,7 @@ from auto_kmdb.db import check_url_exists, init_news, annote_positive, get_artic
 from math import ceil
 import json
 import logging
+from datetime import datetime
 
 
 api = Blueprint('api', __name__, url_prefix='/api')
@@ -145,6 +146,8 @@ def annote():
     others = request.json['tags']
     newspaper_id = request.json['newspaper_id']
     is_active = request.json['active']
+    pub_date = request.json['pub_date']
+    parsed_date = datetime.strptime(pub_date, "%m/%d/%Y, %I:%M:%S %p")
     category = 0
     if 'category' in request.json:
         category = request.json['category']
@@ -153,7 +156,7 @@ def annote():
         file_id = request.json['file_id']
 
     with connection_pool.get_connection() as connection:
-        annote_positive(connection, id, url, title, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active, category, others, file_id)
+        annote_positive(connection, id, url, title, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active, category, others, file_id, parsed_date)
     return jsonify({}), 200
 
 

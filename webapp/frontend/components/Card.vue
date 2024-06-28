@@ -327,6 +327,7 @@
                     'tags': positiveOthers.value,
                     'active': is_active.value,
                     'file_id': file.value,
+                    'pub_date': article.value.date,
                 },
 
                 onResponse({ request, response, options }) {
