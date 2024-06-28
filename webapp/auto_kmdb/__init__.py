@@ -37,7 +37,6 @@ def create_app():
         app.register_blueprint(api)
         logger.info("registered api")
 
-    os.environ['PATH'] += ':'+os.environ['DATA_PATH']
     login_444()
     login_24()
 
