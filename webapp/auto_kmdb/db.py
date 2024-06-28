@@ -649,7 +649,7 @@ def get_articles(
 ):
     query = ""
 
-    selection = """SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step, skip_reason, negative_reason,
+    selection = """SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason, negative_reason,
             n.cre_time AS date, category
         FROM autokmdb_news n
         """
@@ -690,6 +690,13 @@ def get_articles(
             (q, q, q, q, start, end),
         )
         return count, cursor.fetchall()
+
+
+def force_accept_article(connection: PooledMySQLConnection, id):
+    query = """UPDATE autokmdb_news SET classification_label = 1, processing_step = 2, source = 1 WHERE id = %s;"""
+    with connection.cursor() as cursor:
+        cursor.execute(query, (id,))
+    connection.commit()
 
 
 def annote_negative(connection: PooledMySQLConnection, id, reason):
@@ -791,6 +798,7 @@ def annote_positive(
     category,
     others,
     file_id,
+    pub_date,
 ):
     query_0 = """SELECT news_id FROM autokmdb_news WHERE id = %s LIMIT 1"""
     query_1 = """UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s, title = %s, description = %s, text = %s WHERE id = %s;"""
@@ -886,7 +894,7 @@ WHERE
                     source_url_string,
                     cre_time,
                     cre_time,
-                    cre_time,
+                    int(pub_date.timestamp()),
                     user_id,
                     user_id,
                     "Y" if is_active else "N",

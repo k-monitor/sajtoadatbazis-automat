@@ -1,6 +1,6 @@
 <template>
     <div class="p-4">
-        <div class="max-w-2xl rounded overflow-hidden shadow-lg mb-4 p-4">
+        <div class="max-w-2xl w-full rounded overflow-hidden shadow-lg mb-4 p-4">
             <p>
                 <a :href="article.url" target="_blank" class="font-bold text-xl mb-2">{{ article.title }}</a>
                 <UBadge class="m-1" color="gray">
@@ -16,7 +16,7 @@
             <p class="text-base text-pretty">{{ article.description }}</p>
             <p class="text-base text-right py-1">{{ article.date }}</p>
             <UButton v-if="article.skip_reason > 1" color="grey" @click="retryArticle">Újra</UButton>
-            <UContainer v-else-if="article.processing_step >= 4 " class="flex justify-between px-0 sm:px-0 lg:px-0">
+            <UContainer v-else-if="article.processing_step >= 4 && article.classification_label != 0" class="flex justify-between px-0 sm:px-0 lg:px-0">
                 <UButtonGroup v-if="article.annotation_label != 0" size="sm" orientation="horizontal">
                     <UButton color="red" @click="deleteArticle">{{ article.annotation_label == null ? "Elutasít" : "Mégis elutasít" }}</UButton>
                     <UDropdown :items="items" :popper="{ placement: 'bottom-end' }">
@@ -29,6 +29,7 @@
                 <UCheckbox v-if="article.annotation_label != 0" @change="selected" class="items-center p-2 scale-125" color="red" v-model="selection" name="selection" label="" />
                 <UButton v-if="true" @click="openModal" :loading="isOpening" class="ml-auto">{{ article.annotation_label == null ? "Tovább" : article.annotation_label == 0 ? "Mégis elfogad" : "Szerkeszt" }}</UButton>
             </UContainer>
+            <UButton v-else-if="article.processing_step == 4 && article.classification_label == 0" @click="forceAccept" class="ml-auto" color="purple">{{ "Mégis feldolgoz" }}</UButton>
         </div>
         <UModal v-model="isOpen" :ui="{ width: 'sm:max-w-7xl' }">
             <div class="p-4 w-full">
@@ -102,12 +103,24 @@
     //baseUrl = 'http://localhost:5000'
     const edit = ref(false)
     const selection = ref(false)
+    let accepting = ref(false)
     let category = ref(0)
     let categories = ref([
         {name: 'Hírek/Magyar hírek', id: 0},
         {name: 'Hírek/EU hírek', id: 1},
         {name: 'Hírek/Világ hírek', id: 2},
     ])
+
+    async function forceAccept() {
+        console.log('force accept')
+        accepting.value = true
+        await postUrl(baseUrl+'/api/annote/force_accept', {
+                method: 'POST',
+                body: {'id': article.value.id},
+            });
+        refresh()
+        accepting.value = false
+    }
     function selected() {
         console.log('selected '+selection.value)
         article.value.selected = selection.value
@@ -314,6 +327,7 @@
                     'tags': positiveOthers.value,
                     'active': is_active.value,
                     'file_id': file.value,
+                    'pub_date': article.value.date,
                 },
 
                 onResponse({ request, response, options }) {

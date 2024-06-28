@@ -1,10 +1,11 @@
 from flask import jsonify, Blueprint, request
-from auto_kmdb.db import get_article, get_articles, annote_negative, connection_pool
+from auto_kmdb.db import get_article, get_articles, annote_negative, connection_pool, force_accept_article
 from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers, get_all_files
 from auto_kmdb.db import check_url_exists, init_news, annote_positive, get_article_counts, validate_session
 from math import ceil
 import json
 import logging
+from datetime import datetime
 
 
 api = Blueprint('api', __name__, url_prefix='/api')
@@ -112,6 +113,20 @@ def not_corruption():
     return jsonify({}), 200
 
 
+@api.route('/annote/force_accept', methods=["POST"])
+def force_accept():
+    session_id = get_session_id(request)
+    with connection_pool.get_connection() as connection:
+        user_id = validate_session(connection, session_id)
+        if not user_id:
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 401
+
+    id = request.json['id']
+    with connection_pool.get_connection() as connection:
+        force_accept_article(connection, id)
+    return jsonify({}), 200
+
+
 @api.route('/annote/positive', methods=["POST"])
 def annote():
     session_id = get_session_id(request)
@@ -131,6 +146,8 @@ def annote():
     others = request.json['tags']
     newspaper_id = request.json['newspaper_id']
     is_active = request.json['active']
+    pub_date = request.json['pub_date']
+    parsed_date = datetime.strptime(pub_date, "%m/%d/%Y, %I:%M:%S %p")
     category = 0
     if 'category' in request.json:
         category = request.json['category']
@@ -139,7 +156,7 @@ def annote():
         file_id = request.json['file_id']
 
     with connection_pool.get_connection() as connection:
-        annote_positive(connection, id, url, title, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active, category, others, file_id)
+        annote_positive(connection, id, url, title, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active, category, others, file_id, parsed_date)
     return jsonify({}), 200
 
 
