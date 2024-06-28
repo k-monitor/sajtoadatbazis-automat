@@ -11,11 +11,8 @@ from bs4 import BeautifulSoup
 import logging
 from auto_kmdb.db import get_retries_from
 from datetime import datetime, timedelta
-from selenium import webdriver
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.common.by import By
-from selenium.webdriver.chromium.options import ChromiumOptions
-from selenium.webdriver.chromium.service import ChromiumService
+import asyncio
+from playwright.async_api import async_playwright
 
 
 jeti_session = ''
@@ -72,36 +69,43 @@ def process_article(id, url, source):
             save_download_step(connection, id, text, title, description, authors, date, is_paywalled)
 
 
+async def main():
+    async with async_playwright() as p:
+        print('main')
+
+        browser = await p.chromium.launch(headless=True)
+        context = await browser.new_context()
+        page = await context.new_page()
+        await page.goto("https://24.hu/")
+
+        await page.wait_for_timeout(1000)
+
+        await page.locator(".css-1tfx6ee").press("Escape")
+
+        await page.get_by_role("link", name="Belépés Regisztráció").click()
+
+        await page.locator("#landing-email").fill(os.environ['USER_24'])
+
+        await page.locator("#btn-next").click()
+
+        await page.wait_for_timeout(1000)
+
+        await page.locator("#password").fill(os.environ['PASS_24'])
+
+        await page.locator("#kc-login").click()
+
+        cookies = await context.cookies()
+        cookies_dict = {cookie['name']: cookie['value'] for cookie in cookies}
+        await browser.close()
+        return cookies_dict
+
+
 def login_24():
-    global cookies_24
-    service = ChromiumService(executable_path='/usr/bin/chromium-driver')
-    options = ChromiumOptions()
-    options.headless = True
-    driver = webdriver.Chrome(options=options, service=service)
-    driver.get("https://24.hu/")
-    assert "24.hu" in driver.title
-    sleep(1)
-    elem = driver.find_element(By.CLASS_NAME, "css-1tfx6ee")
-    elem.send_keys(Keys.ESCAPE)
-    elem = driver.find_element(By.CLASS_NAME, "m-login__iconBtn")
-    elem.click()
-    elem = driver.find_element(By.ID, "landing-email")
-    elem.send_keys(os.environ['USER_24'])
-    elem = driver.find_element(By.ID, "btn-next")
-    sleep(1)
-    elem.click()
-    elem = driver.find_element(By.ID, "password")
-    elem.send_keys(os.environ['PASS_24'])
-    elem = driver.find_element(By.ID, "kc-login")
-    elem.click()
-
-    all_cookies=driver.get_cookies();
-
-    for cookie in all_cookies:
-        cookies_24[cookie['name']] = cookie['value']
-
+    print('login24')
+    cookies_24 = asyncio.run(main())
+    print(cookies_24)
     logging.info(cookies_24)
-    driver.close()
+
 
 def login_444():
     global jeti_session, gateway_session

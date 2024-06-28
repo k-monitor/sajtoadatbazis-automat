@@ -43,6 +43,7 @@ def create_app():
         login_24()
     except Exception as e:
         logging.error(traceback.format_exc())
+        print(traceback.format_exc())
     Thread(target=rss_watcher, args=(app.app_context(),), daemon=True).start()
     Thread(target=do_retries, args=(app.app_context(),), daemon=True).start()
 
