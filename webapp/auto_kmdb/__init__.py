@@ -6,7 +6,7 @@ from flask import Flask
 from threading import Thread
 import os
 from time import sleep
-import sys
+import traceback
 
 sleep(10)  # TODO better wait handling
 from auto_kmdb.DownloadProcessor import DownloadProcessor, do_retries, login_444, login_24
@@ -42,8 +42,7 @@ def create_app():
         login_444()
         login_24()
     except Exception as e:
-        tb = sys.exception().__traceback__
-        logging.error(e.with_traceback(tb))
+        logging.error(traceback.format_exc())
     Thread(target=rss_watcher, args=(app.app_context(),), daemon=True).start()
     Thread(target=do_retries, args=(app.app_context(),), daemon=True).start()
 
