@@ -15,6 +15,7 @@ from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chromium.options import ChromiumOptions
+from selenium.webdriver.chromium.service import ChromiumService
 
 
 jeti_session = ''
@@ -73,9 +74,10 @@ def process_article(id, url, source):
 
 def login_24():
     global cookies_24
+    service = ChromiumService(executable_path='/usr/bin/chromium-driver')
     options = ChromiumOptions()
     options.headless = True
-    driver = webdriver.Chrome(options=options,)
+    driver = webdriver.Chrome(options=options, service=service)
     driver.get("https://24.hu/")
     assert "24.hu" in driver.title
     sleep(1)
