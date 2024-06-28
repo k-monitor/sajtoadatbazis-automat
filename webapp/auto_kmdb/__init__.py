@@ -6,6 +6,7 @@ from flask import Flask
 from threading import Thread
 import os
 from time import sleep
+import sys
 
 sleep(10)  # TODO better wait handling
 from auto_kmdb.DownloadProcessor import DownloadProcessor, do_retries, login_444, login_24
@@ -37,9 +38,13 @@ def create_app():
         app.register_blueprint(api)
         logger.info("registered api")
 
-    login_444()
-    login_24()
-
+    try:
+        login_444()
+        login_24()
+        print(3/0)
+    except Exception as e:
+        tb = sys.exception().__traceback__
+        logging.error(e.with_traceback(tb))
     Thread(target=rss_watcher, args=(app.app_context(),), daemon=True).start()
     Thread(target=do_retries, args=(app.app_context(),), daemon=True).start()
 
