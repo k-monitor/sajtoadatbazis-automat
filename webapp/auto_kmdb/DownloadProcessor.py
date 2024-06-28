@@ -14,7 +14,8 @@ from datetime import datetime, timedelta
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.by import By
-from selenium.webdriver.firefox.options import Options
+from selenium.webdriver.chromium.options import ChromiumOptions
+from selenium.webdriver.chromium.service import ChromiumService
 
 
 jeti_session = ''
@@ -73,18 +74,21 @@ def process_article(id, url, source):
 
 def login_24():
     global cookies_24
-    options = Options()
+    service = ChromiumService(executable_path='/usr/bin/chromium-driver')
+    options = ChromiumOptions()
     options.headless = True
-    driver = webdriver.Firefox(options=options,)
+    driver = webdriver.Chrome(options=options, service=service)
     driver.get("https://24.hu/")
     assert "24.hu" in driver.title
-    elem = driver.find_element(By.CLASS_NAME, "m-login__iconBtn")
+    sleep(1)
+    elem = driver.find_element(By.CLASS_NAME, "css-1tfx6ee")
     elem.send_keys(Keys.ESCAPE)
+    elem = driver.find_element(By.CLASS_NAME, "m-login__iconBtn")
     elem.click()
     elem = driver.find_element(By.ID, "landing-email")
     elem.send_keys(os.environ['USER_24'])
-    sleep(1)
     elem = driver.find_element(By.ID, "btn-next")
+    sleep(1)
     elem.click()
     elem = driver.find_element(By.ID, "password")
     elem.send_keys(os.environ['PASS_24'])

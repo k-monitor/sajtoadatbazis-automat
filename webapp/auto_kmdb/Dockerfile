@@ -5,15 +5,14 @@ WORKDIR /usr/src/app
 COPY . auto_kmdb
 
 RUN apt update
-RUN apt install -y wget git tar firefox
+RUN apt install -y wget git tar chromium chromium-driver
+RUN ln -s /usr/bin/chromium /usr/bin/google-chrome
 
 RUN pip install -r auto_kmdb/requirements.txt
 RUN python auto_kmdb/init_container.py
 RUN mkdir /data
 RUN mkdir /models
 RUN wget 'https://huggingface.co/boapps/kmdb-category-classifier/resolve/main/svm_classifier_category.joblib?download=true' -O /models/svm_classifier_category.joblib
-RUN wget 'https://github.com/mozilla/geckodriver/releases/download/v0.34.0/geckodriver-v0.34.0-linux-aarch64.tar.gz' -O /geckodriver.tar.gz
-RUN tar xvfz /geckodriver.tar.gz -C /data
 
 ENV DATA_PATH="/data"
 
