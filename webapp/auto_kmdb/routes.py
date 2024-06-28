@@ -1,5 +1,5 @@
 from flask import jsonify, Blueprint, request
-from auto_kmdb.db import get_article, get_articles, annote_negative, connection_pool
+from auto_kmdb.db import get_article, get_articles, annote_negative, connection_pool, force_accept_article
 from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers, get_all_files
 from auto_kmdb.db import check_url_exists, init_news, annote_positive, get_article_counts, validate_session
 from math import ceil
@@ -109,6 +109,20 @@ def not_corruption():
     reason = request.json['reason']
     with connection_pool.get_connection() as connection:
         annote_negative(connection, id, reason)
+    return jsonify({}), 200
+
+
+@api.route('/annote/force_accept', methods=["POST"])
+def force_accept():
+    session_id = get_session_id(request)
+    with connection_pool.get_connection() as connection:
+        user_id = validate_session(connection, session_id)
+        if not user_id:
+            return jsonify({'error': 'Nem vagy bejelentkezve!'}), 401
+
+    id = request.json['id']
+    with connection_pool.get_connection() as connection:
+        force_accept_article(connection, id)
     return jsonify({}), 200
 
 

@@ -649,7 +649,7 @@ def get_articles(
 ):
     query = ""
 
-    selection = """SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step, skip_reason, negative_reason,
+    selection = """SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason, negative_reason,
             n.cre_time AS date, category
         FROM autokmdb_news n
         """
@@ -690,6 +690,13 @@ def get_articles(
             (q, q, q, q, start, end),
         )
         return count, cursor.fetchall()
+
+
+def force_accept_article(connection: PooledMySQLConnection, id):
+    query = """UPDATE autokmdb_news SET classification_label = 1, processing_step = 2, source = 1 WHERE id = %s;"""
+    with connection.cursor() as cursor:
+        cursor.execute(query, (id,))
+    connection.commit()
 
 
 def annote_negative(connection: PooledMySQLConnection, id, reason):
