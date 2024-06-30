@@ -147,7 +147,7 @@ def annote():
     newspaper_id = request.json['newspaper_id']
     is_active = request.json['active']
     pub_date = request.json['pub_date']
-    parsed_date = datetime.strptime(pub_date, "%m/%d/%Y, %I:%M:%S %p")
+    parsed_date = datetime.strptime(pub_date, "%a, %d %b %Y %H:%M:%S %Z")
     category = 0
     if 'category' in request.json:
         category = request.json['category']
