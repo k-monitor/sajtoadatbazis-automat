@@ -231,6 +231,11 @@
                     allInstitutions.value = mapEntities(article.value.institutions).filter((obj1, i, arr) => arr.findIndex(obj2 => (obj2.name === obj1.name)) === i || !("name" in obj1))
                     allPlaces.value = mapEntities(article.value.places)
                     allOthers.value = article.value.others
+                    article.value.original_date = article.value.article_date
+
+                    console.log("article.value.original_date")
+                    console.log(article.value.original_date)
+
                     article.value.date = new Date(Date.parse(article.value.date)).toLocaleString()
                     article.value.article_date = new Date(Date.parse(article.value.article_date)).toLocaleString()
                     console.log('allOthers.value')
@@ -327,7 +332,7 @@
                     'tags': positiveOthers.value,
                     'active': is_active.value,
                     'file_id': file.value,
-                    'pub_date': article.value.date,
+                    'pub_date': article.value.original_date,
                 },
 
                 onResponse({ request, response, options }) {
@@ -351,7 +356,7 @@
     const isOpening = ref(false)
 
     article.value.date = new Date(Date.parse(article.value.date)).toLocaleString()
-    article.value.article_date = new Date(Date.parse(article.value.article_date)).toLocaleString()
+    // article.value.article_date = new Date(Date.parse(article.value.article_date)).toLocaleString()
 
     function getRichText() {
         let texthtml = article.value.text
