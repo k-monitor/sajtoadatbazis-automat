@@ -5,6 +5,9 @@ definePageMeta({
 
 import { sub, format, isSameDay, type Duration } from "date-fns";
 
+const route = useRoute();
+const router = useRouter();
+
 const ranges = [
   { label: "Last 7 days", duration: { days: 7 } },
   { label: "Last 14 days", duration: { days: 14 } },
@@ -79,6 +82,51 @@ const status = computed(() => statusItems.value[statusId.value].key);
 const from = computed(() => format(selected.value.start, "yyyy-MM-dd"));
 const to = computed(() => format(selected.value.end, "yyyy-MM-dd"));
 
+function updateURL() {
+  router.push({
+    query: {
+      statusId: statusId.value,
+      from: from.value,
+      to: to.value,
+      selectedDomains: selectedDomains.value
+        .map((domain) => domain.id)
+        .join(","),
+      page: page.value,
+      reverseSort: reverseSort.value ? "true" : "false",
+      q: q.value,
+    },
+  });
+}
+
+function updateFromURL() {
+  if (route.query.statusId) {
+    statusId.value = parseInt(route.query.statusId);
+  }
+  if (route.query.from) {
+    from.value = route.query.from;
+  }
+  if (route.query.to) {
+    to.value = route.query.to;
+  }
+  if (route.query.selectedDomains) {
+    const selectedDomainIds = route.query.selectedDomains
+      .split(",")
+      .map((domain: string) => parseInt(domain));
+    selectedDomains.value = allDomains.value.filter(
+      (domain) => selectedDomainIds.indexOf(domain.id) != -1
+    );
+  }
+  if (route.query.page) {
+    page.value = parseInt(route.query.page);
+  }
+  if (route.query.reverseSort) {
+    reverseSort.value = route.query.reverseSort == "true" ? true : false;
+  }
+  if (route.query.q) {
+    q.value = route.query.q;
+  }
+}
+
 const { data: articleCounts, refresh: refreshArticleCounts } = useLazyFetch(
   baseUrl + "/api/article_counts",
   {
@@ -132,10 +180,17 @@ const statusItems = computed(() => [
   },
 ]);
 
+updateFromURL();
+// updateURL();
+
+watch(statusId, updateURL);
+watch(q, updateURL);
+watch(allDomains, updateFromURL);
+
 const {
   pending,
   data: articleQuery,
-  refresh,
+  refresh: refreshArticles,
 } = useLazyFetch(baseUrl + "/api/articles", {
   method: "POST",
   body: {
@@ -162,12 +217,18 @@ let itemsCount = computed(() =>
   articleQuery.value == null ? null : pages.value * 10
 );
 
+function refresh() {
+  updateURL();
+  refreshArticles();
+}
+
 const selectedDomainAdd = ref(null);
 
 function resetPageRefresh() {
   page.value = 1;
+  updateURL();
   refreshArticleCounts();
-  refresh();
+  refreshArticles();
 }
 
 function refreshAll() {
@@ -199,7 +260,7 @@ async function deleteArticles() {
 async function addUrl() {
   isOpen.value = false;
   try {
-    const { data } = await $fetch(baseUrl + "/api/add_url", {
+    await $fetch(baseUrl + "/api/add_url", {
       method: "POST",
       body: {
         url: newUrl,
@@ -382,7 +443,7 @@ async function addUrl() {
           v-model="page"
           :page-count="10"
           :total="itemsCount"
-          @click="refresh"
+          @change="refresh"
         />
         <Card
           class="flex justify-center"
@@ -398,7 +459,7 @@ async function addUrl() {
           v-model="page"
           :page-count="10"
           :total="itemsCount"
-          @click="refresh"
+          @change="refresh"
         />
       </template>
       <template #item="{ item }" v-else>
