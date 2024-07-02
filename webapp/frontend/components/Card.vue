@@ -238,9 +238,9 @@
 </template>
 
 <script setup lang="ts">
-var baseUrl = "https://autokmdb.deepdata.hu/autokmdb";
-// baseUrl = 'http://localhost:8000'
-//baseUrl = 'http://localhost:5000'
+const config = useRuntimeConfig()
+const baseUrl = config.public.baseUrl
+
 const edit = ref(false);
 const selection = ref(false);
 let accepting = ref(false);

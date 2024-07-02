@@ -3,4 +3,9 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ['@nuxt/ui'],
   ssr: false,
+  runtimeConfig: {
+    public: {
+      baseUrl: process.env.BASE_URL
+    }
+  }
 })

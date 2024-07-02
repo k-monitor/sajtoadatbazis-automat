@@ -15,6 +15,7 @@ const ranges = [
   { label: "2 years", duration: { years: 2 } },
   { label: "3 years", duration: { years: 3 } },
 ];
+
 const selected = ref({ start: sub(new Date(), { days: 14 }), end: new Date() });
 function selectRange(duration: Duration) {
   selected.value = { start: sub(new Date(), duration), end: new Date() };
@@ -37,8 +38,8 @@ const statusId = ref(0);
 let q = ref("");
 let loadingDelete = ref(false);
 
-var baseUrl = "https://autokmdb.deepdata.hu/autokmdb";
-// baseUrl = "http://localhost:8000";
+const config = useRuntimeConfig()
+const baseUrl = config.public.baseUrl
 
 const allLabels = useFetch(baseUrl + "/api/all_labels").data;
 let allFiles = computed(() =>
