@@ -38,8 +38,8 @@ const statusId = ref(0);
 let q = ref("");
 let loadingDelete = ref(false);
 
-const config = useRuntimeConfig()
-const baseUrl = config.public.baseUrl
+const config = useRuntimeConfig();
+const baseUrl = config.public.baseUrl;
 
 const allLabels = useFetch(baseUrl + "/api/all_labels").data;
 let allFiles = computed(() =>
@@ -53,19 +53,20 @@ let allDomains = computed(() =>
     : [{ name: "mind", id: -1 }].concat(allLabels.value?.domains)
 );
 const selectedDomains = ref([{ name: "mind", id: -1 }]);
-// Watch a selectedDomains változásaira
+
 watch(
   selectedDomains,
   (newVal) => {
     const mindIndex = newVal.findIndex((domain) => domain.id === -1);
     const hasOtherSelections = newVal.some((domain) => domain.id !== -1);
 
-    // Ha van másik kiválasztás és a 'mind' is benne van, távolítsuk el a 'mind'-t
-    if (hasOtherSelections && mindIndex !== -1) {
-      selectedDomains.value = newVal.filter((domain) => domain.id !== -1);
+    if (hasOtherSelections) {
+      if (mindIndex === 0)
+        selectedDomains.value = newVal.filter((domain) => domain.id !== -1);
+      else if (mindIndex !== -1)
+        selectedDomains.value = newVal.filter((domain) => domain.id == -1);
     }
 
-    // Ha nincs semmi kiválasztva, válasszuk ki a 'mind'-t
     if (!hasOtherSelections && mindIndex === -1) {
       selectedDomains.value = [{ name: "mind", id: -1 }];
     }
