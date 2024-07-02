@@ -91,9 +91,10 @@ def api_articles():
     q = content.get('q', '')
     domains = content['domain']
     domain_ids = [domain['id'] for domain in domains]
+    reverse = content.get('reverse', False)
 
     with connection_pool.get_connection() as connection:
-        length, articles = get_articles(connection, page, status, domain_ids, '%'+q+'%', start, end)
+        length, articles = get_articles(connection, page, status, domain_ids, '%'+q+'%', start, end, reverse)
 
     return jsonify({'pages': ceil(length/10), 'articles': articles}), 200
 

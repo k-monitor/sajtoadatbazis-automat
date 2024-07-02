@@ -32,6 +32,7 @@ let isOpen = ref(false);
 let isOpenError = ref(false);
 let errorText = ref("");
 let errorTitle = ref("");
+let reverseSort = ref(false);
 
 const page = ref(1);
 const statusId = ref(0);
@@ -143,6 +144,7 @@ const {
     domain: selectedDomains,
     from: from,
     to: to,
+    reverse: reverseSort,
     q: q,
   },
   onResponse({ request, response, options }) {
@@ -262,7 +264,21 @@ async function addUrl() {
               </template>
             </USelectMenu>
           </div>
-
+          <UButton
+            :icon="
+              reverseSort ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'
+            "
+            size="sm"
+            color="primary"
+            square
+            variant="solid"
+            @click="
+              () => {
+                reverseSort = !reverseSort;
+                refresh();
+              }
+            "
+          />
           <UPopover class="px-1" :popper="{ placement: 'bottom-start' }">
             <UButton icon="i-heroicons-calendar-days-20-solid">
               {{ format(selected.start, "yyyy. MM. dd.") }} -
