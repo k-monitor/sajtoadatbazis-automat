@@ -32,14 +32,15 @@ let isOpen = ref(false);
 let isOpenError = ref(false);
 let errorText = ref("");
 let errorTitle = ref("");
+let reverseSort = ref(false);
 
 const page = ref(1);
 const statusId = ref(0);
 let q = ref("");
 let loadingDelete = ref(false);
 
-const config = useRuntimeConfig()
-const baseUrl = config.public.baseUrl
+const config = useRuntimeConfig();
+const baseUrl = config.public.baseUrl;
 
 const allLabels = useFetch(baseUrl + "/api/all_labels").data;
 let allFiles = computed(() =>
@@ -53,19 +54,20 @@ let allDomains = computed(() =>
     : [{ name: "mind", id: -1 }].concat(allLabels.value?.domains)
 );
 const selectedDomains = ref([{ name: "mind", id: -1 }]);
-// Watch a selectedDomains változásaira
+
 watch(
   selectedDomains,
   (newVal) => {
     const mindIndex = newVal.findIndex((domain) => domain.id === -1);
     const hasOtherSelections = newVal.some((domain) => domain.id !== -1);
 
-    // Ha van másik kiválasztás és a 'mind' is benne van, távolítsuk el a 'mind'-t
-    if (hasOtherSelections && mindIndex !== -1) {
-      selectedDomains.value = newVal.filter((domain) => domain.id !== -1);
+    if (hasOtherSelections) {
+      if (mindIndex === 0)
+        selectedDomains.value = newVal.filter((domain) => domain.id !== -1);
+      else if (mindIndex !== -1)
+        selectedDomains.value = newVal.filter((domain) => domain.id == -1);
     }
 
-    // Ha nincs semmi kiválasztva, válasszuk ki a 'mind'-t
     if (!hasOtherSelections && mindIndex === -1) {
       selectedDomains.value = [{ name: "mind", id: -1 }];
     }
@@ -142,6 +144,7 @@ const {
     domain: selectedDomains,
     from: from,
     to: to,
+    reverse: reverseSort,
     q: q,
   },
   onResponse({ request, response, options }) {
@@ -261,7 +264,21 @@ async function addUrl() {
               </template>
             </USelectMenu>
           </div>
-
+          <UButton
+            :icon="
+              reverseSort ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'
+            "
+            size="sm"
+            color="primary"
+            square
+            variant="solid"
+            @click="
+              () => {
+                reverseSort = !reverseSort;
+                refresh();
+              }
+            "
+          />
           <UPopover class="px-1" :popper="{ placement: 'bottom-start' }">
             <UButton icon="i-heroicons-calendar-days-20-solid">
               {{ format(selected.start, "yyyy. MM. dd.") }} -

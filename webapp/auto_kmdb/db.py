@@ -645,7 +645,7 @@ def get_article(connection: PooledMySQLConnection, id):
 
 
 def get_articles(
-    connection, page, status, domains, q="", start="2000-01-01", end="2050-01-01"
+    connection, page, status, domains, q="", start="2000-01-01", end="2050-01-01", reverse=False
 ):
     query = ""
 
@@ -654,9 +654,9 @@ def get_articles(
         FROM autokmdb_news n
         """
     group = (
-        " GROUP BY id ORDER BY source DESC, n.mod_time DESC"
+        " GROUP BY id ORDER BY source DESC, n.mod_time "+('ASC' if reverse else 'DESC')
         if status != "positive"
-        else " GROUP BY id ORDER BY n.mod_time DESC"
+        else " GROUP BY id ORDER BY n.mod_time "+('ASC' if reverse else 'DESC')
     )
 
     if status == "mixed":
