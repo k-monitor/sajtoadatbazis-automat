@@ -13,6 +13,8 @@ from auto_kmdb.db import get_retries_from
 from datetime import datetime, timedelta
 import asyncio
 from playwright.async_api import async_playwright
+from gql import gql, Client
+from gql.transport.requests import RequestsHTTPTransport
 
 
 jeti_session = ''
@@ -109,7 +111,7 @@ def login_24():
 
 def login_444():
     global jeti_session, gateway_session
-    url_1 = 'https://magyarjeti.hu/bejelentkezes?redirect=https%3A%2F%2F444.hu&state=%257B%2522route%2522%253A%2522--reader.index%2522%252C%2522params%2522%253A%255B%255D%257D'
+    url_1 = 'https://magyarjeti.hu/bejelentkezes?redirect=https://444.hu&state=%7B%22route%22%3A%22--reader.index%22%2C%22params%22%3A%5B%5D%7D'
     headers_1 = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
@@ -117,7 +119,7 @@ def login_444():
         'Content-Type': 'application/x-www-form-urlencoded',
         'Origin': 'https://magyarjeti.hu',
         'Connection': 'keep-alive',
-        'Referer': 'https://magyarjeti.hu/bejelentkezes?redirect=https%3A%2F%2F444.hu&state=%257B%2522route%2522%253A%2522--reader.index%2522%252C%2522params%2522%253A%255B%255D%257D',
+        'Referer': 'https://magyarjeti.hu/bejelentkezes?redirect=https://444.hu&state=%7B%22route%22%3A%22--reader.index%22%2C%22params%22%3A%5B%5D%7D',
         'Cookie': '_nss=1; PHPSESSID=kr1trgr9ivb20qjf3dkl9h4v54',
         'Upgrade-Insecure-Requests': '1',
         'Sec-Fetch-Dest': 'document',
@@ -173,15 +175,60 @@ def login_444():
 
 
 def get_444(url):
-    cookie = f'gateway_session={gateway_session}; jeti-session={jeti_session}'
-    logging.info(cookie)
+    cookies = {'gateway_session': gateway_session.replace("%3D", "="), "jeti-session": jeti_session.replace("%3D", "=")}
+    query = gql("""
+    fragment BucketFields on Bucket {
+        id
+        slug
+        name
+    }
+    query fetchContent(
+        $onlyReports: Boolean! = false
+        $slug: String
+        $date: Date
+        $buckets: Mixed!
+    ) {
+        content(
+        fromBucket: { column: SLUG, operator: IN, value: $buckets }
+        slug: $slug
+        publishedAt: $date
+        ) {
+        id
+        title @skip(if: $onlyReports)
+        body @skip(if: $onlyReports)
+        slug
+        createdAt @skip(if: $onlyReports)
+        bucket {
+            ...BucketFields
+        }
+        url @skip(if: $onlyReports)
+        }
+    }
+    """)
+
+    transport = RequestsHTTPTransport(
+        url="https://gateway.ipa.444.hu/api/graphql",
+        use_json=True,
+        cookies=cookies,
+    )
+
+    logging.info(cookies)
     article_name = url.split('/')[-1]
     date = '-'.join(url.split('/')[-4:-1])
     bucket = '444'
     if url.count('/') == 7:
         bucket = url.split('/')[3]
-    response = requests.get(f'https://gateway.ipa.444.hu/api/graphql?crunch=2&operationName=fetchContent&variables=%7B%22slug%22%3A%22{article_name}%22%2C%22date%22%3A%22{date}%22%2C%22buckets%22%3A%5B%22{bucket}%22%5D%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22bb4a4c69fca5577097d0c3f5c9432d5485d8ee2e2e6dfe8f6fbfb61d30e5ed6e%22%7D%7D', headers={'Cookie': cookie})
-    text = '\n'.join([BeautifulSoup(f['content'], features="lxml").text for f in response.json()['data']['crunched'][-1]['content']['body'][0] if isinstance(f, dict) and 'content' in f])
+    variables = {
+        "onlyReports": False,
+        "slug": article_name,
+        "buckets": [bucket],
+        "date": date,
+    }
+
+    client = Client(transport=transport, fetch_schema_from_transport=False)
+    response = client.execute(query, variable_values=variables)
+
+    text = BeautifulSoup(response['content']['body'][0], features="lxml").text
     return text
 
 
