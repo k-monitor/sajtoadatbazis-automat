@@ -3,8 +3,6 @@ FROM python:3.9-slim
 WORKDIR /usr/src/app
 
 COPY . auto_kmdb
-COPY . institutions_synonym.csv
-COPY . places_synonym.csv
 
 RUN apt update
 RUN apt install -y wget git tar chromium
