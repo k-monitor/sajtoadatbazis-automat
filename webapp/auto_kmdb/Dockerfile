@@ -6,8 +6,6 @@ WORKDIR /usr/src/app
 
 # Copy the current directory contents into the container at /usr/src/app
 COPY . auto_kmdb
-COPY . institutions_synonym.csv
-COPY . places_synonym.csv
 
 # Install any needed packages specified in requirements.txt
 RUN apt update

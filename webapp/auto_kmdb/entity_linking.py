@@ -35,10 +35,10 @@ def get_synonyms_file(entity_type: Literal["places", "institutions"] = "places")
         Aliases must be unique.
     """
     if entity_type == "places":
-        synonym_file = pd.read_csv("places_synonym.csv", index_col=[0])
+        synonym_file = pd.read_csv("auto_kmdb/places_synonym.csv", index_col=[0])
     if entity_type == "institutions":
         synonym_file = (
-            pd.read_csv("institutions_synonym.csv", index_col=[0])
+            pd.read_csv("auto_kmdb/institutions_synonym.csv", index_col=[0])
             .drop(
                 columns=[
                     "no_detections",
