@@ -3,7 +3,6 @@ import numpy as np
 from typing import Literal, Optional, Sequence
 import spacy
 
-pd.set_option("future.no_silent_downcasting", True)
 nlp = spacy.load(
     "hu_core_news_lg",
     disable=[
@@ -103,8 +102,8 @@ def get_entities_freq(
         )
     assert db_entities.name.is_unique, "Keyword names should be unique"
     assert np.array(
-        [("," not in str(entity_name)) for entity_name in db_entities.index.values]
-    ).all(), "entity names shoudl not contain commas ','"
+        [(";" not in str(entity_name)) for entity_name in db_entities.name]
+    ).all(), "entity names should not contain semicolons ';'"
     return db_entities.set_index("name")
 
 
@@ -245,13 +244,13 @@ def get_mapping(
         )
     )
     for entity in mapping.index:
-        mapping.at[entity, "from_article"] = ", ".join(
+        mapping.at[entity, "from_article"] = "; ".join(
             [x for x in get_mapping_from_article(entity, mapping.index)]
         )
-        mapping.at[entity, "identical_keyword"] = ", ".join(
+        mapping.at[entity, "identical_keyword"] = "; ".join(
             [x for x in get_identical_keywords(entity, keyword_list)]
         )
-        mapping.at[entity, "keyword_contains_entity"] = ", ".join(
+        mapping.at[entity, "keyword_contains_entity"] = "; ".join(
             [x for x in get_containing_keywords(entity, keyword_list)]
         )
         entity_c_kw = []
@@ -263,10 +262,10 @@ def get_mapping(
             )
             for kw in keyword_list
         ]
-        mapping.at[entity, "entity_contains_keyword"] = ", ".join(entity_c_kw)
+        mapping.at[entity, "entity_contains_keyword"] = "; ".join(entity_c_kw)
 
         mapping.at[entity, "synonym_keyword"] = (
-            ", ".join([x for x in get_mapping_by_synonym(entity, synonym_mapping)])
+            "; ".join([x for x in get_mapping_by_synonym(entity, synonym_mapping)])
             if synonym_mapping is not None
             else None
         )
@@ -317,7 +316,7 @@ def comb_mappings(
     ].index
 
     for detected_ent in mapped_from_article:
-        map_to = mapping.loc[detected_ent, "from_article"].split(", ")[-1]
+        map_to = mapping.loc[detected_ent, "from_article"].split("; ")[-1]
         mapping.loc[map_to, "detections"] = mapping.loc[
             [map_to, detected_ent], "detections"
         ].sum()
@@ -338,13 +337,14 @@ def comb_mappings(
         mapping["combed_mapping"] = mapping["combed_mapping"].combine_first(
             mapping[col]
         )
+
     mapping["combed_mapping"] = (
         mapping["combed_mapping"]
         .apply(
             lambda x: (
-                str(x).split(", ")[0]
-                if len(str(x).split(", ")) == 1
-                else keywords.loc[str(x).split(", "), "count"].index[-1]
+                str(x).split("; ")[0]
+                if len(str(x).split("; ")) == 1
+                else keywords.loc[str(x).split("; "), "count"].sort_values(ascending = False).index[0]
             )
         )
         .replace("nan", np.NaN)
