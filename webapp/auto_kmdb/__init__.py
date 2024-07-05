@@ -8,7 +8,7 @@ import os
 from time import sleep
 import traceback
 
-# sleep(10)  # TODO better wait handling
+sleep(10)  # TODO better wait handling
 from auto_kmdb.DownloadProcessor import DownloadProcessor, do_retries, login_444, login_24, get_444
 from auto_kmdb.ClassificationProcessor import ClassificationProcessor
 from auto_kmdb.NERProcessor import NERProcessor
@@ -38,22 +38,23 @@ def create_app():
         app.register_blueprint(api)
         logger.info("registered api")
 
-    try:
-        login_444()
+    # try:
+        # login_444()
         # login_24()
-    except Exception as e:
-        logging.error(traceback.format_exc())
-        print(traceback.format_exc())
+    # except Exception as e:
+    #     logging.error(traceback.format_exc())
+    #     print(traceback.format_exc())
     Thread(target=rss_watcher, args=(app.app_context(),), daemon=True).start()
-    # Thread(target=do_retries, args=(app.app_context(),), daemon=True).start()
+    Thread(target=do_retries, args=(app.app_context(),), daemon=True).start()
 
     print(get_444('https://444.hu/2023/01/18/a-fougyeszseg-be-akarta-egetni-hadhazyt-de-csak-magat-asta-meg-melyebbre-azzal-hogy-ravilagitott-valamit-nagyon-titkolnak-toni-barbara-es-adam-ugyeben'))
 
+
     processors = [
         DownloadProcessor(),
-        # ClassificationProcessor(),
-        # NERProcessor(),
-        # KeywordProcessor(),
+        ClassificationProcessor(),
+        NERProcessor(),
+        KeywordProcessor(),
     ]
     for processor in processors:
         processor.load_model()

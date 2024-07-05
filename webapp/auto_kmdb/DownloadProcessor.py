@@ -175,60 +175,16 @@ def login_444():
 
 
 def get_444(url):
-    cookies = {'gateway_session': gateway_session.replace("%3D", "="), "jeti-session": jeti_session.replace("%3D", "=")}
-    query = gql("""
-    fragment BucketFields on Bucket {
-        id
-        slug
-        name
-    }
-    query fetchContent(
-        $onlyReports: Boolean! = false
-        $slug: String
-        $date: Date
-        $buckets: Mixed!
-    ) {
-        content(
-        fromBucket: { column: SLUG, operator: IN, value: $buckets }
-        slug: $slug
-        publishedAt: $date
-        ) {
-        id
-        title @skip(if: $onlyReports)
-        body @skip(if: $onlyReports)
-        slug
-        createdAt @skip(if: $onlyReports)
-        bucket {
-            ...BucketFields
-        }
-        url @skip(if: $onlyReports)
-        }
-    }
-    """)
-
-    transport = RequestsHTTPTransport(
-        url="https://gateway.ipa.444.hu/api/graphql",
-        use_json=True,
-        cookies=cookies,
-    )
-
-    logging.info(cookies)
+    cookie = os.environ["COOKIE_444"]
+    logging.info(cookie)
     article_name = url.split('/')[-1]
     date = '-'.join(url.split('/')[-4:-1])
     bucket = '444'
     if url.count('/') == 7:
         bucket = url.split('/')[3]
-    variables = {
-        "onlyReports": False,
-        "slug": article_name,
-        "buckets": [bucket],
-        "date": date,
-    }
 
-    client = Client(transport=transport, fetch_schema_from_transport=False)
-    response = client.execute(query, variable_values=variables)
-
-    text = BeautifulSoup(response['content']['body'][0], features="lxml").text
+    response = requests.get(f'https://gateway.ipa.444.hu/api/graphql?crunch=2&operationName=fetchContent&variables=%7B%22onlyReports%22%3Afalse%2C%22order%22%3A%22DESC%22%2C%22slug%22%3A%22{article_name}%22%2C%22date%22%3A%22{date}%22%2C%22buckets%22%3A%5B%22{bucket}%22%5D%2C%22cursorInclusive%22%3Afalse%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22376c5324c94249caa29a66aeb02f8ed7c593ce2d9036098f1ba63a545405c96a%22%7D%7D', headers={'Cookie': cookie})
+    text = '\n'.join([BeautifulSoup(f['content'], features="lxml").text for f in response.json()['data']['crunched'][-1]['content']['body'][0] if isinstance(f, dict) and 'content' in f])
     return text
 
 
