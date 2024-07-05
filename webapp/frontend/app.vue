@@ -86,8 +86,6 @@ function updateURL() {
   router.push({
     query: {
       statusId: statusId.value,
-      from: from.value,
-      to: to.value,
       selectedDomains: selectedDomains.value
         .map((domain) => domain.id)
         .join(","),
@@ -101,12 +99,6 @@ function updateURL() {
 function updateFromURL() {
   if (route.query.statusId) {
     statusId.value = parseInt(route.query.statusId);
-  }
-  if (route.query.from) {
-    from.value = route.query.from;
-  }
-  if (route.query.to) {
-    to.value = route.query.to;
   }
   if (route.query.selectedDomains) {
     const selectedDomainIds = route.query.selectedDomains
