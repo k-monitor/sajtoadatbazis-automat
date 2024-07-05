@@ -13,8 +13,6 @@ from auto_kmdb.db import get_retries_from
 from datetime import datetime, timedelta
 import asyncio
 from playwright.async_api import async_playwright
-from gql import gql, Client
-from gql.transport.requests import RequestsHTTPTransport
 
 
 jeti_session = ''
