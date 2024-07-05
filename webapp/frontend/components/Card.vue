@@ -6,36 +6,41 @@
           article.title
         }}</a>
         <UBadge class="m-1" color="gray">
-          <Icon
-            size="1.5em"
-            v-if="article.skip_reason > 1"
-            name="mdi:alert-circle-outline"
-            color="orange"
-          />
-          <Icon
-            size="1.5em"
+          <UTooltip v-if="article.skip_reason > 1" text="letöltési hiba">
+            <Icon size="1.5em" name="mdi:alert-circle-outline" color="orange" />
+          </UTooltip>
+          <UTooltip
             v-else-if="article.processing_step < 4"
-            name="mdi:database-clock-outline"
-            color="gray"
-          />
-          <Icon
-            size="1.5em"
-            v-else-if="article.annotation_label == null"
-            name="mdi:question-mark"
-            color="gray"
-          />
-          <Icon
-            size="1.5em"
+            text="feldolgozás alatt"
+          >
+            <Icon size="1.5em" name="mdi:database-clock-outline" color="gray" />
+          </UTooltip>
+          <UTooltip
+            v-else-if="article.annotation_label == null && article.classification_label == 0"
+            text="nem illik az adatbázisba"
+          >
+            <Icon size="1.5em" name="mdi:window-close" color="gray" />
+          </UTooltip>
+          <UTooltip
+            v-else-if="article.annotation_label == null && article.classification_label == 1"
+            text="ellenőrizendő"
+          >
+            <Icon size="1.5em" name="mdi:question-mark" color="gray" />
+          </UTooltip>
+          <UTooltip
             v-else-if="article.annotation_label == 0"
-            name="mdi:database-remove-outline"
-            color="red"
-          />
-          <Icon
-            size="1.5em"
-            v-else-if="article.annotation_label == 1"
-            name="mdi:database-check-outline"
-            color="green"
-          />
+            text="elutasított"
+          >
+            <Icon size="1.5em" name="mdi:database-remove-outline" color="red" />
+          </UTooltip>
+          <UTooltip v-else-if="article.annotation_label == 1" text="elfogadott">
+            <Icon
+              size="1.5em"
+              name="mdi:database-check-outline"
+              color="green"
+              title="elfogadott"
+            />
+          </UTooltip>
         </UBadge>
       </p>
       <UBadge class="m-1" color="blue"> {{ article.newspaper_name }} </UBadge>
@@ -238,8 +243,8 @@
 </template>
 
 <script setup lang="ts">
-const config = useRuntimeConfig()
-const baseUrl = config.public.baseUrl
+const config = useRuntimeConfig();
+const baseUrl = config.public.baseUrl;
 
 const edit = ref(false);
 const selection = ref(false);
