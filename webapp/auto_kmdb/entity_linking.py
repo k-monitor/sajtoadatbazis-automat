@@ -328,7 +328,7 @@ def comb_mappings(
         mapping.loc[map_to, "score"] = sorted_values["score"]
         mapping.loc[map_to, "class"] = sorted_values["class"]
         mapping.loc[map_to, "start"] = sorted_values["start"]
-        # mapping.loc[map_to, 'detected_ent_raw'] = sorted_values["detected_ent_raw"]
+        mapping.loc[map_to, 'detected_ent_raw'] = sorted_values["detected_ent_raw"]
 
     mapping = mapping.loc[~mapping.index.isin(mapped_from_article)]
 
