@@ -9,7 +9,7 @@ from time import sleep
 import traceback
 
 sleep(10)  # TODO better wait handling
-from auto_kmdb.DownloadProcessor import DownloadProcessor, do_retries, login_444, login_24, get_444
+from auto_kmdb.DownloadProcessor import DownloadProcessor, do_retries, login_444, login_24
 from auto_kmdb.ClassificationProcessor import ClassificationProcessor
 from auto_kmdb.NERProcessor import NERProcessor
 from auto_kmdb.KeywordProcessor import KeywordProcessor
@@ -40,14 +40,12 @@ def create_app():
 
     try:
         login_444()
-        # login_24()
+        login_24()
     except Exception:
         logging.error(traceback.format_exc())
         print(traceback.format_exc())
     Thread(target=rss_watcher, args=(app.app_context(),), daemon=True).start()
     Thread(target=do_retries, args=(app.app_context(),), daemon=True).start()
-
-    # print(get_444("https://444.hu/2024/07/03/a-baloldal-hanyatlasa-kelet-kozep-europaban"))
 
     processors = [
         DownloadProcessor(),

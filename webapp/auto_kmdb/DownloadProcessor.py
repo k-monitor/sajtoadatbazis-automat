@@ -72,6 +72,31 @@ def process_article(id, url, source):
 
 def login_24():
     global cookies_24
+    username = os.environ['USER_24']
+    password = os.environ['PASS_24']
+    with sync_playwright() as p:    
+        browser = p.firefox.launch()
+        context = browser.new_context()        
+        page = context.new_page()
+
+        page.goto("https://24.hu/")
+        page.locator(".css-1tfx6ee").press("Escape")
+
+        page.get_by_role("link", name="Belépés Regisztráció").click()
+
+        page.locator("#landing-email").fill(username)
+        page.locator("#btn-next").click()
+
+        page.wait_for_timeout(1000)
+
+        page.locator("#password").fill(password)
+        page.locator("#kc-login").click()
+
+        cookies = context.cookies()
+        cookies_24 = {cookie['name']: cookie['value'] for cookie in cookies}
+
+        browser.close()
+
     logging.info(cookies_24)
 
 
