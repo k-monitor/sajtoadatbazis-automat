@@ -811,7 +811,7 @@ SET
     mod_id = %s,
     status = %s
 WHERE
-    AND news_id = %s;"""
+    news_id = %s;"""
     query_3 = """INSERT INTO news_lang (news_id, lang, name, teaser, articletext, alias, seo_url_default) VALUES (%s, %s, %s, %s, %s, %s, %s)"""
     query_3_update = """UPDATE news_lang
 SET 
@@ -882,7 +882,6 @@ WHERE
                     cre_time,
                     user_id,
                     "Y" if is_active else "N",
-                    user_id,
                     news_id,
                 ),
             )
