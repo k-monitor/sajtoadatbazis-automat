@@ -12,12 +12,13 @@ import logging
 from auto_kmdb.db import get_retries_from
 from datetime import datetime, timedelta
 import asyncio
-from playwright.async_api import async_playwright
+from playwright.sync_api import sync_playwright
 
 
 jeti_session = ''
 gateway_session = ''
 cookies_24 = {}
+cookies_444 = {}
 
 
 def process_article(id, url, source):
@@ -69,119 +70,59 @@ def process_article(id, url, source):
             save_download_step(connection, id, text, title, description, authors, date, is_paywalled)
 
 
-async def main():
-    async with async_playwright() as p:
-        print('main')
-
-        browser = await p.chromium.launch(headless=True)
-        context = await browser.new_context()
-        page = await context.new_page()
-        await page.goto("https://24.hu/")
-
-        await page.wait_for_timeout(1000)
-
-        await page.locator(".css-1tfx6ee").press("Escape")
-
-        await page.get_by_role("link", name="Belépés Regisztráció").click()
-
-        await page.locator("#landing-email").fill(os.environ['USER_24'])
-
-        await page.locator("#btn-next").click()
-
-        await page.wait_for_timeout(1000)
-
-        await page.locator("#password").fill(os.environ['PASS_24'])
-
-        await page.locator("#kc-login").click()
-
-        cookies = await context.cookies()
-        cookies_dict = {cookie['name']: cookie['value'] for cookie in cookies}
-        await browser.close()
-        return cookies_dict
-
-
 def login_24():
-    print('login24')
-    cookies_24 = asyncio.run(main())
-    print(cookies_24)
+    global cookies_24
     logging.info(cookies_24)
 
 
 def login_444():
-    global jeti_session, gateway_session
-    url_1 = 'https://magyarjeti.hu/bejelentkezes?redirect=https://444.hu&state=%7B%22route%22%3A%22--reader.index%22%2C%22params%22%3A%5B%5D%7D'
-    headers_1 = {
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Origin': 'https://magyarjeti.hu',
-        'Connection': 'keep-alive',
-        'Referer': 'https://magyarjeti.hu/bejelentkezes?redirect=https://444.hu&state=%7B%22route%22%3A%22--reader.index%22%2C%22params%22%3A%5B%5D%7D',
-        'Cookie': '_nss=1; PHPSESSID=kr1trgr9ivb20qjf3dkl9h4v54',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'same-origin',
-        'Sec-Fetch-User': '?1',
-        'Priority': 'u=1',
-        'Pragma': 'no-cache',
-        'Cache-Control': 'no-cache',
-        'TE': 'trailers',
-    }
-    data_1 = {
-        'username': os.environ['USER_444'],
-        'password': os.environ['PASS_444'],
-        'send': 'Belépek',
-        '_token_': 'gvpg9qzncfeWNlIublxX6T1HXLiT65rfXfRfg=',
-        'redirect': 'https://444.hu/',
-        'state': '%257B%2522route%2522%253A%2522--reader.index%2522%252C%2522params%2522%253A%255B%255D%257D',
-        'list_id': '',
-        'callback': '',
-        '_do': 'signInForm-submit'
-    }
+    global cookies_444
+    username = os.environ['USER_444']
+    password = os.environ['PASS_444']
+    with sync_playwright() as p:
+        browser = p.firefox.launch()
+        context = browser.new_context()
+        page = context.new_page()
+        page.goto("http://444.hu")
 
-    session = requests.Session()
-    session.cookies = requests.cookies.RequestsCookieJar()
-    session.post(url_1, headers=headers_1, data=data_1)
-    payload = os.environ['PAYL_444']
+        page.wait_for_timeout(1000)
 
-    url_2 = f'https://gateway.ipa.444.hu/session?payload={payload}%3D%3D&redirect=https%3A%2F%2F444.hu%2F%3Fstate%3D%25257B%252522route%252522%25253A%252522--reader.index%252522%25252C%252522params%252522%25253A%25255B%25255D%25257D'
-    headers_2 = {
-        'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Accept-Encoding': 'gzip, deflate, br, zstd',
-        'Referer': 'https://magyarjeti.hu/',
-        'Connection': 'keep-alive',
-        'Cookie': 'abgroup=4;',
-        'Upgrade-Insecure-Requests': '1',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'cross-site',
-        'Sec-Fetch-User': '?1',
-        'Priority': 'u=1',
-        'Pragma': 'no-cache',
-        'Cache-Control': 'no-cache',
-        'TE': 'trailers',
-    }
+        def handler():
+            page.get_by_role("button", name="ELFOGADOM", exact=True).click()
 
-    session.get(url_2, headers=headers_2)
-    cookies = session.cookies
-    jeti_session = cookies.get('jeti-session')
-    gateway_session = cookies.get('gateway_session')
+        page.add_locator_handler(page.get_by_role("button", name="ELFOGADOM", exact=True), handler)
+
+        page.get_by_title("Felhasználói fiók").click()
+        page.screenshot(path="screenshot.png")
+
+        page.get_by_role("button", name="Bejelentkezés", exact=False).click()  
+        page.wait_for_timeout(1000)
+
+        page.add_locator_handler(page.get_by_role("button", name="ELFOGADOM", exact=True), handler)
+
+        page.locator("#frm-signInForm-username").fill(username)
+        page.locator("#frm-signInForm-password").fill(password)
+        page.wait_for_timeout(1000)
+
+        page.locator(".md-filled-button-profile").click()
+        page.wait_for_timeout(1000)
+
+        cookies = context.cookies()
+        cookies_dict = {cookie['name']: cookie['value'] for cookie in cookies}    
+
+        browser.close()
+
+        cookies_444 = cookies_dict
 
 
 def get_444(url):
-    cookie = os.environ["COOKIE_444"]
-    logging.info(cookie)
     article_name = url.split('/')[-1]
     date = '-'.join(url.split('/')[-4:-1])
     bucket = '444'
     if url.count('/') == 7:
         bucket = url.split('/')[3]
 
-    response = requests.get(f'https://gateway.ipa.444.hu/api/graphql?crunch=2&operationName=fetchContent&variables=%7B%22onlyReports%22%3Afalse%2C%22order%22%3A%22DESC%22%2C%22slug%22%3A%22{article_name}%22%2C%22date%22%3A%22{date}%22%2C%22buckets%22%3A%5B%22{bucket}%22%5D%2C%22cursorInclusive%22%3Afalse%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22376c5324c94249caa29a66aeb02f8ed7c593ce2d9036098f1ba63a545405c96a%22%7D%7D', headers={'Cookie': cookie})
+    response = requests.get(f'https://gateway.ipa.444.hu/api/graphql?crunch=2&operationName=fetchContent&variables=%7B%22onlyReports%22%3Afalse%2C%22order%22%3A%22DESC%22%2C%22slug%22%3A%22{article_name}%22%2C%22date%22%3A%22{date}%22%2C%22buckets%22%3A%5B%22{bucket}%22%5D%2C%22cursorInclusive%22%3Afalse%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22376c5324c94249caa29a66aeb02f8ed7c593ce2d9036098f1ba63a545405c96a%22%7D%7D', cookies=cookies_444)
     text = '\n'.join([BeautifulSoup(f['content'], features="lxml").text for f in response.json()['data']['crunched'][-1]['content']['body'][0] if isinstance(f, dict) and 'content' in f])
     return text
 

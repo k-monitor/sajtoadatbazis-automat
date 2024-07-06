@@ -38,17 +38,16 @@ def create_app():
         app.register_blueprint(api)
         logger.info("registered api")
 
-    # try:
-        # login_444()
+    try:
+        login_444()
         # login_24()
-    # except Exception as e:
-    #     logging.error(traceback.format_exc())
-    #     print(traceback.format_exc())
+    except Exception:
+        logging.error(traceback.format_exc())
+        print(traceback.format_exc())
     Thread(target=rss_watcher, args=(app.app_context(),), daemon=True).start()
     Thread(target=do_retries, args=(app.app_context(),), daemon=True).start()
 
-    print(get_444('https://444.hu/2023/01/18/a-fougyeszseg-be-akarta-egetni-hadhazyt-de-csak-magat-asta-meg-melyebbre-azzal-hogy-ravilagitott-valamit-nagyon-titkolnak-toni-barbara-es-adam-ugyeben'))
-
+    # print(get_444("https://444.hu/2024/07/03/a-baloldal-hanyatlasa-kelet-kozep-europaban"))
 
     processors = [
         DownloadProcessor(),
