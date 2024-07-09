@@ -797,7 +797,7 @@ def annote_positive(
     is_active,
     category,
     others,
-    file_id,
+    file_ids,
     pub_date,
 ):
     query_0 = """SELECT news_id FROM autokmdb_news WHERE id = %s LIMIT 1"""
@@ -986,7 +986,7 @@ WHERE
 
         if is_update:
             cursor.execute(delete_file, (news_id,))
-        if file_id > 0:
+        for file_id in file_ids:
             cursor.execute(query_file, (news_id, file_id))
 
     connection.commit()

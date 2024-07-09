@@ -186,11 +186,25 @@
             <p>Akta:</p>
             <USelectMenu
               searchable
+              multiple
+              :search-attributes="['name']"
+              searchable-placeholder="Keresés..."
+              clear-search-on-close
               v-model="file"
               :options="allFiles"
               option-attribute="name"
               value-attribute="id"
-            ></USelectMenu>
+            >
+              <template #empty> betöltés... </template>
+              <template #label>
+                <span>{{
+                  allFiles
+                    .filter((item) => (file.includes(item.id)))
+                    .map(item => item.name)
+                    .join(", ") || "semmi"
+                }}</span>
+              </template>
+            </USelectMenu>
             <p>publikálás: {{ article.article_date }}</p>
             <p>{{ errorText }}</p>
             <UButton
@@ -460,7 +474,7 @@ article.value.others = [];
 article.value.isDownloaded = false;
 
 const is_active = ref(true);
-let file = ref(-1);
+let file = ref([]);
 let submitted = ref(false);
 let errorText = ref("");
 
@@ -516,7 +530,7 @@ async function submitArticle() {
         category: parseInt(category.value),
         tags: positiveOthers.value,
         active: is_active.value,
-        file_id: file.value,
+        file_ids: file.value,
         pub_date: article.value.original_date,
       },
 
