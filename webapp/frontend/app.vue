@@ -48,8 +48,7 @@ const baseUrl = config.public.baseUrl;
 const allLabels = useFetch(baseUrl + "/api/all_labels").data;
 let allFiles = computed(() =>
   allLabels.value == null
-    ? []
-    : [{ name: "semmi", id: -1 }].concat(allLabels.value?.files)
+    ? [] : allLabels.value?.files
 );
 let allDomains = computed(() =>
   allLabels.value == null

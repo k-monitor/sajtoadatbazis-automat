@@ -152,12 +152,12 @@ def annote():
     category = 0
     if 'category' in request.json:
         category = request.json['category']
-    file_id = -1
-    if 'file_id' in request.json:
-        file_id = request.json['file_id']
+    file_ids = []
+    if 'file_ids' in request.json:
+        file_ids = request.json['file_ids']
 
     with connection_pool.get_connection() as connection:
-        annote_positive(connection, id, url, title, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active, category, others, file_id, parsed_date)
+        annote_positive(connection, id, url, title, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active, category, others, file_ids, parsed_date)
     return jsonify({}), 200
 
 
