@@ -25,6 +25,8 @@ def create_app():
     if "LOGFILE" in os.environ:
         logfile = os.environ["LOGFILE"]
     logging.basicConfig(filename=logfile, level=logging.INFO)
+    for _ in range(10):
+        logger.info("")
     logger.info("Started")
 
     app = Flask(
@@ -40,6 +42,9 @@ def create_app():
 
     try:
         login_444()
+    except Exception:
+        logging.error(traceback.format_exc())
+    try:
         login_24()
     except Exception:
         logging.error(traceback.format_exc())
