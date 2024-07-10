@@ -11,14 +11,20 @@ from bs4 import BeautifulSoup
 import logging
 from auto_kmdb.db import get_retries_from
 from datetime import datetime, timedelta
-import asyncio
 from playwright.sync_api import sync_playwright
-
+from auto_kmdb.newspapers.Telex import Telex
 
 jeti_session = ''
 gateway_session = ''
 cookies_24 = {}
 cookies_444 = {}
+newspapers = [Telex()]
+
+
+def get_custom_text(url, html):
+    for paper in newspapers:
+        if paper.is_url_this(url, html):
+            return paper.get_text(url, html)
 
 
 def process_article(id, url, source):
@@ -44,6 +50,14 @@ def process_article(id, url, source):
     elif 'hvg.hu/360/' in url:
         text += '\n'+get_hvg(url.split('/360/')[1].split('?')[0])
         is_paywalled = 1
+
+    try:
+        custom_text = get_custom_text(url, article.html)
+        if custom_text:
+            text = custom_text
+            print(text)
+    except Exception as e:
+        logging.error(e)
 
     title = do_replacements(title, replacements)
     text = do_replacements(text, replacements)

@@ -110,7 +110,7 @@ def not_corruption():
     id = request.json['id']
     reason = request.json['reason']
     with connection_pool.get_connection() as connection:
-        annote_negative(connection, id, reason)
+        annote_negative(connection, id, reason, user_id)
     return jsonify({}), 200
 
 
@@ -124,7 +124,7 @@ def force_accept():
 
     id = request.json['id']
     with connection_pool.get_connection() as connection:
-        force_accept_article(connection, id)
+        force_accept_article(connection, id, user_id)
     return jsonify({}), 200
 
 
@@ -173,7 +173,7 @@ def add_url():
         url = request.json['url']
         if check_url_exists(connection, url):
             return jsonify({'error': 'Cikk már létezik'}), 400
-        init_news(connection, 1, url, url, request.json['newspaper_name'], request.json['newspaper_id'])
+        init_news(connection, 1, url, url, request.json['newspaper_name'], request.json['newspaper_id'], user_id)
         return jsonify({}), 200
 
 
