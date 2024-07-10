@@ -2,9 +2,6 @@
   <div class="p-4">
     <div class="max-w-2xl w-full rounded overflow-hidden shadow-lg mb-4 p-4">
       <p>
-        <a :href="article.url" target="_blank" class="font-bold text-xl mb-2">{{
-          article.title
-        }}</a>
         <UBadge class="m-1" color="gray">
           <UTooltip
             v-if="article.skip_reason > 1"
@@ -53,6 +50,10 @@
             />
           </UTooltip>
         </UBadge>
+        <a :href="article.url" target="_blank" class="font-bold text-xl mb-2 ml-1">{{
+          article.title
+        }}</a>
+
       </p>
       <UBadge class="m-1" color="blue"> {{ article.newspaper_name }} </UBadge>
       <UBadge v-if="article.source == 1" class="m-1" color="orange">
@@ -104,10 +105,10 @@
           class="ml-auto"
           >{{
             article.annotation_label == null
-              ? "Tovább"
+              ? "Szerkesztés"
               : article.annotation_label == 0
               ? "Mégis elfogad"
-              : "Szerkeszt"
+              : "Szerkesztés"
           }}</UButton
         >
       </UContainer>
