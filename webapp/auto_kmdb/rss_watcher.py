@@ -40,7 +40,7 @@ def get_new_from_rss(newspaper):
             clean_url = clear_url(url)
             with connection_pool.get_connection() as connection:
                 if not check_url_exists(connection, clean_url) and not skip_url(clean_url):
-                    init_news(connection, 'rss', url, clean_url, newspaper['name'], newspaper['id'])
+                    init_news(connection, 'rss', url, clean_url, newspaper['name'], newspaper['id'], None)
                     articles_found += 1
     elif newspaper['rss_url'] == 'hvg360':
         logging.info('checking hvg360')
@@ -51,14 +51,14 @@ def get_new_from_rss(newspaper):
             clean_url = clear_url(url)
             with connection_pool.get_connection() as connection:
                 if not check_url_exists(connection, clean_url) and not skip_url(clean_url):
-                    init_news(connection, 'rss', url, clean_url, newspaper['name'], newspaper['id'])
+                    init_news(connection, 'rss', url, clean_url, newspaper['name'], newspaper['id'], None)
                     articles_found += 1
     else:
         for entry in feed.entries:
             clean_url = clear_url(entry.link)
             with connection_pool.get_connection() as connection:
                 if not check_url_exists(connection, clean_url) and not skip_url(clean_url):
-                    init_news(connection, 'rss', entry.link, clean_url, newspaper['name'], newspaper['id'])
+                    init_news(connection, 'rss', entry.link, clean_url, newspaper['name'], newspaper['id'], None)
                     articles_found += 1
 
     if articles_found > 0:

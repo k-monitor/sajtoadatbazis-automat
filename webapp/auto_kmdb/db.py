@@ -229,13 +229,14 @@ def init_news(
     clean_url,
     newspaper_name,
     newspaper_id,
+    user_id,
 ):
     current_datetime = datetime.now()
     cre_time = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
     with connection.cursor(dictionary=True) as cursor:
         query = """INSERT INTO autokmdb_news
-                (source, source_url, clean_url, processing_step, cre_time, newspaper_name, newspaper_id, version_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+                (source, source_url, clean_url, processing_step, cre_time, newspaper_name, newspaper_id, version_number, mod_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(
             query,
             (
@@ -247,6 +248,7 @@ def init_news(
                 newspaper_name,
                 newspaper_id,
                 VERSION_NUMBER,
+                user_id,
             ),
         )
     connection.commit()
@@ -618,7 +620,7 @@ def get_article_others(cursor, id):
 
 def get_article(connection: PooledMySQLConnection, id):
     query = """SELECT n.id AS id, news_id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step, skip_reason,
-            n.text AS text, n.cre_time AS date, category, article_date FROM autokmdb_news n WHERE id = %s
+            n.text AS text, n.cre_time AS date, category, article_date, u.name AS mod_name FROM autokmdb_news n LEFT JOIN users u ON n.mod_id = u.user_id WHERE id = %s
         """
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (id,))
@@ -644,14 +646,18 @@ def get_article(connection: PooledMySQLConnection, id):
         return article
 
 
+
+
+
 def get_articles(
     connection, page, status, domains, q="", start="2000-01-01", end="2050-01-01", reverse=False
 ):
     query = ""
 
     selection = """SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason, negative_reason,
-            n.cre_time AS date, category
+            n.cre_time AS date, category, u.name AS mod_name
         FROM autokmdb_news n
+        LEFT JOIN users u ON n.mod_id = u.user_id
         """
     group = (
         " GROUP BY id ORDER BY source DESC, n.mod_time "+('ASC' if reverse else 'DESC')
@@ -692,15 +698,15 @@ def get_articles(
         return count, cursor.fetchall()
 
 
-def force_accept_article(connection: PooledMySQLConnection, id):
-    query = """UPDATE autokmdb_news SET classification_label = 1, processing_step = 2, source = 1 WHERE id = %s;"""
+def force_accept_article(connection: PooledMySQLConnection, id, user_id):
+    query = """UPDATE autokmdb_news SET classification_label = 1, processing_step = 2, source = 1, mod_id = %s WHERE id = %s;"""
     with connection.cursor() as cursor:
-        cursor.execute(query, (id,))
+        cursor.execute(query, (id, user_id))
     connection.commit()
 
 
-def annote_negative(connection: PooledMySQLConnection, id, reason):
-    query = """UPDATE autokmdb_news SET annotation_label = 0, processing_step = 5, negative_reason = %s WHERE id = %s;"""
+def annote_negative(connection: PooledMySQLConnection, id, reason, user_id):
+    query = """UPDATE autokmdb_news SET annotation_label = 0, processing_step = 5, negative_reason = %s, mod_id = %s WHERE id = %s;"""
     query_id = """SELECT news_id FROM autokmdb_news WHERE id = %s;"""
     query_remove = """DELETE FROM news_news WHERE news_id = %s;"""
     query_remove_person = """DELETE FROM news_persons_link WHERE news_id = %s;"""
@@ -718,6 +724,7 @@ def annote_negative(connection: PooledMySQLConnection, id, reason):
             query,
             (
                 reason,
+                user_id,
                 id,
             ),
         )
@@ -801,7 +808,7 @@ def annote_positive(
     pub_date,
 ):
     query_0 = """SELECT news_id FROM autokmdb_news WHERE id = %s LIMIT 1"""
-    query_1 = """UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s, title = %s, description = %s, text = %s WHERE id = %s;"""
+    query_1 = """UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s, title = %s, description = %s, text = %s, mod_id = %s WHERE id = %s;"""
     query_2 = """INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);"""
     query_2_update = """UPDATE news_news
 SET
@@ -900,7 +907,7 @@ WHERE
                 ),
             )
             news_id = cursor.lastrowid
-        cursor.execute(query_1, (news_id, title, description, text, id))
+        cursor.execute(query_1, (news_id, title, description, text, user_id, id))
 
         if is_update:
             cursor.execute(
