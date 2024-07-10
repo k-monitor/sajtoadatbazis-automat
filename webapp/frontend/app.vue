@@ -47,8 +47,7 @@ const baseUrl = config.public.baseUrl;
 
 const allLabels = useFetch(baseUrl + "/api/all_labels").data;
 let allFiles = computed(() =>
-  allLabels.value == null
-    ? [] : allLabels.value?.files
+  allLabels.value == null ? [] : allLabels.value?.files
 );
 let allDomains = computed(() =>
   allLabels.value == null
@@ -283,118 +282,117 @@ async function addUrl() {
     <UContainer
       class="my-1 justify-between flex lg:px-0 px-4 sm:px-0 ml-1 max-w-full"
     >
-      <UButton class="mr-1" @click="openNewUrl">Új cikk</UButton>
-      <div>
-        <UContainer class="my-1 flex lg:px-0 px-2 sm:px-0 ml-1">
-          <div class="flex px-1">
-            <p>Kiválasztott hírportál: &nbsp;</p>
-            <USelectMenu
-              searchable
-              :search-attributes="['name']"
-              searchable-placeholder="Keresés..."
-              clear-search-on-close
-              multiple
-              class="w-48"
-              v-model="selectedDomains"
-              by="id"
-              :options="allDomains"
-              @change="refresh"
-            >
-              <template #option="{ option }">
-                <span
-                  ><Icon v-if="option.has_rss" name="mdi:rss" color="orange" />
-                  {{ option.name }}</span
-                >
-              </template>
-              <template #empty> betöltés... </template>
-              <template #label>
-                <span>{{
-                  selectedDomains
-                    .map((item) => ("name" in item ? item.name : "mind"))
-                    .join(", ")
-                }}</span>
-              </template>
-            </USelectMenu>
-          </div>
-          <UButton
-            :icon="
-              reverseSort ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'
-            "
-            size="sm"
-            color="primary"
-            square
-            variant="solid"
-            @click="
-              () => {
-                reverseSort = !reverseSort;
-                refresh();
-              }
-            "
-          />
-          <UPopover class="px-1" :popper="{ placement: 'bottom-start' }">
-            <UButton icon="i-heroicons-calendar-days-20-solid">
-              {{ format(selected.start, "yyyy. MM. dd.") }} -
-              {{ format(selected.end, "yyyy. MM. dd.") }}
-            </UButton>
-
-            <template #panel="{ close }">
-              <div
-                class="flex items-center sm:divide-x divide-gray-200 dark:divide-gray-800"
+      <UContainer class="my-1 flex lg:px-0 px-2 sm:px-0 ml-auto mr-1 flex-wrap">
+        <UButton class="mr-1 h-fit my-1" @click="openNewUrl">Új cikk</UButton>
+        <div class="flex my-auto px-1 my-1">
+          <p>Kiválasztott hírportál: &nbsp;</p>
+          <USelectMenu
+            searchable
+            :search-attributes="['name']"
+            searchable-placeholder="Keresés..."
+            clear-search-on-close
+            multiple
+            class="w-48"
+            v-model="selectedDomains"
+            by="id"
+            :options="allDomains"
+            @change="refresh"
+          >
+            <template #option="{ option }">
+              <span
+                ><Icon v-if="option.has_rss" name="mdi:rss" color="orange" />
+                {{ option.name }}</span
               >
-                <div class="hidden sm:flex flex-col py-4">
-                  <UButton
-                    v-for="(range, index) in ranges"
-                    :key="index"
-                    :label="range.label"
-                    color="gray"
-                    variant="ghost"
-                    class="rounded-none px-6"
-                    :class="[
-                      isRangeSelected(range.duration)
-                        ? 'bg-gray-100 dark:bg-gray-800'
-                        : 'hover:bg-gray-50 dark:hover:bg-gray-800/50',
-                    ]"
-                    truncate
-                    @click="selectRange(range.duration)"
-                  />
-                </div>
+            </template>
+            <template #empty> betöltés... </template>
+            <template #label>
+              <span>{{
+                selectedDomains
+                  .map((item) => ("name" in item ? item.name : "mind"))
+                  .join(", ")
+              }}</span>
+            </template>
+          </USelectMenu>
+        </div>
+        <UButton
+          class="h-fit my-1"
+          :icon="
+            reverseSort ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'
+          "
+          size="sm"
+          color="primary"
+          square
+          variant="solid"
+          @click="
+            () => {
+              reverseSort = !reverseSort;
+              refresh();
+            }
+          "
+        />
+        <UPopover class="px-1" :popper="{ placement: 'bottom-start' }">
+          <UButton icon="i-heroicons-calendar-days-20-solid" class=" my-1">
+            {{ format(selected.start, "yyyy. MM. dd.") }} -
+            {{ format(selected.end, "yyyy. MM. dd.") }}
+          </UButton>
 
-                <DatePicker
-                  v-model="selected"
-                  is-required
-                  @close="
-                    () => {
-                      close();
-                      refresh();
-                    }
-                  "
+          <template #panel="{ close }">
+            <div
+              class="flex items-center sm:divide-x divide-gray-200 dark:divide-gray-800"
+            >
+              <div class="hidden sm:flex flex-col py-4">
+                <UButton
+                  v-for="(range, index) in ranges"
+                  :key="index"
+                  :label="range.label"
+                  color="gray"
+                  variant="ghost"
+                  class="rounded-none px-6"
+                  :class="[
+                    isRangeSelected(range.duration)
+                      ? 'bg-gray-100 dark:bg-gray-800'
+                      : 'hover:bg-gray-50 dark:hover:bg-gray-800/50',
+                  ]"
+                  truncate
+                  @click="selectRange(range.duration)"
                 />
               </div>
-            </template>
-          </UPopover>
 
-          <UInput
-            class="px-1"
-            name="q"
-            v-model="q"
-            color="primary"
-            variant="outline"
-            placeholder="Keresés..."
-          />
-          <UButton
-            class="right-5 bottom-5 fixed z-10"
-            v-if="articles && articles.some((v) => v.selected)"
-            color="red"
-            :loading="loadingDelete"
-            @click="deleteArticles"
-            >{{
-              "Kijelöltet elutasít (" +
-              articles.filter((v) => v.selected).length +
-              ")"
-            }}</UButton
-          >
-        </UContainer>
-      </div>
+              <DatePicker
+                v-model="selected"
+                is-required
+                @close="
+                  () => {
+                    close();
+                    refresh();
+                  }
+                "
+              />
+            </div>
+          </template>
+        </UPopover>
+
+        <UInput
+          class="px-1 my-1"
+          name="q"
+          v-model="q"
+          color="primary"
+          variant="outline"
+          placeholder="Keresés..."
+        />
+        <UButton
+          class="right-5 bottom-5 fixed z-10 my-1"
+          v-if="articles && articles.some((v) => v.selected)"
+          color="red"
+          :loading="loadingDelete"
+          @click="deleteArticles"
+          >{{
+            "Kijelöltet elutasít (" +
+            articles.filter((v) => v.selected).length +
+            ")"
+          }}</UButton
+        >
+      </UContainer>
     </UContainer>
 
     <UModal v-model="isOpen">
