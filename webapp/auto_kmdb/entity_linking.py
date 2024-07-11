@@ -22,14 +22,16 @@ from auto_kmdb.db import (
 )
 
 
-def get_synonyms_file(entity_type: Literal["places", "institutions"] = "places") -> pd.DataFrame:
+def get_synonyms_file(
+    entity_type: Literal["places", "institutions"] = "places"
+) -> pd.DataFrame:
     """
     Loads synonym aliases for places or institutions from csv files.
 
     Args:
         entity_type: must be of value "places" or "institutions" because we do not have synonym
             files for people
-    
+
     Returns:
         Dataframe indexed by aliases and contianing a column 'db_keyword' the alias belongs to.
         Aliases must be unique.
@@ -183,10 +185,7 @@ def get_mapping(
     synonym_mapping: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     """
-    Receives the detected entities of a single article and a list of keywords taken from the DB. If
-    an entity is detected multiple times, the algorithm performs the linking only once and takes the
-    'class', 'score', 'start', 'detected_ent_raw' infos of the detection with the highest class and
-    score.
+    Receives the detected entities of a single article and a list of keywords taken from the DB.
 
     The linking is a rule-based algorithm with the following rules:
         1. Linking from the article: It checks if an entity could be linked with any other entity
@@ -233,16 +232,7 @@ def get_mapping(
     mapping["detected_ent"] = mapping["detected_ent"].apply(
         lambda word: " ".join([token.lemma_ for token in nlp(word)])
     )
-    mapping["detections"] = 1
-    mapping = (
-        mapping.groupby("detected_ent")[["detections"]]
-        .sum()
-        .join(
-            mapping.sort_values(by=["class", "score"], ascending=False)
-            .groupby("detected_ent")
-            .first()[["class", "score", "start", "detected_ent_raw"]]
-        )
-    )
+    mapping = mapping.set_index("detected_ent")
     for entity in mapping.index:
         mapping.at[entity, "from_article"] = "; ".join(
             [x for x in get_mapping_from_article(entity, mapping.index)]
@@ -297,83 +287,62 @@ def comb_mappings(
         combine_columns: the final mapping will be the result fo the combining the columns listed
 
     Returns:
-        Dataframe containing the mappings, indexed by db keyword ids. Contains the following infos:
-            'detections': number of detected entities from the article that have been linked to
-            this db keyword
+        Dataframe containing the mappings, indexed by the found entities' start charachter.
+        Contains the following infos:
+
             'class': 1 if positive, 0 if negative. It takes value of 1 if any of the detected
-            entities linked to this db keyword has been classified as positive
+                entities linked to this db keyword has been classified as positive
             'score': classification score, takes the highest score from the score of the detected
-            entities linked to this db keyword that have the same class
+                entities linked to this db keyword that have the same class
             'start': position of the first character of the detected entity that the 'score'
-            belongs to
+                belongs to
             'detected_ent_raw': the detected entity in the form it appears in text
             'detected_ent': the detected entity after stemming
+            'combed_mapping': suggested db keyword mapping
+            'keyword_id': the id of the suggested db keyword mapping
     """
     mapping = mapping.copy()
 
+    # take rule-based mapping suggestions of from_article pairs
     mapped_from_article = mapping.loc[
-        mapping["from_article"].notna() & mapping["identical_keyword"].isna()
+        mapping["from_article"].notna()
+        & mapping["identical_keyword"].isna()
+        & (mapping["from_article"] != mapping.index),
     ].index
-
     for detected_ent in mapped_from_article:
-        map_to = mapping.loc[detected_ent, "from_article"].split("; ")[-1]
-        mapping.loc[map_to, "detections"] = mapping.loc[
-            [map_to, detected_ent], "detections"
-        ].sum()
-        sorted_values = (
-            mapping.loc[[map_to, detected_ent]]
-            .sort_values(by=["class", "score"], ascending=False)
-            .iloc[0][["score", "class", "start", "detected_ent_raw"]]
+        map_to = mapping.loc[[detected_ent], "from_article"].iloc[0].split("; ")[-1]
+        mapping.loc[[detected_ent], combine_columns] = (
+            mapping.loc[[map_to], combine_columns].iloc[0].values
         )
-        mapping.loc[map_to, "score"] = sorted_values["score"]
-        mapping.loc[map_to, "class"] = sorted_values["class"]
-        mapping.loc[map_to, "start"] = sorted_values["start"]
-        mapping.loc[map_to, 'detected_ent_raw'] = sorted_values["detected_ent_raw"]
 
-    mapping = mapping.loc[~mapping.index.isin(mapped_from_article)]
-
+    # combine first mapping suggestions
+    mapping = mapping.reset_index().set_index("start")
     mapping["combed_mapping"] = np.NaN
     for col in combine_columns:
         mapping["combed_mapping"] = mapping["combed_mapping"].combine_first(
             mapping[col]
         )
 
+    # prioritize in case of multiple suggestions
     mapping["combed_mapping"] = (
         mapping["combed_mapping"]
         .apply(
             lambda x: (
                 str(x).split("; ")[0]
                 if len(str(x).split("; ")) == 1
-                else keywords.loc[str(x).split("; "), "count"].sort_values(ascending = False).index[0]
+                else keywords.loc[str(x).split("; "), "count"]
+                .sort_values(ascending=False)
+                .index[0]
             )
         )
         .replace("nan", np.NaN)
         .replace("None", np.NaN)
     )
 
+    # map db keyword id to mapped keyword name
+    mapping["keyword_id"] = None
     mapping.loc[mapping["combed_mapping"].notna(), "keyword_id"] = keywords.loc[
         mapping.loc[mapping["combed_mapping"].notna(), "combed_mapping"], "id"
     ].values
 
-    mapping = (
-        mapping.reset_index()
-        .groupby("keyword_id")[["detections"]]
-        .sum()
-        .join(
-            mapping.reset_index()
-            .sort_values(by=["class", "score"], ascending=False)
-            .groupby("keyword_id")
-            .first()[
-                [
-                    "combed_mapping",
-                    "class",
-                    "score",
-                    "start",
-                    "detected_ent",
-                    "detected_ent_raw",
-                ]
-            ]
-        )
-    )
-
-    return mapping
+    return mapping.replace(np.nan, None)

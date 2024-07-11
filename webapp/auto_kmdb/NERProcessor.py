@@ -135,25 +135,40 @@ class NERProcessor(Processor):
                 'POS-LOC'
             entity_type: the type of entities we want to link to db, value must be either set to 'people',
                 'places' or 'institutions'
+
         Returns:
-            Dataframe containing the mappings, indexed by db keyword ids. Contains the following infos:
-                'detections': number of detected entities from the article that have been linked to
-                this db keyword
-                'class': 1 if positive, 0 if negative. It takes value of 1 if any of the detected
+            Dataframe containing the mappings, indexed by the found entities' start charachter.
+            Contains the following infos:
+
+            'class': 1 if positive, 0 if negative. It takes value of 1 if any of the detected
                 entities linked to this db keyword has been classified as positive
-                'score': classification score, takes the highest score from the score of the detected
+            'score': classification score, takes the highest score from the score of the detected
                 entities linked to this db keyword that have the same class
-                'start': position of the first character of the detected entity that the 'score'
+            'start': position of the first character of the detected entity that the 'score'
                 belongs to
-                'detected_ent_raw': the detected entity in the form it appears in text
-                'detected_ent': the detected entity after stemming
+            'detected_ent_raw': the detected entity in the form it appears in text
+            'detected_ent': the detected entity after stemming
+            'combed_mapping': suggested db keyword mapping
+            'keyword_id': the id of the suggested db keyword mapping
         """
+        print(entity_type)
+        print(detected_entities)
         synonym_mapping = (
-                get_synonyms_file(entity_type) if (entity_type in ["places", "institutions"]) else None
+            get_synonyms_file(entity_type)
+            if (entity_type in ["places", "institutions"])
+            else None
         )
         keywords = get_entities_freq(entity_type)
         mapping = get_mapping(detected_entities, keywords.index, synonym_mapping)
-        return comb_mappings(mapping, keywords)
+        combed_mapping = comb_mappings(mapping, keywords)
+
+        # drop single-word person suggestions if we failed to map them to db
+        if entity_type == "people":
+            combed_mapping = combed_mapping.loc[
+                [(len(x.split(" ")) > 1) for x in combed_mapping.detected_ent]
+                | combed_mapping.combed_mapping.notna()
+            ]
+        return combed_mapping
 
     def process_next(self):
         with connection_pool.get_connection() as connection:
@@ -180,16 +195,16 @@ class NERProcessor(Processor):
                 assert mapping.index.is_unique, (
                     "Database " + type + " keywords to be added should be unique"
                 )
-                for entity_id in mapping.index.values:
-                    entity_infos = mapping.loc[entity_id]
+                for start_char in mapping.index.values:
+                    entity_infos = mapping.loc[start_char]
                     with connection_pool.get_connection() as connection:
                         db_function(
                             connection,
                             next_row["id"],
                             entity_infos.loc["combed_mapping"],
-                            str(entity_id),
+                            str(entity_infos.loc["keyword_id"]),
                             entity_infos.loc["detected_ent_raw"],
-                            str(entity_infos.loc["start"]),
+                            str(start_char),
                             entity_infos.loc["detected_ent"],
                             str(entity_infos.loc["score"]),
                             str(entity_infos.loc["class"]),
