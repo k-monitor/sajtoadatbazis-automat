@@ -230,13 +230,14 @@ def init_news(
     newspaper_name,
     newspaper_id,
     user_id,
+    pub_time,
 ):
     current_datetime = datetime.now()
     cre_time = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
     with connection.cursor(dictionary=True) as cursor:
         query = """INSERT INTO autokmdb_news
-                (source, source_url, clean_url, processing_step, cre_time, newspaper_name, newspaper_id, version_number, mod_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
+                (source, source_url, clean_url, processing_step, cre_time, article_date, newspaper_name, newspaper_id, version_number, mod_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
         cursor.execute(
             query,
             (
@@ -245,6 +246,7 @@ def init_news(
                 clean_url,
                 0,
                 cre_time,
+                pub_time,
                 newspaper_name,
                 newspaper_id,
                 VERSION_NUMBER,
@@ -399,8 +401,15 @@ def save_download_step(
     date,
     is_paywalled,
 ):
-    query = """UPDATE autokmdb_news SET text = %s, title = %s, description = %s, processing_step = 1, author = %s, article_date = %s, is_paywalled = %s
-               WHERE id = %s;"""
+    query = """UPDATE autokmdb_news 
+            SET text = %s, 
+                title = %s, 
+                description = %s, 
+                processing_step = 1, 
+                author = %s, 
+                article_date = COALESCE(article_date, %s), 
+                is_paywalled = %s
+            WHERE id = %s;"""
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(
             query, (text, title, description, authors, date, is_paywalled, id)

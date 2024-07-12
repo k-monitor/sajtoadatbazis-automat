@@ -173,7 +173,7 @@ def add_url():
         url = request.json['url']
         if check_url_exists(connection, url):
             return jsonify({'error': 'Cikk már létezik'}), 400
-        init_news(connection, 1, url, url, request.json['newspaper_name'], request.json['newspaper_id'], user_id)
+        init_news(connection, 1, url, url, request.json['newspaper_name'], request.json['newspaper_id'], user_id, None)
         return jsonify({}), 200
 
 
