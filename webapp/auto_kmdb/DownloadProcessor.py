@@ -13,6 +13,7 @@ from auto_kmdb.db import get_retries_from
 from datetime import datetime, timedelta
 from playwright.sync_api import sync_playwright
 from auto_kmdb.newspapers.Telex import Telex
+from zoneinfo import ZoneInfo
 
 jeti_session = ''
 gateway_session = ''
@@ -74,7 +75,10 @@ def process_article(id, url, source):
         if '.' not in sl[:400]:
             description = sl[:400]
 
-    date = article.publish_date
+    if article.publish_date:
+        date = article.publish_date.astimezone(ZoneInfo("Europe/Budapest"))
+    else:
+        date = None
 
     if same_news(title, description, text) and source != 1:
         with connection_pool.get_connection() as connection:
