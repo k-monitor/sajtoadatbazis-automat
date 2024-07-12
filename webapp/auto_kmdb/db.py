@@ -554,6 +554,7 @@ def get_article_persons_kmdb(cursor, id):
             "db_name": all_persons_by_id[row["id"]],
         }
         for row in cursor.fetchall()
+        if row["id"] in all_persons_by_id
     ]
 
 
@@ -568,6 +569,7 @@ def get_article_institutions_kmdb(cursor, id):
             "db_name": all_institutions_by_id[row["id"]],
         }
         for row in cursor.fetchall()
+        if row["id"] in all_institutions_by_id
     ]
 
 
@@ -584,6 +586,7 @@ def get_article_places_kmdb(cursor, id):
             "db_name": all_places_by_id[row["id"]],
         }
         for row in cursor.fetchall()
+        if row["id"] in all_places_by_id
     ]
 
 
@@ -600,6 +603,7 @@ def get_article_others_kmdb(cursor, id):
             "db_name": all_others_by_id[row["id"]],
         }
         for row in cursor.fetchall()
+        if row["id"] in all_others_by_id
     ]
 
 
