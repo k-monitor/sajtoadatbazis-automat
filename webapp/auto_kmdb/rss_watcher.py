@@ -39,12 +39,12 @@ def get_new_from_rss(newspaper):
         items = [slot for slot in response.json()['__boxes__'] if slot['name'] == 'Itthon'][0]['slotContents'][0]['generator']['items']
         urls_dates = [('https://www.atv.hu/' + article['slug'], article['published_at']) for article in items]
         for url, published_at in urls_dates:
-            parsed_date = datetime.strptime(published_at, '%Y-%m-%dT%H:%M:%S.%fZ')
-            pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
+            # parsed_date = datetime.strptime(published_at, '%Y-%m-%dT%H:%M:%S.%fZ')
+            # pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
             clean_url = clear_url(url)
             with connection_pool.get_connection() as connection:
                 if not check_url_exists(connection, clean_url) and not skip_url(clean_url):
-                    init_news(connection, 'rss', url, clean_url, newspaper['name'], newspaper['id'], None, pub_time)
+                    init_news(connection, 'rss', url, clean_url, newspaper['name'], newspaper['id'], None, None)
                     articles_found += 1
     elif newspaper['rss_url'] == 'hvg360':
         logging.info('checking hvg360')
@@ -52,12 +52,12 @@ def get_new_from_rss(newspaper):
         response = requests.get(f'https://hvg.hu/cms-control/latest/{now}?skip=0&limit=20')
         urls_dates = [('https://hvg.hu'+article['url'], article['releaseDateIso']) for article in response.json() if article['url'].startswith('/360/')]
         for url, release_date in urls_dates:
-            parsed_date = datetime.strptime(release_date, '%Y-%m-%dT%H:%M:%S.%f%z')
-            pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
+            # parsed_date = datetime.strptime(release_date, '%Y-%m-%dT%H:%M:%S.%f%z')
+            # pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
             clean_url = clear_url(url)
             with connection_pool.get_connection() as connection:
                 if not check_url_exists(connection, clean_url) and not skip_url(clean_url):
-                    init_news(connection, 'rss', url, clean_url, newspaper['name'], newspaper['id'], None, pub_time)
+                    init_news(connection, 'rss', url, clean_url, newspaper['name'], newspaper['id'], None, None)
                     articles_found += 1
     else:
         for entry in feed.entries:
