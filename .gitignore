@@ -1,0 +1,12 @@
+node_modules/
+.venv/
+.avenv/
+.vscode/
+.nuxt/
+.output/
+__pycache__/
+.ipynb_checkpoints/
+.env
+.env.prod
+autokmdb.log
+screenshot.png
