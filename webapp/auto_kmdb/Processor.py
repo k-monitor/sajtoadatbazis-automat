@@ -28,4 +28,4 @@ class Processor:
                 logging.error('encountered error in processing loop')
                 logging.error(e)
                 sleep(60)
-            sleep(1)
+            sleep(3)
