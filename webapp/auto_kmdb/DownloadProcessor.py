@@ -32,6 +32,8 @@ def process_article(id, url, source):
     try:
         headers = {'User-Agent': 'autokmdb'}
         response = requests.get(url, headers=headers, cookies=cookies_24)
+        if response.status_code == 403:
+            raise Exception('Got 403 forbidden while downloading article.')
         article = newspaper.Article(url=url)
         article.download(input_html=response.content)
         article.parse()
