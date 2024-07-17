@@ -5,6 +5,7 @@ services:
     build: './ssh_tunnel'
     ports:
       - "127.0.0.1:9999:9999"
+      - "127.0.0.1:1080:1080"
     volumes:
       - type: bind
         source: ./secrets

@@ -20,7 +20,12 @@ gateway_session = ''
 cookies_24 = {}
 cookies_444 = {}
 newspapers = [Telex()]
-
+proxy_host = os.environ["MYSQL_HOST"]
+request_proxies = {
+    'http': 'socks5://'+proxy_host+':1080',
+    'https': 'socks5://'+proxy_host+':1080'
+}
+playwright_proxy = {"server": "socks5://"+proxy_host+":1080"}
 
 def get_custom_text(url, html):
     for paper in newspapers:
@@ -31,7 +36,7 @@ def get_custom_text(url, html):
 def process_article(id, url, source):
     try:
         headers = {'User-Agent': 'autokmdb'}
-        response = requests.get(url, headers=headers, cookies=cookies_24)
+        response = requests.get(url, headers=headers, cookies=cookies_24, proxies=request_proxies)
         if response.status_code == 403:
             raise Exception('Got 403 forbidden while downloading article.')
         article = newspaper.Article(url=url)
@@ -95,7 +100,7 @@ def login_24():
     username = os.environ['USER_24']
     password = os.environ['PASS_24']
     with sync_playwright() as p:    
-        browser = p.firefox.launch()
+        browser = p.firefox.launch(proxy=playwright_proxy)
         context = browser.new_context()        
         page = context.new_page()
 
@@ -125,7 +130,7 @@ def login_444():
     username = os.environ['USER_444']
     password = os.environ['PASS_444']
     with sync_playwright() as p:
-        browser = p.firefox.launch()
+        browser = p.firefox.launch(proxy=playwright_proxy)
         context = browser.new_context()
         page = context.new_page()
         page.goto("http://444.hu")
@@ -167,14 +172,14 @@ def get_444(url):
     if url.count('/') == 7:
         bucket = url.split('/')[3]
 
-    response = requests.get(f'https://gateway.ipa.444.hu/api/graphql?crunch=2&operationName=fetchContent&variables=%7B%22onlyReports%22%3Afalse%2C%22order%22%3A%22DESC%22%2C%22slug%22%3A%22{article_name}%22%2C%22date%22%3A%22{date}%22%2C%22buckets%22%3A%5B%22{bucket}%22%5D%2C%22cursorInclusive%22%3Afalse%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22376c5324c94249caa29a66aeb02f8ed7c593ce2d9036098f1ba63a545405c96a%22%7D%7D', cookies=cookies_444)
+    response = requests.get(f'https://gateway.ipa.444.hu/api/graphql?crunch=2&operationName=fetchContent&variables=%7B%22onlyReports%22%3Afalse%2C%22order%22%3A%22DESC%22%2C%22slug%22%3A%22{article_name}%22%2C%22date%22%3A%22{date}%22%2C%22buckets%22%3A%5B%22{bucket}%22%5D%2C%22cursorInclusive%22%3Afalse%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22376c5324c94249caa29a66aeb02f8ed7c593ce2d9036098f1ba63a545405c96a%22%7D%7D', cookies=cookies_444, proxies=request_proxies)
     text = '\n'.join([BeautifulSoup(f['content'], features="lxml").text for f in response.json()['data']['crunched'][-1]['content']['body'][0] if isinstance(f, dict) and 'content' in f])
     return text
 
 
 def get_hvg(webid):
     token = os.environ["TOKEN_HVG"]
-    premium_html = requests.get(f'https://api.hvg.hu/web//articles/premiumcontent/?webid={webid}&apiKey=4f67ed9596ac4b11a4b2ac413e7511af', headers={'Authorization': 'Bearer '+token}).content
+    premium_html = requests.get(f'https://api.hvg.hu/web//articles/premiumcontent/?webid={webid}&apiKey=4f67ed9596ac4b11a4b2ac413e7511af', headers={'Authorization': 'Bearer '+token}, proxies=request_proxies).content
     soup = BeautifulSoup(premium_html, features="lxml")
     premium_text = '\n'.join([t.text for t in soup.find_all('p')])
     premium_text = premium_text.replace('A hvg360 tartalma, így a fenti cikk is, olyan érték, ami nem jöhetett volna létre a te előfizetésed nélkül. Ha tetszett az írásunk, akkor oszd meg a minőségi újságírás élményét szeretteiddel is, és ajándékozz hvg360-előfizetést!', '')
