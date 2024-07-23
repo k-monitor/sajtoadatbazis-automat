@@ -11,10 +11,13 @@ from auto_kmdb.entity_linking import (
 from auto_kmdb.Processor import Processor
 from time import sleep
 from auto_kmdb.db import connection_pool
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 import pandas as pd
 import logging
 import torch
 from typing import Literal
+import traceback
 
 
 def join_entities(classifications: list[dir]):
@@ -217,5 +220,9 @@ class NERProcessor(Processor):
         torch.cuda.empty_cache()
         try:
             self.do_process(next_row)
-        except Exception:
+        except Exception as e:
             skip_processing_error(connection, next_row["id"])
+            logging.warn('exception during: '+str(next_row["id"]))
+            logging.error(e)
+            print(traceback.format_exc())
+            logging.error(traceback.format_exc())
