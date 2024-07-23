@@ -170,7 +170,7 @@ class NERProcessor(Processor):
             ]
         return combed_mapping
     
-    
+
     def do_process(self, next_row):
         self.text = next_row["text"]
         self.predict()
@@ -218,4 +218,5 @@ class NERProcessor(Processor):
         try:
             self.do_process(next_row)
         except Exception:
+            logging.warn('skipped artile with exception: '+next_row["id"])
             skip_processing_error(connection, next_row["id"])
