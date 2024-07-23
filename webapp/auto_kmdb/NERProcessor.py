@@ -1,7 +1,7 @@
 from transformers import pipeline, AutoTokenizer
 from auto_kmdb.db import get_ner_queue, add_auto_person, add_auto_institution
 from auto_kmdb.db import add_auto_place, get_all_persons, get_all_institutions
-from auto_kmdb.db import save_ner_step, get_all_places
+from auto_kmdb.db import save_ner_step, get_all_places, skip_processing_error
 from auto_kmdb.entity_linking import (
     get_entities_freq,
     get_mapping,
@@ -169,15 +169,9 @@ class NERProcessor(Processor):
                 | combed_mapping.combed_mapping.notna()
             ]
         return combed_mapping
-
-    def process_next(self):
-        with connection_pool.get_connection() as connection:
-            next_row = get_ner_queue(connection)
-        if next_row is None:
-            sleep(30)
-            return
-        torch.cuda.empty_cache()
-
+    
+    
+    def do_process(self, next_row):
         self.text = next_row["text"]
         self.predict()
 
@@ -212,3 +206,16 @@ class NERProcessor(Processor):
 
         with connection_pool.get_connection() as connection:
             save_ner_step(connection, next_row["id"])
+
+
+    def process_next(self):
+        with connection_pool.get_connection() as connection:
+            next_row = get_ner_queue(connection)
+        if next_row is None:
+            sleep(30)
+            return
+        torch.cuda.empty_cache()
+        try:
+            self.do_process(next_row)
+        except Exception:
+            skip_processing_error(connection, next_row["id"])
