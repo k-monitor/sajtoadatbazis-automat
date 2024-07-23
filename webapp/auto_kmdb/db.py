@@ -444,6 +444,14 @@ def skip_download_error(connection: PooledMySQLConnection, id):
     connection.commit()
 
 
+def skip_processing_error(connection: PooledMySQLConnection, id):
+    query = """UPDATE autokmdb_news SET skip_reason = 4, processing_step = 5
+               WHERE id = %s"""
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query, (id,))
+    connection.commit()
+
+
 def save_classification_step(
     connection: PooledMySQLConnection,
     id,
