@@ -1,9 +1,11 @@
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
+
+warnings.simplefilter(action="ignore", category=FutureWarning)
 import pandas as pd
 import numpy as np
 from typing import Literal, Optional, Sequence
 import spacy
+import logging
 
 nlp = spacy.load(
     "hu_core_news_lg",
@@ -21,6 +23,8 @@ from auto_kmdb.db import (
     get_all_persons_freq,
     get_all_institutions_freq,
     get_all_places_freq,
+    get_all_places,
+    get_all_institutions,
 )
 
 
@@ -38,29 +42,46 @@ def get_synonyms_file(
         Dataframe indexed by aliases and contianing a column 'db_keyword' the alias belongs to.
         Aliases must be unique.
     """
-    if entity_type == "places":
-        synonym_file = pd.read_csv("auto_kmdb/places_synonym.csv", index_col=[0])
-    if entity_type == "institutions":
-        synonym_file = (
-            pd.read_csv("auto_kmdb/institutions_synonym.csv", index_col=[0])
-            .drop(
-                columns=[
-                    "no_detections",
-                    "no_db_keywords",
-                    "number_of_missed_detections",
-                    "címkézési szabály",
-                ]
-            )
-            .T
+    synonym_file = (
+        pd.read_csv(f"auto_kmdb/{entity_type}_synonym.csv", index_col=[0])
+        .drop(
+            columns=[
+                "rész típus",
+                "detected_ent",
+                "no_detections",
+                "no_db_keywords",
+                "number_of_missed_detections",
+                "címkézési szabály",
+            ],
+            errors="ignore",
         )
-
+        .T
+    )
     synonym_mapping = pd.DataFrame(columns=["db_keyword"])
     synonym_mapping.index.name = "entity"
 
+    with connection_pool.get_connection() as connection:
+        if entity_type == "places":
+            db_entities = get_all_places(connection)
+        elif entity_type == "institutions":
+            db_entities = get_all_institutions(connection)
+
+    entity_dict = {}
+    for e in db_entities:
+        entity_dict[e["id"]] = e["name"]
+
     for col in synonym_file.columns:
+        if str(col) == "nan":
+            continue
         synonyms = synonym_file[col].dropna().values
-        for word in synonyms:
-            synonym_mapping.loc[word.strip()] = col.strip()
+
+        db_id = int(col)
+        if db_id in entity_dict:
+            db_keyword = entity_dict[db_id]
+            for word in synonyms:
+                synonym_mapping.loc[word.strip()] = db_keyword
+        else:
+            logging.warn(f"didn't find db_id {db_id} in db.")
     assert synonym_mapping.index.duplicated().sum() == 0
     return synonym_mapping
 
