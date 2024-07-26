@@ -4,8 +4,20 @@
       <p>
         <UBadge class="m-1" color="gray">
           <UTooltip
-            v-if="article.skip_reason > 1"
+            v-if="article.skip_reason == 2"
+            :text="'átvett cikk ' + (article.mod_name ?? '')"
+          >
+            <Icon size="1.5em" name="mdi:alert-circle-outline" color="orange" />
+          </UTooltip>
+          <UTooltip
+            v-else-if="article.skip_reason == 3"
             :text="'letöltési hiba ' + (article.mod_name ?? '')"
+          >
+            <Icon size="1.5em" name="mdi:alert-circle-outline" color="orange" />
+          </UTooltip>
+          <UTooltip
+            v-else-if="article.skip_reason == 4"
+            :text="'feldolgozási hiba ' + (article.mod_name ?? '')"
           >
             <Icon size="1.5em" name="mdi:alert-circle-outline" color="orange" />
           </UTooltip>
