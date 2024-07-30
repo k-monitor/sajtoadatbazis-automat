@@ -1,15 +1,15 @@
 from flask import jsonify, Blueprint, request
 from auto_kmdb.db import get_article, get_articles, annote_negative, connection_pool, force_accept_article
 from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers, get_all_files
-from auto_kmdb.db import check_url_exists, init_news, annote_positive, get_article_counts, validate_session
+from auto_kmdb.db import check_url_exists, init_news, annote_positive, get_article_counts, validate_session, get_keyword_synonyms
 from math import ceil
 import json
 import logging
 from datetime import datetime
 
 
-with open('auto_kmdb/data/keyword_synonyms.json') as f:
-    keyword_synonyms = json.load(f)
+with connection_pool.get_connection() as connection:
+    keyword_synonyms = get_keyword_synonyms(connection)
 
 api = Blueprint('api', __name__, url_prefix='/api')
 
