@@ -1041,6 +1041,14 @@ def get_rss_urls(connection: PooledMySQLConnection):
         return cursor.fetchall()
 
 
+@cache
+def get_keyword_synonyms(connection: PooledMySQLConnection):
+    query = """SELECT synonym, name, db_id FROM autokmdb_keyword_synonyms"""
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query)
+        return cursor.fetchall()
+
+
 def validate_session(connection: PooledMySQLConnection, session_id):
     if "NO_LOGIN" in os.environ:
         return True
