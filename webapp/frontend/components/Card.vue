@@ -7,13 +7,13 @@
             v-if="article.skip_reason > 1"
             :text="'letöltési hiba ' + (article.mod_name ?? '')"
           >
-            <Icon size="1.5em" name="mdi:alert-circle-outline" color="orange" />
+            <Icon size="1.5em" name="mdi:alert-circle-outline" class="text-orange-500" />
           </UTooltip>
           <UTooltip
             v-else-if="article.processing_step < 4"
             :text="'feldolgozás alatt ' + (article.mod_name ?? '')"
           >
-            <Icon size="1.5em" name="mdi:database-clock-outline" color="gray" />
+            <Icon size="1.5em" name="mdi:database-clock-outline" class="text-gray-500" />
           </UTooltip>
           <UTooltip
             v-else-if="
@@ -22,7 +22,7 @@
             "
             :text="'nem illik az adatbázisba ' + (article.mod_name ?? '')"
           >
-            <Icon size="1.5em" name="mdi:window-close" color="gray" />
+            <Icon size="1.5em" name="mdi:window-close" class="text-gray-500" />
           </UTooltip>
           <UTooltip
             v-else-if="
@@ -31,13 +31,13 @@
             "
             :text="'ellenőrizendő ' + (article.mod_name ?? '')"
           >
-            <Icon size="1.5em" name="mdi:question-mark" color="gray" />
+            <Icon size="1.5em" name="mdi:question-mark" class="text-gray-500" />
           </UTooltip>
           <UTooltip
             v-else-if="article.annotation_label == 0"
             :text="'elutasított ' + (article.mod_name ?? '')"
           >
-            <Icon size="1.5em" name="mdi:database-remove-outline" color="red" />
+            <Icon size="1.5em" name="mdi:database-remove-outline" class="text-red-500" />
           </UTooltip>
           <UTooltip
             v-else-if="article.annotation_label == 1"
@@ -46,7 +46,7 @@
             <Icon
               size="1.5em"
               name="mdi:database-check-outline"
-              color="green"
+              class="text-green-500"
             />
           </UTooltip>
         </UBadge>
@@ -402,6 +402,7 @@ function getKeywords(text) {
         found_name: match[0],
         found_position: match.index,
         name: keywordCandidate.name,
+        db_id: keywordCandidate.db_id,
         id: keywordCandidate.db_id,
         classification_label: 0,
       });
@@ -426,7 +427,6 @@ function openModal() {
     $fetch(baseUrl + "/api/article/" + article.value.id, {
       query: {},
       onResponse({ request, response, options }) {
-        console.log(response._data);
         let original = article.value;
         article.value = response._data;
         article.value.original = original;
@@ -445,17 +445,12 @@ function openModal() {
         allOthers.value = mapEntities(keywords);
         article.value.original_date = article.value.article_date;
 
-        console.log("article.value.original_date");
-        console.log(article.value.original_date);
-
         article.value.date = new Date(
           Date.parse(article.value.date)
         ).toLocaleString();
         article.value.article_date = new Date(
           Date.parse(article.value.article_date)
         ).toLocaleString();
-        console.log("allOthers.value");
-        console.log(allOthers.value);
 
         if (article.value.annotation_label == 1) {
           positivePersons.value = allPersons.value.filter(
@@ -645,8 +640,6 @@ function getRichText() {
   let lastIndex = 0;
 
   for (const entity of allEntities) {
-    console.log(entity.found_position);
-    console.log(entity.found_name);
     richText += texthtml.substring(lastIndex, entity.found_position);
     if (entity.etype == "person")
       richText +=
@@ -665,7 +658,7 @@ function getRichText() {
         "</span>";
     else if (entity.etype == "keyword")
       richText +=
-        '<span style="color:orange; font-weight:bold">' +
+        '<span style="background-color:#aaffaa;">' +
         entity.found_name +
         "</span>";
 

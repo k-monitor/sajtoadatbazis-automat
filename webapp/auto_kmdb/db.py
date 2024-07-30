@@ -640,7 +640,7 @@ def get_article_others(cursor, id):
 
 
 def get_article(connection: PooledMySQLConnection, id):
-    query = """SELECT n.id AS id, news_id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, annotation_label, processing_step, skip_reason,
+    query = """SELECT n.id AS id, news_id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason,
             n.text AS text, n.cre_time AS date, category, article_date, u.name AS mod_name FROM autokmdb_news n LEFT JOIN users u ON n.mod_id = u.user_id WHERE id = %s
         """
     with connection.cursor(dictionary=True) as cursor:
