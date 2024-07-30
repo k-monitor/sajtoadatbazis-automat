@@ -16,8 +16,8 @@ RUN wget 'https://huggingface.co/boapps/kmdb-category-classifier/resolve/main/sv
 RUN playwright install firefox
 RUN playwright install-deps
 
-RUN wget 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTzcHYcevHz8G1U8WIfQjDLWnBj2pdNeb4Ekd8l-y-M4ufOjW6TkHxGLsZgHkyI6KPD5D-7pdZ-L2GK/pub?gid=1636309901&single=true&output=csv' -O auto_kmdb/places_synonym.csv
-RUN wget 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTzcHYcevHz8G1U8WIfQjDLWnBj2pdNeb4Ekd8l-y-M4ufOjW6TkHxGLsZgHkyI6KPD5D-7pdZ-L2GK/pub?gid=1261307072&single=true&output=csv' -O auto_kmdb/institutions_synonym.csv
+RUN wget 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTJLsof1CkRQ4hkw_bPSxtbpk5mo1ucUN0iUvZHHEd2SySJLrGOEsGPSbdsQ1JPJOy2ksgvJVPVxuTw/pub?gid=1567624346&single=true&output=csv' -O auto_kmdb/places_synonym.csv
+RUN wget 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTJLsof1CkRQ4hkw_bPSxtbpk5mo1ucUN0iUvZHHEd2SySJLrGOEsGPSbdsQ1JPJOy2ksgvJVPVxuTw/pub?gid=1205893612&single=true&output=csv' -O auto_kmdb/institutions_synonym.csv
 
 ENV DATA_PATH="/data"
 
