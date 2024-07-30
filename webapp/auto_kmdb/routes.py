@@ -8,6 +8,9 @@ import logging
 from datetime import datetime
 
 
+with open('auto_kmdb/data/keyword_synonyms.json') as f:
+    keyword_synonyms = json.load(f)
+
 api = Blueprint('api', __name__, url_prefix='/api')
 
 
@@ -38,6 +41,11 @@ def reformat_article(article):
         article['others'] = []
 
     return article
+
+
+@api.route('/keyword_synonyms', methods=["GET"])
+def get_keyword_synonyms():
+    return jsonify(keyword_synonyms), 200
 
 
 @api.route('/article_counts', methods=["POST"])

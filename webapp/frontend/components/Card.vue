@@ -386,6 +386,38 @@ function mapEntities(entities) {
   return mappedEntities.flatMap((e) => (e.db_id == null ? e.list : [e]));
 }
 
+function getKeywords(text) {
+  function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+  }
+
+  function findAllKeywords(text, keywordCandidate) {
+    const regex = new RegExp(escapeRegExp(keywordCandidate.synonym), 'g');
+    const results = [];
+    let match;
+
+    while ((match = regex.exec(text)) !== null) {
+      results.push({
+        etype: "keyword",
+        found_name: match[0],
+        found_position: match.index,
+        name: keywordCandidate.name,
+        id: keywordCandidate.db_id,
+        classification_label: 0,
+      });
+    }
+
+    return results;
+  }
+
+  const keywordSynonyms = useFetch(baseUrl + "/api/keyword_synonyms").data;
+  let allKeywords = Array();
+  for (const keywordCandidate of keywordSynonyms.value)
+    allKeywords = allKeywords.concat(findAllKeywords(text, keywordCandidate)); 
+
+  return allKeywords;
+}
+
 function openModal() {
   isOpening.value = true;
   if (article.value.isDownloaded) {
@@ -410,7 +442,8 @@ function openModal() {
             !("name" in obj1)
         );
         allPlaces.value = mapEntities(article.value.places);
-        allOthers.value = article.value.others;
+        const keywords = getKeywords(article.value.text);
+        allOthers.value = mapEntities(keywords);
         article.value.original_date = article.value.article_date;
 
         console.log("article.value.original_date");
@@ -596,9 +629,8 @@ function getRichText() {
   allPlaces.forEach((element) => {
     element.etype = "place";
   });
-
   let allEntities = allPersons
-    .concat(allInstitutions, allPlaces)
+    .concat(allInstitutions, allPlaces, allOthers.value)
     .filter(
       (obj1, i, arr) =>
         arr.findIndex((obj2) => obj2.found_position === obj1.found_position) ===
@@ -629,6 +661,11 @@ function getRichText() {
     else if (entity.etype == "place")
       richText +=
         '<span style="color:purple; font-weight:bold">' +
+        entity.found_name +
+        "</span>";
+    else if (entity.etype == "keyword")
+      richText +=
+        '<span style="color:orange; font-weight:bold">' +
         entity.found_name +
         "</span>";
 
