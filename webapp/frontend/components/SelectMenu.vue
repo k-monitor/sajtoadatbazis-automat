@@ -35,7 +35,7 @@
       </template>
       <template #option="{ option }">
         <span class="block truncate">
-          <Icon v-if="option.db_id" name="mdi:database-outline" color="green" />
+          <Icon v-if="option.db_id" name="mdi:database-outline" class="text-green-500" />
           {{
             option.db_name != null
               ? option.db_name
@@ -54,12 +54,12 @@
               option.classification_score != null
             "
             name="mdi:emoticon-devil"
-            color="red"
+            class="text-red-500"
           />
           <Icon
             v-else-if="option.classification_score != null"
             name="mdi:account-cowboy-hat"
-            color="gold"
+            class="text-yellow-500"
           />
           {{ option.classification_score != null ? ")" : "" }}
         </span>
@@ -75,11 +75,6 @@ const handleUpdate = (event) => {
 };
 
 import { distance } from "fastest-levenshtein";
-
-console.log("distance('Tar', 'Katar')");
-console.log(distance("Tar", "Katar"));
-console.log("distance('Tar', 'Tar')");
-console.log(distance("Tar", "Tar"));
 
 function search(q: string) {
   if (q === "") {
