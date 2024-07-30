@@ -410,9 +410,8 @@ function getKeywords(text) {
     return results;
   }
 
-  const keywordSynonyms = useFetch(baseUrl + "/api/keyword_synonyms").data;
   let allKeywords = Array();
-  for (const keywordCandidate of keywordSynonyms.value)
+  for (const keywordCandidate of keywordSynonyms)
     allKeywords = allKeywords.concat(findAllKeywords(text, keywordCandidate)); 
 
   return allKeywords;
@@ -509,7 +508,8 @@ const {
   allLabels,
   allFiles,
   refresh,
-} = defineProps(["article", "allLabels", "allFiles", "refresh"]);
+  keywordSynonyms,
+} = defineProps(["article", "allLabels", "allFiles", "refresh", "keywordSynonyms"]);
 const article = ref(articleValue);
 article.value.text = "";
 article.value.institutions = [];

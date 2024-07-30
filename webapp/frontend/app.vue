@@ -46,6 +46,8 @@ const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
 
 const allLabels = useFetch(baseUrl + "/api/all_labels").data;
+const keywordSynonyms = useFetch(baseUrl + "/api/keyword_synonyms").data;
+
 let allFiles = computed(() =>
   allLabels.value == null ? [] : allLabels.value?.files
 );
@@ -440,6 +442,7 @@ async function addUrl() {
           :key="article.id"
           :article="article"
           :allLabels="allLabels"
+          :keywordSynonyms="keywordSynonyms"
           :allFiles="allFiles"
           :refresh="refreshAll"
         />
