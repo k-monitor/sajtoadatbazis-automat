@@ -40,7 +40,7 @@ def process_article(id, url, source):
         if response.status_code == 403:
             raise Exception('Got 403 forbidden while downloading article.')
         article = newspaper.Article(url=url)
-        article.download(input_html=str(response.content).replace('<br>', '\n'))
+        article.download(input_html=str(response.text).replace('<br>', '\n'))
         article.parse()
     except Exception as e:
         logging.error(e)
