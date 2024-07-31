@@ -36,6 +36,7 @@ let isOpenError = ref(false);
 let errorText = ref("");
 let errorTitle = ref("");
 let reverseSort = ref(false);
+let loginError = ref(false);
 
 const page = ref(1);
 const statusId = ref(0);
@@ -130,7 +131,13 @@ const { data: articleCounts, refresh: refreshArticleCounts } = useLazyFetch(
       q: q,
     },
     onResponse({ request, response, options }) {
-      if (response.status >= 300) {
+      if (response.status == 401) {
+        loginError.value = true;
+        isOpenError.value = true;
+        errorText.value = 'Kérlek, jelentkezz be a K-Monitor Adatbázis admin felületén, majd töltsd újra ezt a lapot!';
+        errorTitle.value = "Hiba";
+      } else if (response.status >= 300) {
+        loginError.value = false;
         isOpenError.value = true;
         errorText.value = response._data.error;
         errorTitle.value = "Hiba " + response.status;
@@ -195,7 +202,13 @@ const {
     q: q,
   },
   onResponse({ request, response, options }) {
-    if (response.status >= 300) {
+    if (response.status == 401) {
+      loginError.value = true;
+      isOpenError.value = true;
+      errorText.value = 'Kérlek, jelentkezz be a K-Monitor Adatbázis admin felületén, majd töltsd újra ezt a lapot!';
+      errorTitle.value = "Hiba";
+    } else if (response.status >= 300) {
+      loginError.value = false;
       isOpenError.value = true;
       errorText.value = response._data.error;
       errorTitle.value = "Hiba " + response.status;
@@ -419,11 +432,12 @@ async function addUrl() {
       </div>
     </UModal>
 
-    <UModal v-model="isOpenError">
+    <UModal v-model="isOpenError" :prevent-close="true">
       <div class="p-4">
         <h1 class="font-bold">{{ errorTitle }}</h1>
         <p class="py-5">{{ errorText }}</p>
-        <UButton @click="isOpenError = false">Bezárás</UButton>
+        <p v-if="loginError"><a href="https://autokmdb.deepdata.hu/admin.php" class="text-blue-700">admin felület</a></p>
+        <UButton v-else @click="isOpenError = false">Bezárás</UButton>
       </div>
     </UModal>
 
