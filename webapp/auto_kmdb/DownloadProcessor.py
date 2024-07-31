@@ -40,7 +40,7 @@ def process_article(id, url, source):
         if response.status_code == 403:
             raise Exception('Got 403 forbidden while downloading article.')
         article = newspaper.Article(url=url)
-        article.download(input_html=response.content)
+        article.download(input_html=str(response.content).replace('<br>', '\n'))
         article.parse()
     except Exception as e:
         logging.error(e)
@@ -67,8 +67,8 @@ def process_article(id, url, source):
     except Exception as e:
         logging.error(e)
 
-    title = do_replacements(title, replacements)
-    text = do_replacements(text, replacements)
+    title = do_replacements(title, replacements).strip()
+    text = do_replacements(text, replacements).strip()
 
     authors = ','.join([a for a in article.authors if ' ' in a])
 
