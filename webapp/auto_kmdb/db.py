@@ -877,6 +877,7 @@ WHERE
         """UPDATE autokmdb_institutions SET annotation_label = 1 WHERE id = %s;"""
     )
     query_pl = """INSERT INTO news_places_link (news_id, place_id) VALUES (%s, %s)"""
+    get_pl_parent = """SELECT parent_id FROM news_places WHERE place_id = %s;"""
     delete_pl = """DELETE FROM news_places_link WHERE news_id = %s"""
     query_auto_pl = """UPDATE autokmdb_places SET annotation_label = 1 WHERE id = %s;"""
     query_others = (
@@ -1004,6 +1005,11 @@ WHERE
             if place["db_id"] not in done_place_ids:
                 cursor.execute(query_pl, (news_id, place["db_id"]))
                 done_place_ids.add(place["db_id"])
+                cursor.execute(get_pl_parent, (place["db_id"],))
+                parent_id = cursor.fetchone()
+                if parent_id:
+                    cursor.execute(query_pl, (news_id, parent_id[0]))
+                    done_place_ids.add(parent_id[0])
             if "id" in place and isinstance(place["id"], int):
                 cursor.execute(query_auto_pl, (place["id"],))
 
