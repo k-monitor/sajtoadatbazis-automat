@@ -150,7 +150,7 @@
             <p>Leírás:</p>
             <UTextarea class="my-2" resize v-model="article.description" />
             <div class="flex justify-between">
-              <p>Szöveg:</p>
+              <p>Szöveg ({{articleLength}}):</p>
               <div class="flex items-center">
                 <p>szerkeszt:</p>
                 <UToggle class="m-2" size="md" color="primary" v-model="edit" />
@@ -529,6 +529,7 @@ const is_active = ref(true);
 let file = ref([]);
 let submitted = ref(false);
 let errorText = ref("");
+let articleLength = computed(() => article.value.text.length)
 
 async function retryArticle() {
   // TODO
