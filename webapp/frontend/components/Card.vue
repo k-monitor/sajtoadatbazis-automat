@@ -533,6 +533,14 @@ let errorText = ref("");
 async function retryArticle() {
   // TODO
 }
+
+function getMethod() {
+  if (article.value.annotation_label == null)
+    return "annote"
+  else
+    return "edit"
+}
+
 async function deleteArticle() {
   await postUrl(baseUrl + "/api/annote/negative", {
     method: "POST",
@@ -567,7 +575,7 @@ async function submitArticle() {
   });
 
   try {
-    await postUrl(baseUrl + "/api/annote/positive", {
+    await $fetch(baseUrl + "/api/"+getMethod()+"/positive", {
       method: "POST",
       body: {
         id: article.value.id,
@@ -585,7 +593,10 @@ async function submitArticle() {
         file_ids: file.value,
         pub_date: article.value.original_date,
       },
-
+      onResponseError({ request, response, options }) {
+        submitted.value = false;
+        errorText.value = response._data.error;
+        },
       onResponse({ request, response, options }) {
         submitted.value = false;
         if (response.status >= 300) {
@@ -599,9 +610,11 @@ async function submitArticle() {
       },
     });
   } catch (error) {
-    submitted.value = false;
-    console.log(error);
-    errorText.value = error;
+    if (submitted.value) {
+      submitted.value = false;
+      console.log(error);
+      errorText.value = error;
+    }
   }
 }
 const isOpen = ref(false);

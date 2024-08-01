@@ -809,6 +809,13 @@ def create_institution(connection, name, user_id):
     return db_id
 
 
+def get_article_annotation(connection, news_id):
+    get_annotation = """SELECT annotation_label FROM autokmdb_news WHERE id = %s;"""
+    with connection.cursor() as cursor:
+        cursor.execute(get_annotation, (news_id,))
+        return cursor.fetchone()[0]
+
+
 def annote_positive(
     connection: PooledMySQLConnection,
     id,

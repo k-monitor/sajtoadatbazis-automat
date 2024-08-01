@@ -1,5 +1,5 @@
 from flask import jsonify, Blueprint, request
-from auto_kmdb.db import get_article, get_articles, annote_negative, connection_pool, force_accept_article
+from auto_kmdb.db import get_article, get_articles, annote_negative, connection_pool, force_accept_article, get_article_annotation
 from auto_kmdb.db import get_all_persons, get_all_institutions, get_all_places, get_all_others, get_all_newspapers, get_all_files
 from auto_kmdb.db import check_url_exists, init_news, annote_positive, get_article_counts, validate_session, get_keyword_synonyms
 from math import ceil
@@ -137,6 +137,7 @@ def force_accept():
 
 
 @api.route('/annote/positive', methods=["POST"])
+@api.route('/edit/positive', methods=["POST"])
 def annote():
     session_id = get_session_id(request)
     with connection_pool.get_connection() as connection:
@@ -145,6 +146,13 @@ def annote():
             return jsonify({'error': 'Nem vagy bejelentkezve!'}), 401
 
     id = request.json['id']
+
+    correct_annotations = {None: '/api/annote/positive', 1: '/api/edit/positive', 0: ''}
+    with connection_pool.get_connection() as connection:
+        annotation_label = get_article_annotation(connection, id)
+    if request.path != correct_annotations[annotation_label]:
+        return jsonify({'error': 'Szerkesztés közben megváltozott a cikk státusza. Kérlek töltsd újra az oldalt!'}), 409
+
     url = request.json['url']
     title = request.json['title']
     description = request.json['description']
