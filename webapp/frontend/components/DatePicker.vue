@@ -40,6 +40,7 @@ const attrs = {
     v-model.range="date"
     :columns="1"
     v-bind="{ ...attrs, ...$attrs }"
+    :max-date="new Date()"
   />
   <VCalendarDatePicker v-else v-model="date" v-bind="{ ...attrs, ...$attrs }" />
 </template>
