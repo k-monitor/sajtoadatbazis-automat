@@ -14,6 +14,7 @@
       multiple
       v-model:query="query"
       @update:model-value="handleUpdate"
+      @keyup="onPress"
     >
       <template #label>
         <span v-if="localPositiveList.length">{{
@@ -75,6 +76,13 @@ const handleUpdate = (event) => {
 };
 
 import { distance } from "fastest-levenshtein";
+
+const onPress = (e) => {
+  if (e.keyCode <= 64) // don't do anything if tab/enter/etc is pressed
+    return;
+  e.target.click(); // open the select menu by clicking the focused button
+  query.value = e.key; // add the pressed key to the search query
+};
 
 function search(q: string) {
   if (q === "") {
