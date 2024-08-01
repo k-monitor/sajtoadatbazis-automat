@@ -1,7 +1,7 @@
 <template>
   <div class="p-4">
     <div class="max-w-2xl w-full rounded overflow-hidden shadow-lg mb-4 p-4">
-      <p>
+      <p class="inline">
         <UBadge class="m-1" color="gray">
           <UTooltip
             v-if="article.skip_reason == 2"
@@ -67,7 +67,7 @@
         }}</a>
 
       </p>
-      <UBadge class="m-1" color="blue"> {{ article.newspaper_name }} </UBadge>
+      <UButton class="m-1 px-2 py-1 inline" color="blue" @click="() => $emit('update:filter_newspaper', {name: article.newspaper_name, id: article.newspaper_id})"> {{ article.newspaper_name }} </UButton>
       <UBadge v-if="article.source == 1" class="m-1" color="orange">
         manuálisan hozzáadott
       </UBadge>

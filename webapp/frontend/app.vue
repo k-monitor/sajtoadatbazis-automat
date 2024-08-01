@@ -241,6 +241,10 @@ function refreshAll() {
   refresh();
 }
 
+function filterNewspaper(selectedNewspaper) {
+  selectedDomains.value = [selectedNewspaper]
+}
+
 function openNewUrl() {
   newUrl = "";
   isOpen.value = true;
@@ -459,6 +463,7 @@ async function addUrl() {
           :keywordSynonyms="keywordSynonyms"
           :allFiles="allFiles"
           :refresh="refreshAll"
+          @update:filter_newspaper="filterNewspaper"
         />
         <UPagination
           class="p-4 justify-center"
