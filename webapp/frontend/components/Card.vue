@@ -73,12 +73,9 @@
       </UBadge>
       <p class="text-base text-pretty">{{ article.description }}</p>
       <p class="text-base text-right py-1">{{ article.date }}</p>
-      <UButton v-if="article.skip_reason > 1" color="grey" @click="retryArticle"
-        >Újra</UButton
-      >
       <UContainer
-        v-else-if="
-          article.processing_step >= 4 && article.classification_label != 0
+        v-if="
+          article.processing_step >= 4 && article.skip_reason == null
         "
         class="flex justify-between px-0 sm:px-0 lg:px-0"
       >
@@ -124,15 +121,18 @@
           }}</UButton
         >
       </UContainer>
-      <UButton
-        v-else-if="
-          article.processing_step == 4 && article.classification_label == 0
-        "
-        @click="forceAccept"
-        class="ml-auto"
-        color="purple"
-        >{{ "Mégis feldolgoz" }}</UButton
-      >
+      <div class="flex justify-between">
+        <UButton v-if="article.skip_reason >= 1" color="orange" @click="retryArticle">Újra feldolgoz</UButton>
+        <UButton
+          v-if="
+            (article.skip_reason >= 1)
+          "
+          @click="forceAccept"
+          class="ml-auto r-0"
+          color="purple"
+          >{{ "Szerkesztésre küld" }}</UButton
+        >
+      </div>
     </div>
     <UModal v-model="isOpen" :ui="{ width: 'sm:max-w-7xl' }">
       <div class="p-4 w-full">
