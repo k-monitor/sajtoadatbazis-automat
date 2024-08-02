@@ -720,9 +720,9 @@ def get_articles(
 
 
 def force_accept_article(connection: PooledMySQLConnection, id, user_id):
-    query = """UPDATE autokmdb_news SET classification_label = 1, processing_step = 2, source = 1, mod_id = %s WHERE id = %s;"""
+    query = """UPDATE autokmdb_news SET classification_label = 1, processing_step = 4, skip_reason = NULL, source = 1, mod_id = %s WHERE id = %s;"""
     with connection.cursor() as cursor:
-        cursor.execute(query, (id, user_id))
+        cursor.execute(query, (user_id, id))
     connection.commit()
 
 
