@@ -681,9 +681,9 @@ def get_articles(
         LEFT JOIN users u ON n.mod_id = u.user_id
         """
     group = (
-        " GROUP BY id ORDER BY source DESC, n.mod_time "+('ASC' if reverse else 'DESC')
+        " GROUP BY id ORDER BY source DESC, n.article_date "+('ASC' if reverse else 'DESC')
         if status != "positive"
-        else " GROUP BY id ORDER BY n.mod_time "+('ASC' if reverse else 'DESC')
+        else " GROUP BY id ORDER BY n.article_date "+('ASC' if reverse else 'DESC')
     )
 
     if status == "mixed":
