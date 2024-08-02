@@ -13,7 +13,7 @@ def clear_url(url):
         str: The cleared URL.
     """
     u = urlparse(url)
-    return u.scheme + '://' + u.netloc + '/' + u.path.replace('www.', '').strip('/')
+    return 'https://' + u.netloc + '/' + u.path.replace('www.', '').strip('/')
 
 
 def read_file(filename):
