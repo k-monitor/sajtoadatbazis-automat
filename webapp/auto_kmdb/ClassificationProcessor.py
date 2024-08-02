@@ -1,5 +1,5 @@
 from auto_kmdb.Processor import Processor
-from auto_kmdb.db import get_classification_queue, save_classification_step
+from auto_kmdb.db import get_classification_queue, save_classification_step, skip_processing_error
 from time import sleep
 from transformers import BertForSequenceClassification, BertTokenizer
 import torch.nn.functional as F
@@ -8,6 +8,7 @@ from joblib import load
 import torch
 import logging
 import gc
+import traceback
 
 
 article_classification_prompt = '''{title}
@@ -57,16 +58,22 @@ class ClassificationProcessor(Processor):
         self.text = article_classification_prompt.format(title=next_row['title'], description=next_row['description'])
         self.article_text = next_row['text']
 
-        self.predict()
-
-        if next_row['source'] == 1:
+        try:
+            self.predict()
+            if next_row['source'] == 1:
+                with connection_pool.get_connection() as connection:
+                    save_classification_step(connection, next_row['id'], 1, 1.0, self.category)
+            else:
+                with connection_pool.get_connection() as connection:
+                    save_classification_step(connection, next_row['id'], self.label, self.score, self.category)
+            del self.output
+        except Exception as e:
             with connection_pool.get_connection() as connection:
-                save_classification_step(connection, next_row['id'], 1, 1.0, self.category)
-            return
+                skip_processing_error(connection, next_row["id"])
+            logging.warn('exception during: '+str(next_row["id"]))
+            logging.error(e)
+            print(traceback.format_exc())
+            logging.error(traceback.format_exc())
 
-        with connection_pool.get_connection() as connection:
-            save_classification_step(connection, next_row['id'], self.label, self.score, self.category)
-
-        del self.output
         torch.cuda.empty_cache()
         gc.collect()
