@@ -319,7 +319,7 @@ async function addUrl() {
           >
             <template #option="{ option }">
               <span
-                ><Icon v-if="option.has_rss" name="mdi:rss" color="orange" />
+                ><Icon v-if="option.has_rss" name="mdi:rss" class="text-yellow-500" />
                 {{ option.name }}</span
               >
             </template>
