@@ -137,6 +137,7 @@ def force_accept():
 
 
 @api.route('/annote/positive', methods=["POST"])
+@api.route('/change/positive', methods=["POST"])
 @api.route('/edit/positive', methods=["POST"])
 def annote():
     session_id = get_session_id(request)
@@ -147,7 +148,7 @@ def annote():
 
     id = request.json['id']
 
-    correct_annotations = {None: '/api/annote/positive', 1: '/api/edit/positive', 0: ''}
+    correct_annotations = {None: '/api/annote/positive', 1: '/api/edit/positive', 0: '/api/change/positive'}
     with connection_pool.get_connection() as connection:
         annotation_label = get_article_annotation(connection, id)
     if request.path != correct_annotations[annotation_label]:

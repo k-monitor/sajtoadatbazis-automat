@@ -124,9 +124,7 @@
       <div class="flex justify-between">
         <UButton v-if="article.skip_reason >= 1" color="orange" @click="retryArticle">Újra feldolgoz</UButton>
         <UButton
-          v-if="
-            (article.skip_reason >= 1)
-          "
+          v-if="(article.skip_reason >= 1)"
           @click="forceAccept"
           class="ml-auto r-0"
           color="purple"
@@ -538,8 +536,10 @@ async function retryArticle() {
 function getMethod() {
   if (article.value.annotation_label == null)
     return "annote"
-  else
+  else if (article.value.annotation_label == 1)
     return "edit"
+  else if (article.value.annotation_label == 0)
+    return "change"
 }
 
 async function deleteArticle() {
