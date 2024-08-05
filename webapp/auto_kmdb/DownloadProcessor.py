@@ -33,7 +33,7 @@ def get_custom_text(url, html):
             return paper.get_text(url, html)
 
 
-def process_article(id, url, source):
+def process_article(id, url, source, newspaper_id):
     try:
         headers = {'User-Agent': 'autokmdb'}
         response = requests.get(url, headers=headers, cookies=cookies_24, proxies=request_proxies)
@@ -87,7 +87,7 @@ def process_article(id, url, source):
     else:
         date = None
 
-    if same_news(title, description, text) and source != 1:
+    if same_news(title, description, text) and same_news(title, description, text) != newspaper_id and source != 1:
         with connection_pool.get_connection() as connection:
             skip_same_news(connection, id, text, title, description, authors, date, is_paywalled)
     else:
@@ -214,4 +214,4 @@ class DownloadProcessor(Processor):
             sleep(30)
             return
         logging.info('download processor is processing: ' + next_row['url'])
-        process_article(next_row['id'], next_row['url'], next_row['source'])
+        process_article(next_row['id'], next_row['url'], next_row['source'], next_row['newspaper_id'])

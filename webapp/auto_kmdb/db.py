@@ -477,7 +477,7 @@ def get_retries_from(connection, date):
 
 def get_step_queue(connection, step):
     fields = {
-        0: "clean_url AS url, source",
+        0: "clean_url AS url, source, newspaper_id",
         1: "title, description, text, source",
         2: "text",
         3: "text",
