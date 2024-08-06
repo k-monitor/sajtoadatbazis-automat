@@ -495,6 +495,14 @@ function openModal() {
           );
         }
 
+        article.value.institutions = article.value.institutions??[];
+        article.value.persons = article.value.persons??[];
+        article.value.places = article.value.places??[];
+        article.value.others = article.value.others??[];
+        article.value.text = article.value.text??"";
+        article.value.title = article.value.title??"";
+        article.value.description = article.value.description??"";
+
         category.value = article.value.category;
         richText.value = getRichText();
         isOpen.value = true;
@@ -527,7 +535,7 @@ const is_active = ref(true);
 let file = ref([]);
 let submitted = ref(false);
 let errorText = ref("");
-let articleLength = computed(() => article.value.text.length)
+let articleLength = computed(() => (article.value.text??"").length)
 
 async function retryArticle() {
   // TODO
@@ -625,7 +633,7 @@ article.value.date = new Date(Date.parse(article.value.date)).toLocaleString();
 // article.value.article_date = new Date(Date.parse(article.value.article_date)).toLocaleString()
 
 function getRichText() {
-  let texthtml = article.value.text;
+  let texthtml = article.value.text ?? '';
 
   let allPersons = article.value.persons
     .filter((obj) => obj.found_position)
