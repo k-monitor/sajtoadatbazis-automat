@@ -250,15 +250,45 @@ function openNewUrl() {
   isOpen.value = true;
 }
 
-async function deleteArticles() {
-  console.log("hello");
-  console.log(articles.value[0].selected);
+const items = [
+  [
+    {
+      label: "Nem releváns",
+      slot: "item",
+      click: async () => deleteArticles(0),
+    },
+    {
+      label: "Átvett",
+      slot: "item",
+      click: async () => deleteArticles(1),
+    },
+    {
+      label: "Már szerepel",
+      slot: "item",
+      click: async () => deleteArticles(3),
+    },
+    {
+      label: "Külföldi",
+      slot: "item",
+      click: async () => deleteArticles(2),
+    },
+    {
+      label: "Egyéb",
+      slot: "item",
+      click: async () => deleteArticles(100),
+    },
+  ],
+];
+
+async function deleteArticles(reason) {
+  console.debug(articles.value[0].selected);
+  console.debug(reason);
   loadingDelete.value = true;
   for (const article of articles.value) {
     if (article.selected) {
       await $fetch(baseUrl + "/api/annote/negative", {
         method: "POST",
-        body: { id: article.id, reason: 0 },
+        body: { id: article.id, reason: reason },
       });
     }
   }
@@ -399,18 +429,18 @@ async function addUrl() {
           variant="outline"
           placeholder="Keresés..."
         />
-        <UButton
-          class="right-5 bottom-5 fixed z-10 my-1"
-          v-if="articles && articles.some((v) => v.selected)"
-          color="red"
-          :loading="loadingDelete"
-          @click="deleteArticles"
-          >{{
-            "Kijelöltet elutasít (" +
-            articles.filter((v) => v.selected).length +
-            ")"
-          }}</UButton
-        >
+        <UDropdown class="left-5 bottom-5 fixed z-10 my-1" label="Elutasít" :items="items"
+          :popper="{ placement: 'bottom-end' }" v-if="articles && articles.some((v) => v.selected)">
+          <UButton
+            color="red"
+            :label="'Kijelöltet elutasít (' + articles.filter((v) => v.selected).length + ')'"
+            trailing-icon="i-heroicons-chevron-down-20-solid"
+            :loading="loadingDelete"
+            />
+          <template #item="{ item }">
+            <span class="">{{ item.label }}</span>
+          </template>
+        </UDropdown>
       </UContainer>
     </UContainer>
 
