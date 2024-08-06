@@ -127,19 +127,19 @@
       <div class="p-4 w-full">
         <div class="my-2 flex justify-center px-0 sm:px-0 lg:px-0 flex-wrap">
           <div class="max-w-2xl mx-4 flex-grow">
-            <p>Cím:</p>
+            <p class="font-bold">Cím:</p>
             <UTextarea
               class="my-2 min-h-0"
               rows="1"
               autoresize
               v-model="article.title"
             />
-            <p>URL:</p>
+            <p class="font-bold">URL:</p>
             <UInput class="my-2" v-model="article.url" />
-            <p>Leírás:</p>
+            <p class="font-bold">Leírás:</p>
             <UTextarea class="my-2" resize v-model="article.description" />
             <div class="flex justify-between">
-              <p>Szöveg ({{articleLength}}):</p>
+              <p class="font-bold">Szöveg ({{articleLength}}):</p>
               <div class="flex items-center">
                 <p>szerkeszt:</p>
                 <UToggle class="m-2" size="md" color="primary" v-model="edit" />
@@ -189,15 +189,17 @@
               @update:positiveList="updatePositiveOthers"
               :labels="allLabels['keywords']"
             />
-            <p>Kategória:</p>
+            <p class="font-bold">Kategória:</p>
             <USelect
+              class="my-2"
               v-model="category"
               :options="categories"
               option-attribute="name"
               value-attribute="id"
             />
-            <p>Akta:</p>
+            <p class="font-bold">Akta:</p>
             <USelectMenu
+              class="my-2"
               searchable
               multiple
               :search-attributes="['name']"
@@ -230,7 +232,7 @@
             </UButton>
           </div>
         </div>
-        <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
+        <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0 mx-4">
           <UButton color="gray" @click="closeModal">Mégse</UButton>
 
           <div class="my-2 flex justify-between">
@@ -244,12 +246,9 @@
                 <span class="">{{ item.label }}</span>
               </template>
             </UDropdown>
-            <UCheckbox
-              class="mx-5"
-              size="xl"
-              v-model="is_active"
-              label="Aktív"
-            />
+            <div class="mx-4 flex">
+              <p class="mr-2 my-auto">Aktív: </p><UToggle class="my-auto" v-model="is_active" />
+            </div>
             <UButton @click="submitArticle" :loading="submitted"
               >Elfogad</UButton
             >

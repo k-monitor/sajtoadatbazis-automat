@@ -1,6 +1,6 @@
 <template>
   <div>
-    <p style="text-transform: capitalize">{{ type }}:</p>
+    <p  class="font-bold" style="text-transform: capitalize">{{ type }}:</p>
     <USelectMenu
       @close="() => $emit('update:positiveList', localPositiveList)"
       :searchable="search"
