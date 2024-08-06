@@ -5,6 +5,7 @@ from contextlib import closing
 from datetime import datetime
 from slugify import slugify
 import logging
+from datetime import datetime, timedelta
 
 connection_pool = MySQLConnectionPool(
     pool_name="cnx_pool",
@@ -1062,6 +1063,16 @@ def get_keyword_synonyms(connection: PooledMySQLConnection):
         return cursor.fetchall()
 
 
+def update_session(connection: PooledMySQLConnection, session_id, unix_timestamp):
+    query = """UPDATE users_sessions SET session_expires = %s WHERE session_id = %s"""
+    dt = datetime.fromtimestamp(unix_timestamp)
+    new_dt = dt + timedelta(minutes=30)
+    new_unix_timestamp = int(new_dt.timestamp())
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query, (new_unix_timestamp, session_id))
+    connection.commit()
+
+
 def validate_session(connection: PooledMySQLConnection, session_id):
     if "NO_LOGIN" in os.environ:
         return True
@@ -1071,6 +1082,9 @@ def validate_session(connection: PooledMySQLConnection, session_id):
         session = cursor.fetchone()
     if session is None or session["registered"] == 0:
         return None
+
+    update_session(connection, session_id, session['session_expires'])
+
     return session["registered"]
 
 
