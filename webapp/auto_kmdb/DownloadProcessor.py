@@ -13,13 +13,14 @@ from auto_kmdb.db import get_retries_from
 from datetime import datetime, timedelta
 from playwright.sync_api import sync_playwright
 from auto_kmdb.newspapers.Telex import Telex
+from auto_kmdb.newspapers.Atv import Atv
 from zoneinfo import ZoneInfo
 
 jeti_session = ''
 gateway_session = ''
 cookies_24 = {}
 cookies_444 = {}
-newspapers = [Telex()]
+newspapers = [Telex(), Atv()]
 proxy_host = os.environ["MYSQL_HOST"]
 request_proxies = {
     'http': 'socks5://'+proxy_host+':1080',
@@ -31,6 +32,12 @@ def get_custom_text(url, html):
     for paper in newspapers:
         if paper.is_url_this(url, html):
             return paper.get_text(url, html)
+
+
+def get_custom_description(url, html):
+    for paper in newspapers:
+        if paper.is_url_this(url, html):
+            return paper.get_description(url, html)
 
 
 def process_article(id, url, source, newspaper_id):
@@ -63,7 +70,6 @@ def process_article(id, url, source, newspaper_id):
         custom_text = get_custom_text(url, article.html)
         if custom_text:
             text = custom_text
-            print(text)
     except Exception as e:
         logging.error(e)
 
@@ -75,6 +81,14 @@ def process_article(id, url, source, newspaper_id):
     description = article.meta_description
     for common_description in common_descriptions:
         description = description.replace(common_description.strip(), '')
+
+    try:
+        custom_description = get_custom_description(url, article.html)
+        if custom_description:
+            description = custom_description
+            print(description)
+    except Exception as e:
+        logging.error(e)
 
     if len(description) < 1 and text.count('\n') > 1:
         sl = text.splitlines()[0]

@@ -8,5 +8,8 @@ class Newspaper:
     def get_text(self, url, html):
         pass
 
+    def get_description(self, url, html):
+        pass
+
     def get_feed(self):
         pass
