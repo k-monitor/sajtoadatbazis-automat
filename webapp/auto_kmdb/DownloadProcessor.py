@@ -86,7 +86,6 @@ def process_article(id, url, source, newspaper_id):
         custom_description = get_custom_description(url, article.html)
         if custom_description:
             description = custom_description
-            print(description)
     except Exception as e:
         logging.error(e)
 
@@ -100,7 +99,6 @@ def process_article(id, url, source, newspaper_id):
         date = article.publish_date.astimezone(timezone.utc)
     else:
         date = None
-    print(date, url)
 
     if same_news(title, description, text) and same_news(title, description, text) != newspaper_id and source != 1:
         with connection_pool.get_connection() as connection:
