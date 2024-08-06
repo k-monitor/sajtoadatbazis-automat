@@ -79,10 +79,10 @@
         "
         class="flex justify-between px-0 sm:px-0 lg:px-0"
       >
-        <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }" v-if="article.annotation_label != 0">
+        <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }" v-if="true">
           <UButton
             color="red"
-            :label="article.annotation_label == null ? 'Elutasít' : 'Mégis elutasít'"
+            :label="article.annotation_label == null ? 'Elutasít' : article.annotation_label == 1 ? 'Mégis elutasít' : reasons[article.negative_reason.toString()]"
             trailing-icon="i-heroicons-chevron-down-20-solid"
           />
           <template #item="{ item }">
@@ -289,6 +289,8 @@ function selected() {
   article.value.selected = selection.value;
   if (article.value.original) article.value.original.selected = selection.value;
 }
+
+const reasons = {'0': 'Nem releváns', '1': 'Átvett', '2': 'Külföldi', '3': 'Már szerepel', '100': 'Egyéb'}
 
 const items = [
   [
