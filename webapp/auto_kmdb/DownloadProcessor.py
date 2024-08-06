@@ -14,7 +14,7 @@ from datetime import datetime, timedelta
 from playwright.sync_api import sync_playwright
 from auto_kmdb.newspapers.Telex import Telex
 from auto_kmdb.newspapers.Atv import Atv
-from zoneinfo import ZoneInfo
+from datetime import timezone
 
 jeti_session = ''
 gateway_session = ''
@@ -97,9 +97,10 @@ def process_article(id, url, source, newspaper_id):
             description = sl[:400]
 
     if article.publish_date:
-        date = article.publish_date.astimezone(ZoneInfo("Europe/Budapest"))
+        date = article.publish_date.astimezone(timezone.utc)
     else:
         date = None
+    print(date, url)
 
     if same_news(title, description, text) and same_news(title, description, text) != newspaper_id and source != 1:
         with connection_pool.get_connection() as connection:
