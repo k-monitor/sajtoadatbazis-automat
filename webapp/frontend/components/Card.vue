@@ -79,25 +79,16 @@
         "
         class="flex justify-between px-0 sm:px-0 lg:px-0"
       >
-        <UButtonGroup
-          v-if="article.annotation_label != 0"
-          size="sm"
-          orientation="horizontal"
-        >
-          <UButton color="red" @click="deleteArticle">{{
-            article.annotation_label == null ? "Elutasít" : "Mégis elutasít"
-          }}</UButton>
-          <UDropdown :items="items" :popper="{ placement: 'bottom-end' }">
-            <UButton
-              color="white"
-              label=""
-              trailing-icon="i-heroicons-chevron-down-20-solid"
-            />
-            <template #item="{ item }">
-              <span class="">{{ item.label }}</span>
-            </template>
-          </UDropdown>
-        </UButtonGroup>
+        <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }" v-if="article.annotation_label != 0">
+          <UButton
+            color="red"
+            :label="article.annotation_label == null ? 'Elutasít' : 'Mégis elutasít'"
+            trailing-icon="i-heroicons-chevron-down-20-solid"
+          />
+          <template #item="{ item }">
+            <span class="">{{ item.label }}</span>
+          </template>
+        </UDropdown>
         <UCheckbox
           v-if="article.annotation_label != 0"
           @change="selected"
@@ -243,25 +234,16 @@
           <UButton color="gray" @click="closeModal">Mégse</UButton>
 
           <div class="my-2 flex justify-between">
-            <UButtonGroup
-              v-if="article.annotation_label != 0"
-              size="sm"
-              orientation="horizontal"
-            >
-              <UButton color="red" @click="deleteArticle">{{
-                article.annotation_label == null ? "Elutasít" : "Mégis elutasít"
-              }}</UButton>
-              <UDropdown :items="items" :popper="{ placement: 'bottom-end' }">
-                <UButton
-                  color="white"
-                  label=""
-                  trailing-icon="i-heroicons-chevron-down-20-solid"
-                />
-                <template #item="{ item }">
-                  <span class="">{{ item.label }}</span>
-                </template>
-              </UDropdown>
-            </UButtonGroup>
+            <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }" v-if="article.annotation_label != 0">
+              <UButton
+                color="red"
+                :label="article.annotation_label == null ? 'Elutasít' : 'Mégis elutasít'"
+                trailing-icon="i-heroicons-chevron-down-20-solid"
+              />
+              <template #item="{ item }">
+                <span class="">{{ item.label }}</span>
+              </template>
+            </UDropdown>
             <UCheckbox
               class="mx-5"
               size="xl"
@@ -310,6 +292,17 @@ function selected() {
 
 const items = [
   [
+  {
+      label: "Nem releváns",
+      slot: "item",
+      click: async () => {
+        await postUrl(baseUrl + "/api/annote/negative", {
+          method: "POST",
+          body: { id: article.value.id, reason: 0 },
+        });
+        refresh();
+      },
+    },
     {
       label: "Átvett",
       slot: "item",
