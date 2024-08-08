@@ -838,7 +838,7 @@ def annote_positive(
 ):
     query_0 = """SELECT news_id FROM autokmdb_news WHERE id = %s LIMIT 1"""
     query_1 = """UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s, title = %s, description = %s, text = %s, mod_id = %s WHERE id = %s;"""
-    query_2 = """INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id, status) VALUES (%s, %s, %s, %s, %s, %s, %s, %s);"""
+    query_2 = """INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id, status, news_type, news_rel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, "P", "N");"""
     query_2_update = """UPDATE news_news
 SET
     source_url = %s,
@@ -880,6 +880,7 @@ WHERE
     delete_p = """DELETE FROM news_persons_link WHERE news_id = %s"""
     query_auto_p = """UPDATE autokmdb_persons SET annotation_label = 1 WHERE id = %s;"""
     query_i = """INSERT INTO news_institutions_link (news_id, institution_id) VALUES (%s, %s)"""
+    delete_seo = """DELETE FROM seo_urls_data WHERE item_id = %s"""
     delete_i = """DELETE FROM news_institutions_link WHERE news_id = %s"""
     query_auto_i = (
         """UPDATE autokmdb_institutions SET annotation_label = 1 WHERE id = %s;"""
@@ -894,6 +895,8 @@ WHERE
     delete_others = """DELETE FROM news_others_link WHERE news_id = %s;"""
     query_file = """INSERT INTO news_files_link (news_id, file_id) VALUES (%s, %s)"""
     delete_file = """DELETE FROM news_files_link WHERE news_id = %s;"""
+
+    seo_query = """INSERT INTO seo_urls_data (seo_url, modul, action, item_id, lang) VALUES (%s, "news", "view", %s, "hu")"""
 
     current_datetime = datetime.now()
     cre_time = int(current_datetime.timestamp())
@@ -938,6 +941,13 @@ WHERE
             )
             news_id = cursor.lastrowid
         cursor.execute(query_1, (news_id, title, description, text, user_id, id))
+
+        try:
+            cursor.execute(delete_seo, (news_id,))
+        except Exception as e:
+            pass
+
+        cursor.execute(seo_query, (seo_url_default, news_id))
 
         if is_update:
             cursor.execute(
