@@ -1025,7 +1025,7 @@ WHERE
                 done_place_ids.add(place["db_id"])
                 cursor.execute(get_pl_parent, (place["db_id"],))
                 parent_id = cursor.fetchone()
-                if parent_id:
+                if parent_id and parent_id[0]:
                     cursor.execute(query_pl, (news_id, parent_id[0]))
                     done_place_ids.add(parent_id[0])
             if "id" in place and isinstance(place["id"], int):
