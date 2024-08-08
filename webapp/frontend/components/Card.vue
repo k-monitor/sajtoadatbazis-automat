@@ -5,25 +5,25 @@
         <UBadge class="m-1 inline p-2" color="gray">
           <UTooltip
             v-if="article.skip_reason == 2"
-            :text="'átvett cikk ' + (article.mod_name ?? '')"
+            :text="'átvett cikk'"
           >
             <Icon size="1.2em" name="mdi:alert-circle-outline" color="orange" />
           </UTooltip>
           <UTooltip
             v-else-if="article.skip_reason == 3"
-            :text="'letöltési hiba ' + (article.mod_name ?? '')"
+            :text="'letöltési hiba'"
           >
             <Icon size="1.2em" name="mdi:alert-circle-outline" class="text-orange-500" />
           </UTooltip>
           <UTooltip
             v-else-if="article.skip_reason == 4"
-            :text="'feldolgozási hiba ' + (article.mod_name ?? '')"
+            :text="'feldolgozási hiba'"
           >
             <Icon size="1.2em" name="mdi:alert-circle-outline" color="orange" />
           </UTooltip>
           <UTooltip
             v-else-if="article.processing_step < 4"
-            :text="'feldolgozás alatt ' + (article.mod_name ?? '')"
+            :text="'feldolgozás alatt'"
           >
             <Icon size="1.2em" name="mdi:database-clock-outline" class="text-gray-500" />
           </UTooltip>
@@ -32,7 +32,7 @@
               article.annotation_label == null &&
               article.classification_label == 0
             "
-            :text="'nem illik az adatbázisba ' + (article.mod_name ?? '')"
+            :text="'nem illik az adatbázisba'"
           >
             <Icon size="1.2em" name="mdi:window-close" class="text-gray-500" />
           </UTooltip>
@@ -41,19 +41,19 @@
               article.annotation_label == null &&
               article.classification_label == 1
             "
-            :text="'ellenőrizendő ' + (article.mod_name ?? '')"
+            :text="article.mod_name ? ('ellenőrizendő, hozzáadta: ' + article.mod_name) : 'ellenőrizendő'"
           >
             <Icon size="1.2em" name="mdi:question-mark" class="text-gray-500" />
           </UTooltip>
           <UTooltip
             v-else-if="article.annotation_label == 0"
-            :text="'elutasított ' + (article.mod_name ?? '')"
+            :text="'elutasított : ' + (article.mod_name ?? '') + ' : ' + reasons[article.negative_reason.toString()]"
           >
             <Icon size="1.2em" name="mdi:database-remove-outline" class="text-red-500" />
           </UTooltip>
           <UTooltip
             v-else-if="article.annotation_label == 1"
-            :text="'elfogadott ' + (article.mod_name ?? '')"
+            :text="'elfogadott : ' + (article.mod_name ?? '')"
           >
             <Icon
               size="1.2em"
