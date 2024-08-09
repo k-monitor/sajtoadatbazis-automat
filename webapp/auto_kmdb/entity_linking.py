@@ -1,4 +1,6 @@
 import warnings
+from functools import cache
+import gc
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
 import pandas as pd
@@ -28,6 +30,7 @@ from auto_kmdb.db import (
 )
 
 
+@cache
 def get_synonyms_file(
     entity_type: Literal["places", "institutions"] = "places"
 ) -> pd.DataFrame:
@@ -85,7 +88,7 @@ def get_synonyms_file(
     assert synonym_mapping.index.duplicated().sum() == 0
     return synonym_mapping
 
-
+@cache
 def get_entities_freq(
     type: Literal["people", "places", "institutions"]
 ) -> pd.DataFrame:
@@ -282,7 +285,9 @@ def get_mapping(
             if synonym_mapping is not None
             else None
         )
-
+    del detected_entities
+    del keyword_list
+    gc.collect()
     return mapping.replace("", np.NAN)
 
 
@@ -367,5 +372,7 @@ def comb_mappings(
     mapping.loc[mapping["combed_mapping"].notna(), "keyword_id"] = keywords.loc[
         mapping.loc[mapping["combed_mapping"].notna(), "combed_mapping"], "id"
     ].values
+    del keywords
+    gc.collect()
 
     return mapping.replace(np.nan, None)

@@ -18,6 +18,7 @@ import logging
 import torch
 from typing import Literal
 import traceback
+import gc
 
 
 def join_entities(classifications: list[dir]):
@@ -171,6 +172,12 @@ class NERProcessor(Processor):
                 [(len(x.split(" ")) > 1) for x in combed_mapping.detected_ent]
                 | combed_mapping.combed_mapping.notna()
             ]
+
+        del mapping
+        del keywords
+        del synonym_mapping
+        gc.collect()
+
         return combed_mapping
     
     
@@ -206,6 +213,9 @@ class NERProcessor(Processor):
                             str(entity_infos.loc["score"]),
                             str(entity_infos.loc["class"]),
                         )
+                del mapping
+                gc.collect()
+
 
         with connection_pool.get_connection() as connection:
             save_ner_step(connection, next_row["id"])

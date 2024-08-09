@@ -46,6 +46,7 @@ class ClassificationProcessor(Processor):
             self.label = 1 if self.score > 0.42 else 0
 
             self.category = int(self.svm_classifier.predict([cls_embedding])[0])
+            del inputs, logits, probabilities
 
     def process_next(self):
         with connection_pool.get_connection() as connection:
