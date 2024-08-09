@@ -630,7 +630,7 @@ function getRichText() {
   let texthtml = article.value.text ?? '';
 
   let allPersons = article.value.persons
-    .filter((obj) => obj.found_position)
+    .filter((obj) => obj.found_position != null)
     .map((person) => person.list ?? [person])
     .flat();
   allPersons.forEach((element) => {
@@ -638,7 +638,7 @@ function getRichText() {
   });
 
   let allInstitutions = article.value.institutions
-    .filter((obj) => obj.found_position)
+    .filter((obj) => obj.found_position != null)
     .map((person) => person.list ?? [person])
     .flat();
   allInstitutions.forEach((element) => {
@@ -646,7 +646,7 @@ function getRichText() {
   });
 
   let allPlaces = article.value.places
-    .filter((obj) => obj.found_position)
+    .filter((obj) => obj.found_position != null)
     .map((person) => person.list ?? [person])
     .flat();
   allPlaces.forEach((element) => {
