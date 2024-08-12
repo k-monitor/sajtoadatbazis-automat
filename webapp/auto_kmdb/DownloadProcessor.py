@@ -210,7 +210,7 @@ def do_retries(app_context):
         rows = get_retries_from(connection, formatted_date)
     for row in rows:
         logging.info('retrying: ' + row['url'])
-        process_article(row['id'], row['url'], row['source'])
+        process_article(row['id'], row['url'], row['source'], row['newspaper_id'])
         sleep(3)
 
 

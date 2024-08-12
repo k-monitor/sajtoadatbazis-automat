@@ -470,7 +470,7 @@ def save_classification_step(
 
 
 def get_retries_from(connection, date):
-    query = """SELECT id, source_url AS url, source FROM autokmdb_news WHERE skip_reason = 3 AND cre_time >= %s AND processing_step = 5 ORDER BY source DESC, mod_time DESC"""
+    query = """SELECT id, source_url AS url, source, newspaper_id FROM autokmdb_news WHERE skip_reason = 3 AND cre_time >= %s AND processing_step = 5 ORDER BY source DESC, mod_time DESC"""
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (date,))
         return cursor.fetchall()
