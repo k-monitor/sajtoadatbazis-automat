@@ -11,7 +11,7 @@ RUN pip install -r auto_kmdb/requirements.txt
 RUN python auto_kmdb/init_container.py
 RUN mkdir /data
 RUN mkdir /models
-RUN wget 'https://huggingface.co/boapps/kmdb-category-classifier/resolve/main/svm_classifier_category.joblib?download=true' -O /models/svm_classifier_category.joblib
+RUN wget 'https://huggingface.co/K-Monitor/kmdb_classification_category/resolve/main/svm_classifier_category.joblib?download=true' -O /models/svm_classifier_category.joblib
 
 RUN playwright install firefox
 RUN playwright install-deps
