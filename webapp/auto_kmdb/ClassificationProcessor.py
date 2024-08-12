@@ -14,6 +14,14 @@ import traceback
 article_classification_prompt = '''{title}
 {description}'''
 
+def to_category_id(category):
+    if category == 'hungarian-news':
+        return 0
+    elif category == 'eu-news':
+        return 1
+    elif category == 'world-news':
+        return 2
+    return 0
 
 class ClassificationProcessor(Processor):
     def __init__(self):
@@ -45,7 +53,7 @@ class ClassificationProcessor(Processor):
             self.score = float(probabilities[1])
             self.label = 1 if self.score > 0.42 else 0
 
-            self.category = int(self.svm_classifier.predict([cls_embedding])[0])
+            self.category = to_category_id(self.svm_classifier.predict([cls_embedding])[0])
             del inputs, logits, probabilities
 
     def process_next(self):
