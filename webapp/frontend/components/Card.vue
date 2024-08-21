@@ -226,7 +226,7 @@
               class="my-5"
               v-if="article.annotation_label == 1"
               target="_blank"
-              :to="`${config.public.baseUrl}?mod=news&action=news&do=news&news_id=${article.news_id}`"
+              :to="`${config.public.adminUrl}?mod=news&action=news&do=news&news_id=${article.news_id}`"
             >
               szerkesztés az adminban
             </UButton>
