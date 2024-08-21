@@ -257,6 +257,15 @@ def init_news(
     connection.commit()
 
 
+def url_exists_in_kmdb(connection: PooledMySQLConnection, url):
+    with connection.cursor() as cursor:
+        query = "SELECT news_id FROM news_news WHERE source_url LIKE '%s%'"
+        cursor.execute(query, (url,))
+        results = cursor.fetchall()
+
+        return len(results) != 0
+
+
 def check_url_exists(connection: PooledMySQLConnection, url):
     with connection.cursor() as cursor:
         query = "SELECT id FROM autokmdb_news WHERE clean_url = %s"
