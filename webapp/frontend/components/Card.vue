@@ -226,7 +226,7 @@
               class="my-5"
               v-if="article.annotation_label == 1"
               target="_blank"
-              :to="`https://autokmdb.deepdata.hu/admin.php?mod=news&action=news&do=news&news_id=${article.news_id}`"
+              :to="`${config.public.baseUrl}?mod=news&action=news&do=news&news_id=${article.news_id}`"
             >
               szerkesztés az adminban
             </UButton>

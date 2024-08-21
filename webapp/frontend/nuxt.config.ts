@@ -5,7 +5,8 @@ export default defineNuxtConfig({
   ssr: false,
   runtimeConfig: {
     public: {
-      baseUrl: process.env.BASE_URL
+      baseUrl: process.env.BASE_URL,
+      adminUrl: process.env.ADMIN_URL,
     }
   }
 })

@@ -6,7 +6,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN yarn install && BASE_URL="https://autokmdb.deepdata.hu/autokmdb" yarn build
+RUN yarn install && yarn build
 
 EXPOSE 3000
 

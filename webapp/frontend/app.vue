@@ -470,7 +470,7 @@ async function addUrl() {
       <div class="p-4">
         <h1 class="font-bold">{{ errorTitle }}</h1>
         <p class="py-5">{{ errorText }}</p>
-        <p v-if="loginError"><a href="https://autokmdb.deepdata.hu/admin.php" target="_blank" class="text-blue-700">admin felület</a></p>
+        <p v-if="loginError"><a :href="config.public.baseUrl" target="_blank" class="text-blue-700">admin felület</a></p>
         <UButton v-else @click="isOpenError = false">Bezárás</UButton>
       </div>
     </UModal>
