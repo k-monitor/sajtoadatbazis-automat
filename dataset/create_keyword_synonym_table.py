@@ -4,7 +4,7 @@ from mysql.connector import Error
 from dotenv import load_dotenv
 import os
 
-load_dotenv('../webapp/.env')
+load_dotenv('../webapp/.env.prod')
 
 def connect_to_database():
     try:
@@ -30,7 +30,7 @@ def create_table(connection):
             synonym VARCHAR(255),
             name VARCHAR(255),
             db_id INT
-        )
+        ) CHARACTER SET utf8 COLLATE utf8_general_ci;
         """)
         print("Table 'autokmdb_keyword_synonyms' created successfully.")
     except Error as e:
