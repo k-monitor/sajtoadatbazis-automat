@@ -3,7 +3,7 @@ import re
 import subprocess
 
 log_file = "data/log.txt"
-error_pattern = r"(ERROR:root:MySQL Connection not available)|(ERROR:root:Can not reconnect to MySQL)"
+error_pattern = r"(ERROR:root:MySQL Connection not available)|(ERROR:root:Can not reconnect to MySQL)|(ERROR:root:SOCKSHTTPSConnectionPool)"
 
 
 def check_log_file():
