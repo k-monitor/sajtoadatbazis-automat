@@ -173,8 +173,9 @@ def annote():
     if 'file_ids' in request.json:
         file_ids = request.json['file_ids']
 
-    if url_exists_in_kmdb(connection, url):
-        return jsonify({'error': 'Ez a cikk url alapján már szerepel az adatbázisban. Valószínűleg az autokmdb-n kívülről lett hozzáadva.'}), 409
+    with connection_pool.get_connection() as connection:
+        if url_exists_in_kmdb(connection, url):
+            return jsonify({'error': 'Ez a cikk url alapján már szerepel az adatbázisban. Valószínűleg az autokmdb-n kívülről lett hozzáadva.'}), 409
 
     with connection_pool.get_connection() as connection:
         annote_positive(connection, id, url, title, title, description, text, persons, institutions, places, newspaper_id, user_id, is_active, category, others, file_ids, parsed_date)
