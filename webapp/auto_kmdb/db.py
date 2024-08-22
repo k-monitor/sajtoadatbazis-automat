@@ -259,8 +259,8 @@ def init_news(
 
 def url_exists_in_kmdb(connection: PooledMySQLConnection, url):
     with connection.cursor() as cursor:
-        query = "SELECT news_id FROM news_news WHERE source_url LIKE '%s%'"
-        cursor.execute(query, (url,))
+        query = "SELECT news_id FROM news_news WHERE source_url LIKE %s"
+        cursor.execute(query, ('%' + url + '%',))
         results = cursor.fetchall()
 
         return len(results) != 0
