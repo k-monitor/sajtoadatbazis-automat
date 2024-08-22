@@ -23,10 +23,10 @@ cookies_444 = {}
 newspapers = [Telex(), Atv()]
 proxy_host = os.environ["MYSQL_HOST"]
 request_proxies = {
-    'http': 'socks5://'+proxy_host+':1080',
-    'https': 'socks5://'+proxy_host+':1080'
+    'http': 'socks5h://'+proxy_host+':1080',
+    'https': 'socks5h://'+proxy_host+':1080'
 }
-playwright_proxy = {"server": "socks5://"+proxy_host+":1080"}
+playwright_proxy = {"server": "socks5h://"+proxy_host+":1080"}
 
 def get_custom_text(url, html):
     for paper in newspapers:
