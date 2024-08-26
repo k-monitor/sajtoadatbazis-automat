@@ -43,7 +43,7 @@ def get_custom_description(url, html):
 def process_article(id, url, source, newspaper_id):
     try:
         headers = {'User-Agent': 'autokmdb'}
-        response = requests.get(url, headers=headers, cookies=cookies_24, proxies=request_proxies)
+        response = requests.get(url, headers=headers, cookies=cookies_24)
         if response.status_code == 403:
             raise Exception('Got 403 forbidden while downloading article.')
         article = newspaper.Article(url=url)
@@ -113,7 +113,7 @@ def login_24():
     username = os.environ['USER_24']
     password = os.environ['PASS_24']
     with sync_playwright() as p:    
-        browser = p.firefox.launch(proxy=playwright_proxy)
+        browser = p.firefox.launch()
         context = browser.new_context()        
         page = context.new_page()
 
@@ -143,7 +143,7 @@ def login_444():
     username = os.environ['USER_444']
     password = os.environ['PASS_444']
     with sync_playwright() as p:
-        browser = p.firefox.launch(proxy=playwright_proxy)
+        browser = p.firefox.launch()
         context = browser.new_context()
         page = context.new_page()
         page.goto("http://444.hu")
