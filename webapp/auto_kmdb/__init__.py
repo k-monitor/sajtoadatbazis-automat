@@ -40,15 +40,6 @@ def create_app():
         app.register_blueprint(api)
         logger.info("registered api")
 
-    try:
-        login_444()
-    except Exception:
-        logging.error(traceback.format_exc())
-    try:
-        login_24()
-    except Exception:
-        logging.error(traceback.format_exc())
-        print(traceback.format_exc())
     Thread(target=rss_watcher, args=(app.app_context(),), daemon=True).start()
     Thread(target=do_retries, args=(app.app_context(),), daemon=True).start()
 
