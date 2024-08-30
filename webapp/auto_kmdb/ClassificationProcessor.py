@@ -38,7 +38,7 @@ class ClassificationProcessor(Processor):
         self.model = BertForSequenceClassification.from_pretrained(
             'K-Monitor/kmdb_classification_hubert')
         self.tokenizer = BertTokenizer.from_pretrained('SZTAKI-HLT/hubert-base-cc', max_length=512)
-        self.svm_classifier = load(os.environ['DATA_PATH']+'/svm_classifier_category.joblib')
+        self.svm_classifier = load('data/svm_classifier_category.joblib')
         self.is_done = True
         logging.info('loaded classification model')
 

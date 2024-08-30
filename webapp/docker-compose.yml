@@ -24,7 +24,7 @@ services:
     volumes:
       - type: bind
         source: ./data
-        target: /data
+        target: ./data
     ports:
       - "8080:8000"
     env_file:

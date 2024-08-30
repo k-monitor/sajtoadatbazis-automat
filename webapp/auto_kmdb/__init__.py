@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv('data/.env')
 
 from flask import Flask
 from threading import Thread
