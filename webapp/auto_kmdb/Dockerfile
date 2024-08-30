@@ -5,7 +5,7 @@ WORKDIR /usr/src/app
 COPY . auto_kmdb
 
 RUN apt update
-RUN apt install -y wget git gcc
+RUN apt install -y wget git gcc g++
 
 RUN pip install -r auto_kmdb/requirements.txt
 RUN python auto_kmdb/init_container.py
