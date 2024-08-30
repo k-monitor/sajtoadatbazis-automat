@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 def create_app():
     logfile = "autokmdb.log"
     if "LOGFILE" in os.environ:
-        logfile = os.environ["LOGFILE"]
+        logfile = 'data/log.txt'
     logging.basicConfig(filename=logfile, level=logging.INFO)
     for _ in range(10):
         logger.info("")
