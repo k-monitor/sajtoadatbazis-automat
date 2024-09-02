@@ -537,9 +537,9 @@ def get_article_counts(
         if status == "mixed":
             query = """WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND (n.skip_reason = 0 OR n.skip_reason is NULL)"""
         elif status == "positive":
-            query = """WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 1"""
+            query = """WHERE processing_step = 5 AND n.annotation_label = 1"""
         elif status == "negative":
-            query = """WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 0"""
+            query = """WHERE processing_step = 5 AND n.annotation_label = 0"""
         elif status == "processing":
             query = """WHERE processing_step < 4"""
         elif status == "all":
@@ -699,9 +699,9 @@ def get_articles(
     if status == "mixed":
         query = """WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND (n.skip_reason = 0 OR n.skip_reason is NULL)"""
     elif status == "positive":
-        query = """WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 1"""
+        query = """WHERE processing_step = 5 AND n.annotation_label = 1"""
     elif status == "negative":
-        query = """WHERE n.classification_label = 1 AND processing_step = 5 AND n.annotation_label = 0"""
+        query = """WHERE processing_step = 5 AND n.annotation_label = 0"""
     elif status == "processing":
         query = """WHERE processing_step < 4"""
     elif status == "all":

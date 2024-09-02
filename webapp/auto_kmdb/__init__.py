@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv('data/.env')
 
 from flask import Flask
 from threading import Thread
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 def create_app():
     logfile = "autokmdb.log"
     if "LOGFILE" in os.environ:
-        logfile = os.environ["LOGFILE"]
+        logfile = 'data/log.txt'
     logging.basicConfig(filename=logfile, level=logging.INFO)
     for _ in range(10):
         logger.info("")
@@ -40,15 +40,6 @@ def create_app():
         app.register_blueprint(api)
         logger.info("registered api")
 
-    try:
-        login_444()
-    except Exception:
-        logging.error(traceback.format_exc())
-    try:
-        login_24()
-    except Exception:
-        logging.error(traceback.format_exc())
-        print(traceback.format_exc())
     Thread(target=rss_watcher, args=(app.app_context(),), daemon=True).start()
     Thread(target=do_retries, args=(app.app_context(),), daemon=True).start()
 

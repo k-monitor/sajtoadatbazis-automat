@@ -1,6 +1,8 @@
 from transformers import pipeline, AutoTokenizer
 from transformers import BertForSequenceClassification, BertTokenizer
+from dotenv import load_dotenv
 
+load_dotenv('data/.env')
 
 classifier = pipeline("ner", model="boapps/kmdb_ner_model",
                       aggregation_strategy="average",
