@@ -9,7 +9,7 @@ class Telex(Newspaper):
 
     def get_text(this, url, html):
         soup = BeautifulSoup(html, 'html.parser')
-        paragraphs = soup.select('div.article-html-content p')
+        paragraphs = soup.select('div.article-html-content p, div.article-html-content li')
 
         parsed_text = []
         for p in paragraphs:
