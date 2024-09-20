@@ -88,6 +88,7 @@ def get_synonyms_file(
     assert synonym_mapping.index.duplicated().sum() == 0
     return synonym_mapping
 
+
 @cache
 def get_entities_freq(
     type: Literal["people", "places", "institutions"]

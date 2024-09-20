@@ -12,7 +12,8 @@ from auto_kmdb.Processor import Processor
 from time import sleep
 from auto_kmdb.db import connection_pool
 import warnings
-warnings.simplefilter(action='ignore', category=FutureWarning)
+
+warnings.simplefilter(action="ignore", category=FutureWarning)
 import pandas as pd
 import logging
 import torch
@@ -179,8 +180,7 @@ class NERProcessor(Processor):
         gc.collect()
 
         return combed_mapping
-    
-    
+
     def do_process(self, next_row):
         self.text = next_row["text"]
         self.predict()
@@ -216,10 +216,8 @@ class NERProcessor(Processor):
                 del mapping
                 gc.collect()
 
-
         with connection_pool.get_connection() as connection:
             save_ner_step(connection, next_row["id"])
-
 
     def process_next(self):
         with connection_pool.get_connection() as connection:
@@ -232,7 +230,7 @@ class NERProcessor(Processor):
             self.do_process(next_row)
         except Exception as e:
             skip_processing_error(connection, next_row["id"])
-            logging.warn('exception during: '+str(next_row["id"]))
+            logging.warn("exception during: " + str(next_row["id"]))
             logging.error(e)
             print(traceback.format_exc())
             logging.error(traceback.format_exc())

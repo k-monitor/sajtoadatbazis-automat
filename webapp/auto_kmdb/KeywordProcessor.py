@@ -6,8 +6,8 @@ import logging
 
 class KeywordProcessor(Processor):
     def __init__(self):
-        #super().__init__()
-        logging.info('initialized keyword processor')
+        # super().__init__()
+        logging.info("initialized keyword processor")
         self.done = False
 
     def load_model(self):
@@ -27,10 +27,10 @@ class KeywordProcessor(Processor):
         if next_row is None:
             sleep(30)
             return
-        logging.info('keyword processor next')
+        logging.info("keyword processor next")
         self.predict()
 
         # TODO
 
         with connection_pool.get_connection() as connection:
-            save_keyword_step(connection, next_row['id'])
+            save_keyword_step(connection, next_row["id"])

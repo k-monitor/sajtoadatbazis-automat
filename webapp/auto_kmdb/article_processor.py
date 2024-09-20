@@ -14,7 +14,7 @@ def article_processor(appcontext):
         print("Starting")
         if not all([p.is_done() for p in processors]):
             continue
-        print('All done')
+        print("All done")
         for processor in processors:
             processor.process_next()
-        sleep(1*60)
+        sleep(1 * 60)

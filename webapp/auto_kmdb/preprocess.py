@@ -13,11 +13,11 @@ def clear_url(url):
         str: The cleared URL.
     """
     u = urlparse(url)
-    return 'https://' + u.netloc + '/' + u.path.replace('www.', '').strip('/')
+    return "https://" + u.netloc + "/" + u.path.replace("www.", "").strip("/")
 
 
 def read_file(filename):
-    with open(filename, 'r') as f:
+    with open(filename, "r") as f:
         return f.readlines()
 
 
@@ -39,26 +39,55 @@ def do_replacements(text, replacements):
 
 def trim_title(title):
     for name in title_papers:
-        title = title.replace(name, '')
+        title = title.replace(name, "")
     return title
 
 
-common_descriptions = read_file('auto_kmdb/data/common_descriptions.txt')
-common_lines = read_file('auto_kmdb/data/common_lines.txt')
+common_descriptions = read_file("auto_kmdb/data/common_descriptions.txt")
+common_lines = read_file("auto_kmdb/data/common_lines.txt")
 
-picture_pattern = re.compile(r'Fotó: (\w+\/[^\s]+ [^\s]+|MTI)')
-picture_pattern = re.compile(r'Fotó: .*')
-quote_pattern = re.compile(r'[”“„]')
-dot_pattern = re.compile(r'[…]')
-line_pattern = re.compile(r'^\d{4}\. [^\s]+ \d{2}\., [^\s]+, \d{2}\:\d{2} • .*$|(^Szerző: .*$)|(^Címkék: .*$)|(^Kiemelt kép: .*$)')
-space_pattern = re.compile(r'  +')
-newline_pattern = re.compile(r'\n\n+')
-dash_pattern = re.compile(r'\–')
-photo_camera_pattern = re.compile(r'photo_camera*')
+picture_pattern = re.compile(r"Fotó: (\w+\/[^\s]+ [^\s]+|MTI)")
+picture_pattern = re.compile(r"Fotó: .*")
+quote_pattern = re.compile(r"[”“„]")
+dot_pattern = re.compile(r"[…]")
+line_pattern = re.compile(
+    r"^\d{4}\. [^\s]+ \d{2}\., [^\s]+, \d{2}\:\d{2} • .*$|(^Szerző: .*$)|(^Címkék: .*$)|(^Kiemelt kép: .*$)"
+)
+space_pattern = re.compile(r"  +")
+newline_pattern = re.compile(r"\n\n+")
+dash_pattern = re.compile(r"\–")
+photo_camera_pattern = re.compile(r"photo_camera*")
 
-title_papers = [' | atlatszo.hu', ' | G7 - Gazdasági sztorik érthetően', ' - ORIGO', ' | 24.hu', 'FEOL - ', ' - PestiSrácok', ' | BorsOnline', ' - Blikk', 'BEOL - ', 'VAOL - ', 'KEMMA - ', 'HírExtra - ', 'DUOL - ', 'SZOLJON - ', 'HEOL - ', ' - Mandiner', ' - Greenfo', 'BAMA - ', 'BOON - ', ' - pecsma.hu']
+title_papers = [
+    " | atlatszo.hu",
+    " | G7 - Gazdasági sztorik érthetően",
+    " - ORIGO",
+    " | 24.hu",
+    "FEOL - ",
+    " - PestiSrácok",
+    " | BorsOnline",
+    " - Blikk",
+    "BEOL - ",
+    "VAOL - ",
+    "KEMMA - ",
+    "HírExtra - ",
+    "DUOL - ",
+    "SZOLJON - ",
+    "HEOL - ",
+    " - Mandiner",
+    " - Greenfo",
+    "BAMA - ",
+    "BOON - ",
+    " - pecsma.hu",
+]
 
-replacements = [(picture_pattern, ''), (quote_pattern, '"'),
-                (dot_pattern, '...'), (line_pattern, ''),
-                (space_pattern, ' '), (dash_pattern, '-'),
-                (photo_camera_pattern, ''), (newline_pattern, '\n\n')]
+replacements = [
+    (picture_pattern, ""),
+    (quote_pattern, '"'),
+    (dot_pattern, "..."),
+    (line_pattern, ""),
+    (space_pattern, " "),
+    (dash_pattern, "-"),
+    (photo_camera_pattern, ""),
+    (newline_pattern, "\n\n"),
+]

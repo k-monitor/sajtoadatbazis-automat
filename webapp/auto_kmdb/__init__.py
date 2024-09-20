@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 
-load_dotenv('data/.env')
+load_dotenv("data/.env")
 
 from flask import Flask
 from threading import Thread
@@ -9,7 +9,12 @@ from time import sleep
 import traceback
 
 sleep(10)  # TODO better wait handling
-from auto_kmdb.DownloadProcessor import DownloadProcessor, do_retries, login_444, login_24
+from auto_kmdb.DownloadProcessor import (
+    DownloadProcessor,
+    do_retries,
+    login_444,
+    login_24,
+)
 from auto_kmdb.ClassificationProcessor import ClassificationProcessor
 from auto_kmdb.NERProcessor import NERProcessor
 from auto_kmdb.KeywordProcessor import KeywordProcessor
@@ -23,7 +28,7 @@ logger = logging.getLogger(__name__)
 def create_app():
     logfile = "autokmdb.log"
     if "LOGFILE" in os.environ:
-        logfile = 'data/log.txt'
+        logfile = "data/log.txt"
     logging.basicConfig(filename=logfile, level=logging.INFO)
     for _ in range(10):
         logger.info("")
