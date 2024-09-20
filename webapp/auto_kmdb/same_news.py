@@ -197,17 +197,17 @@ def same_news(title, description, text):
     if ":" in title and title.split(":")[0] in news_names:
         for n in newspapers:
             if n["name"] == title.split(":")[0]:
-                return n['id']
+                return n["id"]
 
     for sent in products:
         if sent in description or sent in text:
             for n in newspapers:
                 if n["name"] in sent:
-                    return n['id']
+                    return n["id"]
 
     if text.endswith(")"):
         for n in newspapers:
             if text[text.rfind("(") :].lower() == "(" + n["name"] + ")":
-                return n['id']
+                return n["id"]
 
     return None

@@ -260,7 +260,7 @@ def init_news(
 def url_exists_in_kmdb(connection: PooledMySQLConnection, url):
     with connection.cursor() as cursor:
         query = "SELECT news_id FROM news_news WHERE source_url LIKE %s"
-        cursor.execute(query, ('%' + url + '%',))
+        cursor.execute(query, ("%" + url + "%",))
         results = cursor.fetchall()
 
         return len(results) != 0
@@ -548,7 +548,7 @@ def get_article_counts(
             domain_list = ",".join([str(domain) for domain in domains])
             query += f" AND n.newspaper_id IN ({domain_list})"
         query += " AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)"
-        query += ' AND DATE(n.cre_time) BETWEEN %s AND %s'
+        query += " AND DATE(n.cre_time) BETWEEN %s AND %s"
         with connection.cursor(dictionary=True) as cursor:
             cursor.execute(
                 "SELECT COUNT(id) FROM autokmdb_news n " + query,
@@ -677,11 +677,15 @@ def get_article(connection: PooledMySQLConnection, id):
         return article
 
 
-
-
-
 def get_articles(
-    connection, page, status, domains, q="", start="2000-01-01", end="2050-01-01", reverse=False
+    connection,
+    page,
+    status,
+    domains,
+    q="",
+    start="2000-01-01",
+    end="2050-01-01",
+    reverse=False,
 ):
     query = ""
 
@@ -691,9 +695,10 @@ def get_articles(
         LEFT JOIN users u ON n.mod_id = u.user_id
         """
     group = (
-        " GROUP BY id ORDER BY source DESC, n.article_date "+('ASC' if reverse else 'DESC')
+        " GROUP BY id ORDER BY source DESC, n.article_date "
+        + ("ASC" if reverse else "DESC")
         if status != "positive"
-        else " GROUP BY id ORDER BY n.article_date "+('ASC' if reverse else 'DESC')
+        else " GROUP BY id ORDER BY n.article_date " + ("ASC" if reverse else "DESC")
     )
 
     if status == "mixed":
@@ -847,7 +852,7 @@ def annote_positive(
 ):
     query_0 = """SELECT news_id FROM autokmdb_news WHERE id = %s LIMIT 1"""
     query_1 = """UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s, title = %s, description = %s, text = %s, mod_id = %s WHERE id = %s;"""
-    query_2 = """INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id, status, news_type, news_rel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, "P", "N");"""
+    query_2 = """INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id, status, news_type, news_rel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, "D", "N");"""
     query_2_update = """UPDATE news_news
 SET
     source_url = %s,
@@ -1102,7 +1107,7 @@ def validate_session(connection: PooledMySQLConnection, session_id):
     if session is None or session["registered"] == 0:
         return None
 
-    update_session(connection, session_id, session['session_expires'])
+    update_session(connection, session_id, session["session_expires"])
 
     return session["registered"]
 
