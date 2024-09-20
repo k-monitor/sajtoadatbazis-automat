@@ -1,7 +1,7 @@
 from auto_kmdb.Processor import Processor
 from auto_kmdb.same_news import same_news
 from auto_kmdb.db import get_download_queue, save_download_step, skip_same_news, skip_download_error
-from auto_kmdb.preprocess import do_replacements, replacements, common_descriptions
+from auto_kmdb.preprocess import do_replacements, replacements, common_descriptions, trim_title
 from time import sleep
 import newspaper
 from auto_kmdb.db import connection_pool
@@ -73,6 +73,7 @@ def process_article(id, url, source, newspaper_id):
     except Exception as e:
         logging.error(e)
 
+    title = trim_title(title)
     title = do_replacements(title, replacements).strip()
     text = do_replacements(text, replacements).strip()
 

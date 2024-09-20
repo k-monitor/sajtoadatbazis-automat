@@ -37,6 +37,12 @@ def do_replacements(text, replacements):
     return text
 
 
+def trim_title(title):
+    for name in title_papers:
+        title = title.replace(name, '')
+    return title
+
+
 common_descriptions = read_file('auto_kmdb/data/common_descriptions.txt')
 common_lines = read_file('auto_kmdb/data/common_lines.txt')
 
@@ -49,6 +55,8 @@ space_pattern = re.compile(r'  +')
 newline_pattern = re.compile(r'\n\n+')
 dash_pattern = re.compile(r'\–')
 photo_camera_pattern = re.compile(r'photo_camera*')
+
+title_papers = [' | atlatszo.hu', ' | G7 - Gazdasági sztorik érthetően', ' - ORIGO', ' | 24.hu', 'FEOL - ', ' - PestiSrácok', ' | BorsOnline', ' - Blikk', 'BEOL - ', 'VAOL - ', 'KEMMA - ', 'HírExtra - ', 'DUOL - ', 'SZOLJON - ', 'HEOL - ', ' - Mandiner', ' - Greenfo', 'BAMA - ', 'BOON - ', ' - pecsma.hu']
 
 replacements = [(picture_pattern, ''), (quote_pattern, '"'),
                 (dot_pattern, '...'), (line_pattern, ''),
