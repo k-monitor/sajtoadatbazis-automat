@@ -24,13 +24,14 @@ from datetime import datetime, timedelta
 from playwright.sync_api import sync_playwright
 from auto_kmdb.newspapers.Telex import Telex
 from auto_kmdb.newspapers.Atv import Atv
+from auto_kmdb.newspapers.Mediaworks import Mediaworks
 from datetime import timezone
 
 jeti_session = ""
 gateway_session = ""
 cookies_24 = {}
 cookies_444 = {}
-newspapers = [Telex(), Atv()]
+newspapers = [Telex(), Atv(), Mediaworks()]
 proxy_host = os.environ["MYSQL_HOST"]
 request_proxies = {
     "http": "socks5h://" + proxy_host + ":1080",
