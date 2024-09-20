@@ -852,7 +852,7 @@ def annote_positive(
 ):
     query_0 = """SELECT news_id FROM autokmdb_news WHERE id = %s LIMIT 1"""
     query_1 = """UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s, title = %s, description = %s, text = %s, mod_id = %s WHERE id = %s;"""
-    query_2 = """INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id, status, news_type, news_rel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, "P", "N");"""
+    query_2 = """INSERT INTO news_news (source_url, source_url_string, cre_time, mod_time, pub_time, cre_id, mod_id, status, news_type, news_rel) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, "D", "N");"""
     query_2_update = """UPDATE news_news
 SET
     source_url = %s,
