@@ -2,7 +2,7 @@
 
 check_for_errors() {
     result=$(podman-compose logs 2>&1)
-    if [[ "${result}" == *"ERROR"* ]] || [[ "${result}" == *"CRITICAL"* ]]; then
+    if [[ "${result}" == *"ERROR"* ]] || [[ "${result}" == *"CRITICAL"* ]] || [[ "${result}" == *"mysql.connector.errors.OperationalError"* ]]; then
         return 0 # Return true
     else
         return 1 # Return false
