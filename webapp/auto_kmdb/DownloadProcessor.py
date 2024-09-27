@@ -256,9 +256,16 @@ def do_retries(app_context):
 
 class DownloadProcessor(Processor):
     def __init__(self):
+        try:
+            login_24()
+        except Exception:
+            logging.error('Failed to login to 24.hu')
+        try:
+            login_444()
+        except Exception:
+            logging.error('Failed to login to 24.hu')
+
         logging.info("initialized download processor")
-        pass
-        # super().__init__()
 
     def process_next(self):
         with connection_pool.get_connection() as connection:
