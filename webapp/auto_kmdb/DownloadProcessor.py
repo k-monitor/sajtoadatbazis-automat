@@ -26,6 +26,7 @@ from auto_kmdb.newspapers.Telex import Telex
 from auto_kmdb.newspapers.Atv import Atv
 from auto_kmdb.newspapers.Mediaworks import Mediaworks
 from datetime import timezone
+import traceback
 
 jeti_session = ""
 gateway_session = ""
@@ -259,11 +260,13 @@ class DownloadProcessor(Processor):
         try:
             login_24()
         except Exception:
+            logging.error(traceback.format_exc())
             logging.error('Failed to login to 24.hu')
         try:
             login_444()
         except Exception:
-            logging.error('Failed to login to 24.hu')
+            logging.error(traceback.format_exc())
+            logging.error('Failed to login to 444.hu')
 
         logging.info("initialized download processor")
 
