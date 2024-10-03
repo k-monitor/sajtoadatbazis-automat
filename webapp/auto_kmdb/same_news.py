@@ -1,5 +1,6 @@
 from itertools import product
 
+# newspapers and their IDs
 newspapers = [
     {"name": "444", "id": 122},
     {"name": "444.hu", "id": 122},
@@ -66,15 +67,19 @@ newspapers = [
 ]
 
 
+# Function to clean the text by converting to lowercase and removing specific characters
 def clean(text):
     return text.lower().replace(".", "").replace(" ", "")
 
 
+# Clean the names of newspapers in the list of dictionaries
 for n in newspapers:
     n["name"] = clean(n["name"])
 
-news_names = [n["name"] for n in newspapers]
+# Convert newspapers' names into a set for efficient membership testing
+news_names_set = {n["name"] for n in newspapers}
 
+# Generate possible combinations of phrases
 products = [
     clean("".join(e))
     for e in (
@@ -95,28 +100,29 @@ products = [
                     "válaszolta",
                 ],
                 ["a", "az", ""],
-                news_names,
+                news_names_set,
             )
         )
         + list(
             product(
                 ["elismerte"],
                 ["a", "az", ""],
-                news_names,
+                news_names_set,
                 ["-nak", "nak", "-nek", "nek"],
             )
         )
         + list(
             product(
-                news_names, ["vette észre", "azt írja", "bukkant rá", "kiderítette"]
+                news_names_set,
+                ["vette észre", "azt írja", "bukkant rá", "kiderítette"],
             )
         )
-        + list(product(news_names, ["úgy tudja"]))
-        + list(product(news_names, ["riportjából kiderül", "riportja szerint"]))
-        + list(product(["ahogy"], ["a", "az", ""], news_names, ["írja"]))
+        + list(product(news_names_set, ["úgy tudja"]))
+        + list(product(news_names_set, ["riportjából kiderül", "riportja szerint"]))
+        + list(product(["ahogy"], ["a", "az", ""], news_names_set, ["írja"]))
         + list(
-            product(["landolt"], ["a", "az", ""], news_names, ["postaládájában"])
-        )  # landolt a Magyar Narancs postaládájában
+            product(["landolt"], ["a", "az", ""], news_names_set, ["postaládájában"])
+        )
         + list(
             product(
                 [
@@ -138,13 +144,13 @@ products = [
                     "róla",
                 ],
                 ["a", "az", ""],
-                news_names,
+                news_names_set,
             )
         )
         + list(
             product(
                 ["a", "az", ""],
-                news_names,
+                news_names_set,
                 [
                     "beszámolója szerint",
                     "összeállítása szerint",
@@ -179,24 +185,32 @@ products = [
             product(
                 ["derül ki", "derült ki"],
                 ["a", "az"],
-                news_names,
+                news_names_set,
                 ["beszámolójából", "cikkéből", "riportjából"],
             )
         )
-        + list(product(["írta"], ["a", "az"], news_names))
-        + list(product(["szemléző"], news_names, ["szerint"]))
-        + list(product(["via"], news_names))
+        + list(product(["írta"], ["a", "az"], news_names_set))
+        + list(product(["szemléző"], news_names_set, ["szerint"]))
+        + list(product(["via"], news_names_set))
     )
 ]
 
 
+# Function to check if a piece of text ends with the format of "(news_name)"
+def check_ends_with(text, news_name):
+    return text.endswith(f"({news_name})")
+
+
+# Function to determine the same news ID based on title, description, and text
 def same_news(title, description, text):
     title = clean(title)
     description = clean(description)
     text = clean(text)
-    if ":" in title and title.split(":")[0] in news_names:
+
+    if ":" in title and title.split(":")[0] in news_names_set:
+        title_prefix = title.split(":")[0]
         for n in newspapers:
-            if n["name"] == title.split(":")[0]:
+            if n["name"] == title_prefix:
                 return n["id"]
 
     for sent in products:
@@ -207,7 +221,7 @@ def same_news(title, description, text):
 
     if text.endswith(")"):
         for n in newspapers:
-            if text[text.rfind("(") :].lower() == "(" + n["name"] + ")":
+            if check_ends_with(text, n["name"]):
                 return n["id"]
 
     return None
