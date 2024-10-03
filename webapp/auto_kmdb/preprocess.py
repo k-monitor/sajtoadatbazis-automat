@@ -79,6 +79,7 @@ title_papers = [
     "BAMA - ",
     "BOON - ",
     " - pecsma.hu",
+    " - Direkt36",
 ]
 
 replacements = [
