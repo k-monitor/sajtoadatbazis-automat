@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 
 class Mediaworks(Newspaper):
-    def is_url_this(self, url, html):
+    def is_url_this(self, url: str, html: str) -> bool:
         return urlparse(url).netloc in [
             "www.baon.hu",
             "www.bama.hu",
@@ -34,15 +34,15 @@ class Mediaworks(Newspaper):
             "metropol.hu",
         ]
 
-    def get_text(this, url, html):
+    def get_text(self, url: str, html: str) -> str:
         soup = BeautifulSoup(html, "html.parser")
         paragraphs = soup.select(
             ".block-content p, .block-content li, .article-text-formatter p, .article-text-formatter li"
         )
 
-        parsed_text = []
+        parsed_text: list[str] = []
         for p in paragraphs:
-            text = p.get_text(strip=True)
+            text: str = p.get_text(strip=True)
             if text:
                 parsed_text.append(text)
 
