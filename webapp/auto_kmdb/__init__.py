@@ -26,10 +26,14 @@ logger = logging.getLogger(__name__)
 
 
 def create_app():
-    logfile = "autokmdb.log"
-    if "LOGFILE" in os.environ:
-        logfile = "data/log.txt"
-    logging.basicConfig(filename=logfile, level=logging.INFO)
+    logfile = "data/log.txt"
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+        filename=logfile,
+    )
+
     for _ in range(10):
         logger.info("")
     logger.info("Started")
