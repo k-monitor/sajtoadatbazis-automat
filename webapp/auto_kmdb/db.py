@@ -1083,7 +1083,7 @@ WHERE
         for file_id in file_ids:
             cursor.execute(query_file, (news_id, file_id))
 
-        setTags(cursor, institutions, persons, newspaper_name, institutions, places, others)
+        setTags(cursor, news_id, persons, newspaper_name, institutions, places, others)
 
     connection.commit()
 
