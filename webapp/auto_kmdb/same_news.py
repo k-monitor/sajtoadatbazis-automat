@@ -1,7 +1,8 @@
 from itertools import product
+from typing import Optional
 
 # newspapers and their IDs
-newspapers = [
+newspapers: list[dict[str, str | Optional[int]]] = [
     {"name": "444", "id": 122},
     {"name": "444.hu", "id": 122},
     {"name": "24.hu", "id": 102},
@@ -68,7 +69,7 @@ newspapers = [
 
 
 # Function to clean the text by converting to lowercase and removing specific characters
-def clean(text):
+def clean(text: str) -> str:
     return text.lower().replace(".", "").replace(" ", "")
 
 
@@ -77,10 +78,10 @@ for n in newspapers:
     n["name"] = clean(n["name"])
 
 # Convert newspapers' names into a set for efficient membership testing
-news_names_set = {n["name"] for n in newspapers}
+news_names_set: set[str] = {n["name"] for n in newspapers}
 
 # Generate possible combinations of phrases
-products = [
+products: list[str] = [
     clean("".join(e))
     for e in (
         list(
@@ -197,12 +198,12 @@ products = [
 
 
 # Function to check if a piece of text ends with the format of "(news_name)"
-def check_ends_with(text, news_name):
+def check_ends_with(text: str, news_name: str) -> bool:
     return text.endswith(f"({news_name})")
 
 
 # Function to determine the same news ID based on title, description, and text
-def same_news(title, description, text):
+def same_news(title: str, description: str, text: str) -> Optional[int]:
     title = clean(title)
     description = clean(description)
     text = clean(text)
