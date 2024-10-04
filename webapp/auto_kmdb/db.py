@@ -841,18 +841,18 @@ def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
     names += [place['name'] for place in places]
     names += [other['name'] for other in others]
 
+    names_str: str = '|'.join(names)
+
     tag_query = """SELECT tag_id FROM news_tags WHERE news_id = %s"""
     tag_update = """UPDATE news_tags SET names = %s WHERE tag_id = %s"""
     tag_insert = """INSERT INTO news_tags (names, news_id) VALUES (%s, %s)"""
 
     cursor.execute(tag_query, (news_id,))
-    tag_id: Optional[int] = cursor.fetchone()[0]
+    tag_id: list[Optional[int]] = cursor.fetchone()
 
-    names_str: str = '|'.join(names)
-
-    if tag_id is not None:
+    if tag_id and tag_id[0]:
         cursor.execute(tag_update, (names_str, news_id,))
-        logging.info(f"updating tag_id={tag_id} news_id={news_id} with text: {names_str}")
+        logging.info(f"updating tag_id={tag_id[0]} news_id={news_id} with text: {names_str}")
     else:
         cursor.execute(tag_insert, (names_str, news_id,))
         logging.info(f"updating news_id={news_id} with text: {names_str}")
