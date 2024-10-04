@@ -1,4 +1,5 @@
 from functools import cache
+from typing import Optional
 from mysql.connector.pooling import MySQLConnectionPool, PooledMySQLConnection
 import os
 from contextlib import closing
@@ -831,6 +832,32 @@ def get_article_annotation(connection, news_id):
         return cursor.fetchone()[0]
 
 
+def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
+    logging.info('setTags')
+    names: list[str] = [person['name'] for person in persons]
+    names += [institution['name'] for institution in institutions]
+    names.append(newspaper)
+    names += [institution['name'] for institution in institutions]
+    names += [place['name'] for place in places]
+    names += [other['name'] for other in others]
+
+    names_str: str = '|'.join(names)
+
+    tag_query = """SELECT tag_id FROM news_tags WHERE news_id = %s"""
+    tag_update = """UPDATE news_tags SET names = %s WHERE tag_id = %s"""
+    tag_insert = """INSERT INTO news_tags (names, news_id) VALUES (%s, %s)"""
+
+    cursor.execute(tag_query, (news_id,))
+    tag_id: list[Optional[int]] = cursor.fetchone()
+
+    if tag_id and tag_id[0]:
+        cursor.execute(tag_update, (names_str, news_id,))
+        logging.info(f"updating tag_id={tag_id[0]} news_id={news_id} with text: {names_str}")
+    else:
+        cursor.execute(tag_insert, (names_str, news_id,))
+        logging.info(f"updating news_id={news_id} with text: {names_str}")
+
+
 def annote_positive(
     connection: PooledMySQLConnection,
     id,
@@ -843,6 +870,7 @@ def annote_positive(
     institutions,
     places,
     newspaper_id,
+    newspaper_name,
     user_id,
     is_active,
     category,
@@ -1054,6 +1082,8 @@ WHERE
             cursor.execute(delete_file, (news_id,))
         for file_id in file_ids:
             cursor.execute(query_file, (news_id, file_id))
+
+        setTags(cursor, news_id, persons, newspaper_name, institutions, places, others)
 
     connection.commit()
 
