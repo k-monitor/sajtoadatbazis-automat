@@ -834,12 +834,11 @@ def get_article_annotation(connection, news_id):
 
 def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
     logging.info('setTags')
-    names: list[str] = [person['name'] for person in persons]
-    names += [institution['name'] for institution in institutions]
+    names: list[str] = [person['db_name'] for person in persons]
     names.append(newspaper)
-    names += [institution['name'] for institution in institutions]
-    names += [place['name'] for place in places]
-    names += [other['name'] for other in others]
+    names += [institution['db_name'] for institution in institutions]
+    names += [place['db_name'] for place in places]
+    names += [other['db_name'] for other in others]
 
     names_str: str = '|'.join(names)
 
