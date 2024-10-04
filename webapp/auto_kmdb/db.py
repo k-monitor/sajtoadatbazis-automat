@@ -833,6 +833,7 @@ def get_article_annotation(connection, news_id):
 
 
 def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
+    logging.info('setTags')
     names: list[str] = [person['name'] for person in persons]
     names += [institution['name'] for institution in institutions]
     names.append(newspaper)
@@ -851,8 +852,10 @@ def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
 
     if tag_id is not None:
         cursor.execute(tag_update, (names_str, news_id,))
+        logging.info(f"updating tag_id={tag_id} news_id={news_id} with text: {names_str}")
     else:
         cursor.execute(tag_insert, (names_str, news_id,))
+        logging.info(f"updating news_id={news_id} with text: {names_str}")
 
 
 def annote_positive(
