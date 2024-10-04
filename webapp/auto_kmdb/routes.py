@@ -206,6 +206,7 @@ def annote():
     places = request.json["positive_places"]
     others = request.json["tags"]
     newspaper_id = request.json["newspaper_id"]
+    newspaper_name = request.json["newspaper_name"]
     is_active = request.json["active"]
     pub_date = request.json["pub_date"]
     parsed_date = datetime.strptime(pub_date, "%a, %d %b %Y %H:%M:%S %Z")
@@ -243,6 +244,7 @@ def annote():
             institutions,
             places,
             newspaper_id,
+            newspaper_name,
             user_id,
             is_active,
             category,
