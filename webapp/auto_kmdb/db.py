@@ -835,11 +835,14 @@ def get_article_annotation(connection, news_id):
 def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
     def to_names(lst):
         result = []
+        seen = set()
         for e in lst:
-            if 'db_name' in e and e['db_name']:
+            if 'db_name' in e and e['db_name'] and e['db_name'] not in seen:
                 result.append(e['db_name'])
-            elif 'name' in e and e['name']:
+                seen.add(e['db_name'])
+            elif 'name' in e and e['name'] and e['name'] not in seen:
                 result.append(e['name'])
+                seen.add(e['name'])
             else:
                 logging.warning(f"no names in: {e}")
         return result
