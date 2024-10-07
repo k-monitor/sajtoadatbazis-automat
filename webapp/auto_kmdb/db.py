@@ -833,12 +833,26 @@ def get_article_annotation(connection, news_id):
 
 
 def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
+    def to_names(lst):
+        result = []
+        seen = set()
+        for e in lst:
+            if 'db_name' in e and e['db_name'] and e['db_name'] not in seen:
+                result.append(e['db_name'])
+                seen.add(e['db_name'])
+            elif 'name' in e and e['name'] and e['name'] not in seen:
+                result.append(e['name'])
+                seen.add(e['name'])
+            else:
+                logging.warning(f"no names in: {e}")
+        return result
+
     logging.info('setTags')
-    names: list[str] = [person['db_name'] for person in persons]
+    names: list[str] = to_names(persons)
     names.append(newspaper)
-    names += [institution['db_name'] for institution in institutions]
-    names += [place['db_name'] for place in places]
-    names += [other['db_name'] for other in others]
+    names += to_names(institutions)
+    names += to_names(places)
+    names += to_names(others)
 
     names_str: str = '|'.join(names)
 
