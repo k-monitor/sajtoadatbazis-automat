@@ -836,9 +836,9 @@ def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
     def to_names(lst):
         result = []
         for e in lst:
-            if 'db_name' in e:
+            if 'db_name' in e and e['db_name']:
                 result.append(e['db_name'])
-            elif 'name' in e:
+            elif 'name' in e and e['name']:
                 result.append(e['name'])
             else:
                 logging.warning(f"no names in: {e}")
