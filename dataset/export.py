@@ -25,7 +25,6 @@ def export_kmdb(connection, limit=-1):
                     CONCAT('https://adatbazis.k-monitor.hu/', nl.seo_url_default) AS kmdb_url,
                     nn.name AS newspaper,
                     nclg.alias AS category,
-                    GROUP_CONCAT(DISTINCT nf.name SEPARATOR ';;;') AS files,
                     FROM_UNIXTIME(n.pub_time) AS pub_time
                 FROM
                     news_news n
@@ -39,10 +38,6 @@ def export_kmdb(connection, limit=-1):
                     news_categories_link ncl ON n.news_id = ncl.news_id
                 LEFT JOIN
                     news_categories_lang nclg ON ncl.cid = nclg.cid
-                LEFT JOIN
-                    news_files_link nfl ON n.news_id = nfl.news_id
-                LEFT JOIN
-                    news_files nf ON nfl.file_id = nf.file_id
                 WHERE n.status = 'Y'
                 GROUP BY
                     n.news_id
@@ -51,8 +46,8 @@ def export_kmdb(connection, limit=-1):
             cursor.execute(query_news)
 
             def transform_article(article):
-                article['files'] = article['files'].split(
-                    ';;;') if article['files'] else []
+                # article['files'] = article['files'].split(
+                    # ';;;') if article['files'] else []
                 try:
                     soup = BeautifulSoup(article['text'], features="lxml")
                     article['text'] = '\n'.join(
@@ -73,6 +68,17 @@ def export_kmdb(connection, limit=-1):
             """
             cursor.execute(query_persons)
             persons_data = cursor.fetchall()
+
+            query_files = """
+                SELECT
+                    DISTINCT nfl.news_id, nf.name_hu as name
+                FROM
+                    news_files_link nfl
+                JOIN
+                    news_files nf ON nfl.file_id = nf.file_id
+            """
+            cursor.execute(query_files)
+            files_data = cursor.fetchall()
 
             query_institutions = """
                 SELECT
@@ -119,6 +125,7 @@ def export_kmdb(connection, limit=-1):
             institutions_dict = create_related_data_dict(institutions_data)
             places_dict = create_related_data_dict(places_data)
             others_dict = create_related_data_dict(others_data)
+            files_dict = create_related_data_dict(files_data)
 
             for news in news_data:
                 news['pub_time'] = news['pub_time'].strftime(
@@ -128,6 +135,7 @@ def export_kmdb(connection, limit=-1):
                 news['institutions'] = institutions_dict.get(news_id, [])
                 news['places'] = places_dict.get(news_id, [])
                 news['others'] = others_dict.get(news_id, [])
+                news['files'] = files_dict.get(news_id, [])
 
             return news_data
 
@@ -154,3 +162,12 @@ with jsonlines.open('export.prod.jsonl', mode='w') as writer:
 
 dataset = Dataset.from_list(data)
 dataset.push_to_hub('K-Monitor/kmdb_base')
+
+files_list = []
+for f in dataset['files']:
+    if f:
+        files_list += f
+
+files_set = set(files_list)
+
+print(len(files_set))
