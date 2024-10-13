@@ -21,7 +21,6 @@ from auto_kmdb.db import (
     get_keyword_synonyms,
 )
 from math import ceil
-import json
 import logging
 from datetime import datetime
 
@@ -34,41 +33,6 @@ api = Blueprint("api", __name__, url_prefix="/api")
 
 def get_session_id(request):
     return request.cookies.get("PHPSESSID")
-
-
-def reformat_article(article):
-    try:
-        article["persons"] = (
-            json.loads("[" + article["persons"] + "]") if article["persons"] else []
-        )
-    except Exception as e:
-        print(e)
-        article["persons"] = []
-    try:
-        article["institutions"] = (
-            json.loads("[" + article["institutions"] + "]")
-            if article["institutions"]
-            else []
-        )
-    except Exception as e:
-        print(e)
-        article["institutions"] = []
-    try:
-        article["places"] = (
-            json.loads("[" + article["places"] + "]") if article["places"] else []
-        )
-    except Exception as e:
-        print(e)
-        article["places"] = []
-    try:
-        article["others"] = (
-            json.loads("[" + article["others"] + "]") if article["others"] else []
-        )
-    except Exception as e:
-        print(e)
-        article["others"] = []
-
-    return article
 
 
 @api.route("/keyword_synonyms", methods=["GET"])
