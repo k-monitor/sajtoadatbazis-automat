@@ -33,7 +33,7 @@ from auto_kmdb.newspapers.Mediaworks import Mediaworks
 from datetime import timezone
 import traceback
 
-from webapp.auto_kmdb.newspapers.Newspaper import Newspaper
+from auto_kmdb.newspapers.Newspaper import Newspaper
 
 newspapers: list[Newspaper] = [Telex(), Atv(), Mediaworks()]
 proxy_host: str = os.environ["MYSQL_HOST"]
@@ -126,16 +126,17 @@ def save_article(
     same_news_id: Optional[int],
     newspaper_id: int,
     source: int,
+    news_id: int,
 ):
     if same_news_id and same_news_id != newspaper_id and source != 1:
         with connection_pool.get_connection() as connection:
             skip_same_news(
-                connection, id, text, title, description, authors, date, is_paywalled
+                connection, news_id, text, title, description, authors, date, is_paywalled
             )
     else:
         with connection_pool.get_connection() as connection:
             save_download_step(
-                connection, id, text, title, description, authors, date, is_paywalled
+                connection, news_id, text, title, description, authors, date, is_paywalled
             )
 
 
@@ -276,14 +277,15 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
             same_news_id,
             row["newspaper_id"],
             row["source"],
+            row["id"]
         )
         sleep(3)
 
 
 class DownloadProcessor(Processor):
     def __init__(self) -> None:
-        cookies_24: dict[str, str]
-        cookies_444: dict[str, str]
+        cookies_24: dict[str, str] = {}
+        cookies_444: dict[str, str] = {}
         try:
             cookies_24 = login_24(os.environ["USER_24"], os.environ["PASS_24"])
         except Exception:
@@ -325,6 +327,7 @@ class DownloadProcessor(Processor):
                 same_news_id,
                 next_row["newspaper_id"],
                 next_row["source"],
+                next_row["id"],
             )
         except Exception as e:
             logging.error(e)

@@ -1,6 +1,6 @@
 from dotenv import load_dotenv
 
-from webapp.auto_kmdb.Processor import Processor
+from auto_kmdb.Processor import Processor
 
 load_dotenv("data/.env")
 
