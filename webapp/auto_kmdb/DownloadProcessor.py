@@ -18,7 +18,6 @@ import os
 import requests
 from bs4 import BeautifulSoup
 import logging
-from auto_kmdb.db import get_retries_from
 from datetime import datetime, timedelta
 from playwright.sync_api import sync_playwright
 from auto_kmdb.newspapers.Telex import Telex
@@ -266,8 +265,8 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
     new_date: datetime = current_date - timedelta(days=3)
     formatted_date: str = new_date.strftime("%Y-%m-%d")
 
-    with connection_pool.get_connection() as connection:
-        rows = get_retries_from(connection, formatted_date)
+    with db.connection_pool.get_connection() as connection:
+        rows = db.get_retries_from(connection, formatted_date)
     for row in rows:
         logging.info("retrying: " + row["url"])
         text, title, description, authors, date, is_paywalled, same_news_id = (
