@@ -1,13 +1,13 @@
 from functools import cache
+from typing import Any, Optional
 from mysql.connector.pooling import MySQLConnectionPool, PooledMySQLConnection
 import os
-from contextlib import closing
 from datetime import datetime
 from slugify import slugify
 import logging
 from datetime import datetime, timedelta
 
-connection_pool = MySQLConnectionPool(
+connection_pool: MySQLConnectionPool = MySQLConnectionPool(
     pool_name="cnx_pool",
     pool_size=10,
     pool_reset_session=True,
@@ -18,13 +18,13 @@ connection_pool = MySQLConnectionPool(
     database=os.environ["MYSQL_DB"],
 )
 
-VERSION_NUMBER = 0
+VERSION_NUMBER: int = 0
 
 
 @cache
 def get_all(
     connection: PooledMySQLConnection, table: str, id_column: str, name_column: str
-) -> list[dir]:
+) -> list[dict]:
     """
     Queries label id-name pairs from given table.
 
@@ -35,7 +35,7 @@ def get_all(
         name_column: name of the column containing the names
 
     Returns:
-        List of dirs, each dir containing the 'name' and 'id' of a given label.
+        List of dicts, each dict containing the 'name' and 'id' of a given label.
     """
     query = f'SELECT {id_column} AS id, {name_column} AS name FROM {table} WHERE status = "Y";'
     with connection.cursor(dictionary=True) as cursor:
@@ -43,7 +43,7 @@ def get_all(
         return list(cursor.fetchall())
 
 
-def get_all_persons(connection: PooledMySQLConnection) -> list[dir]:
+def get_all_persons(connection: PooledMySQLConnection) -> list[dict]:
     """
     Queries person label id-name pairs.
 
@@ -51,12 +51,12 @@ def get_all_persons(connection: PooledMySQLConnection) -> list[dir]:
         connection: db connection
 
     Returns:
-        List of dirs, each dir containing the 'name' of a person and 'id' of its label.
+        List of dicts, each dict containing the 'name' of a person and 'id' of its label.
     """
     return get_all(connection, "news_persons", "person_id", "name")
 
 
-def get_all_institutions(connection: PooledMySQLConnection) -> list[dir]:
+def get_all_institutions(connection: PooledMySQLConnection) -> list[dict]:
     """
     Queries institution label id-name pairs.
 
@@ -64,12 +64,12 @@ def get_all_institutions(connection: PooledMySQLConnection) -> list[dir]:
         connection: db connection
 
     Returns:
-        List of dirs, each dir containing the 'name' of an institution and 'id' of its label.
+        List of dicts, each dict containing the 'name' of an institution and 'id' of its label.
     """
     return get_all(connection, "news_institutions", "institution_id", "name")
 
 
-def get_all_places(connection: PooledMySQLConnection) -> list[dir]:
+def get_all_places(connection: PooledMySQLConnection) -> list[dict]:
     """
     Queries place label id-name pairs.
 
@@ -77,12 +77,12 @@ def get_all_places(connection: PooledMySQLConnection) -> list[dir]:
         connection: db connection
 
     Returns:
-        List of dirs, each dir containing the 'name' of a place and 'id' of its label.
+        List of dicts, each dict containing the 'name' of a place and 'id' of its label.
     """
     return get_all(connection, "news_places", "place_id", "name_hu")
 
 
-def get_all_others(connection: PooledMySQLConnection) -> list[dir]:
+def get_all_others(connection: PooledMySQLConnection) -> list[dict]:
     """
     Queries other label id-name pairs.
 
@@ -90,12 +90,12 @@ def get_all_others(connection: PooledMySQLConnection) -> list[dir]:
         connection: db connection
 
     Returns:
-        List of dirs, each dir containing the 'name' of the label and its 'id'.
+        List of dicts, each dict containing the 'name' of the label and its 'id'.
     """
     return get_all(connection, "news_others", "other_id", "name_hu")
 
 
-def get_all_files(connection: PooledMySQLConnection) -> list[dir]:
+def get_all_files(connection: PooledMySQLConnection) -> list[dict]:
     """
     Queries file id-name pairs.
 
@@ -103,7 +103,7 @@ def get_all_files(connection: PooledMySQLConnection) -> list[dir]:
         connection: db connection
 
     Returns:
-        List of dirs, each dir containing the 'name' of the file and its 'id'.
+        List of dicts, each dict containing the 'name' of the file and its 'id'.
     """
     return get_all(connection, "news_files", "file_id", "name_hu")
 
@@ -124,7 +124,7 @@ with connection_pool.get_connection() as connection:
 @cache
 def get_all_freq(
     connection: PooledMySQLConnection, table: str, id_column: str, name_column: str
-) -> list[dir]:
+) -> list[dict]:
     """
     Queries label id-name pairs from given table and counts number of times the given label has
     been used on an article.
@@ -136,7 +136,7 @@ def get_all_freq(
         name_column: name of the column containing the names
 
     Returns:
-        List of dirs, each dir containing the 'name', 'id' and 'count' occurrances of a given label.
+        List of dicts, each dict containing the 'name', 'id' and 'count' occurrances of a given label.
     """
     query = f'SELECT p.{id_column} AS id, p.{name_column} AS name, COUNT(npl.news_id) AS count FROM {table} p JOIN {table}_link npl ON p.{id_column} = npl.{id_column} WHERE status = "Y" GROUP BY p.{id_column};'
     with connection.cursor(dictionary=True) as cursor:
@@ -144,7 +144,7 @@ def get_all_freq(
         return list(cursor.fetchall())
 
 
-def get_all_persons_freq(connection: PooledMySQLConnection) -> list[dir]:
+def get_all_persons_freq(connection: PooledMySQLConnection) -> list[dict]:
     """
     Queries person label id-name pairs and counts the number of times the given person label has
     been used on an article.
@@ -153,13 +153,13 @@ def get_all_persons_freq(connection: PooledMySQLConnection) -> list[dir]:
         connection: db connection
 
     Returns:
-        List of dirs, each dir containing the 'name' and 'id' of a person label, as well as the
+        List of dicts, each dict containing the 'name' and 'id' of a person label, as well as the
         'count' occurrances of the given label.
     """
     return get_all_freq(connection, "news_persons", "person_id", "name")
 
 
-def get_all_institutions_freq(connection: PooledMySQLConnection) -> list[dir]:
+def get_all_institutions_freq(connection: PooledMySQLConnection) -> list[dict]:
     """
     Queries institution label id-name pairs and counts the number of times the given institution
     label has been used on an article.
@@ -168,13 +168,13 @@ def get_all_institutions_freq(connection: PooledMySQLConnection) -> list[dir]:
         connection: db connection
 
     Returns:
-        List of dirs, each dir containing the 'name' and 'id' of an institution label, as well as the
+        List of dicts, each dict containing the 'name' and 'id' of an institution label, as well as the
         'count' occurrances of the given label.
     """
     return get_all_freq(connection, "news_institutions", "institution_id", "name")
 
 
-def get_all_places_freq(connection: PooledMySQLConnection) -> list[dir]:
+def get_all_places_freq(connection: PooledMySQLConnection) -> list[dict]:
     """
     Queries place label id-name pairs and counts the number of times the given place label has been
     used on an article.
@@ -183,7 +183,7 @@ def get_all_places_freq(connection: PooledMySQLConnection) -> list[dir]:
         connection: db connection
 
     Returns:
-        List of dirs, each dir containing the 'name' and 'id' of a place label, as well as the
+        List of dicts, each dict containing the 'name' and 'id' of a place label, as well as the
         'count' occurrances of the given label.
     """
     return get_all_freq(connection, "news_places", "place_id", "name_hu")
@@ -204,7 +204,7 @@ def get_places_alias(connection: PooledMySQLConnection):
 
 
 @cache
-def get_all_newspapers(connection: PooledMySQLConnection):
+def get_all_newspapers(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
     query = """SELECT n.newspaper_id AS id, n.name AS name, n.rss_url AS rss_url, COUNT(a.newspaper_id) AS article_count FROM news_newspapers n
     LEFT JOIN autokmdb_news a ON n.newspaper_id = a.newspaper_id WHERE n.status = "Y"
     GROUP BY n.newspaper_id, n.name, n.rss_url;"""
@@ -225,16 +225,16 @@ def get_all_newspapers(connection: PooledMySQLConnection):
 
 def init_news(
     connection: PooledMySQLConnection,
-    source,
-    source_url,
-    clean_url,
-    newspaper_name,
-    newspaper_id,
-    user_id,
-    pub_time,
-):
-    current_datetime = datetime.now()
-    cre_time = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
+    source: str,
+    source_url: str,
+    clean_url: str,
+    newspaper_name: str,
+    newspaper_id: int,
+    user_id: int,
+    pub_time: str,
+) -> None:
+    current_datetime: datetime = datetime.now()
+    cre_time: str = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
     with connection.cursor(dictionary=True) as cursor:
         query = """INSERT INTO autokmdb_news
                 (source, source_url, clean_url, processing_step, cre_time, article_date, newspaper_name, newspaper_id, version_number, mod_id)
@@ -257,35 +257,35 @@ def init_news(
     connection.commit()
 
 
-def url_exists_in_kmdb(connection: PooledMySQLConnection, url):
+def url_exists_in_kmdb(connection: PooledMySQLConnection, url: str) -> bool:
     with connection.cursor() as cursor:
         query = "SELECT news_id FROM news_news WHERE source_url LIKE %s"
         cursor.execute(query, ("%" + url + "%",))
-        results = cursor.fetchall()
+        results: list[dict] = cursor.fetchall()
 
         return len(results) != 0
 
 
-def check_url_exists(connection: PooledMySQLConnection, url):
+def check_url_exists(connection: PooledMySQLConnection, url: str) -> bool:
     with connection.cursor() as cursor:
         query = "SELECT id FROM autokmdb_news WHERE clean_url = %s"
         cursor.execute(query, (url,))
-        results = cursor.fetchall()
+        results: list[dict] = cursor.fetchall()
 
         return len(results) != 0
 
 
 def add_auto_person(
     connection: PooledMySQLConnection,
-    autokmdb_news_id,
-    person_name,
-    person_id,
-    found_name,
-    found_position,
-    name,
-    classification_score,
-    classification_label,
-):
+    autokmdb_news_id: int,
+    person_name: str,
+    person_id: int,
+    found_name: str,
+    found_position: int,
+    name: str,
+    classification_score: float,
+    classification_label: int,
+) -> None:
     with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_persons
                 (autokmdb_news_id, person_name, person_id, found_name, found_position, name, classification_score, classification_label, version_number)
@@ -309,15 +309,15 @@ def add_auto_person(
 
 def add_auto_institution(
     connection: PooledMySQLConnection,
-    autokmdb_news_id,
-    institution_name,
-    institution_id,
-    found_name,
-    found_position,
-    name,
-    classification_score,
-    classification_label,
-):
+    autokmdb_news_id: int,
+    institution_name: str,
+    institution_id: int,
+    found_name: str,
+    found_position: int,
+    name: str,
+    classification_score: float,
+    classification_label: int,
+) -> None:
     with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_institutions
                 (autokmdb_news_id, institution_name, institution_id, found_name, found_position, name, classification_score, classification_label, version_number)
@@ -341,15 +341,15 @@ def add_auto_institution(
 
 def add_auto_place(
     connection: PooledMySQLConnection,
-    autokmdb_news_id,
-    place_name,
-    place_id,
-    found_name,
-    found_position,
-    name,
-    classification_score,
-    classification_label,
-):
+    autokmdb_news_id: int,
+    place_name: str,
+    place_id: int,
+    found_name: str,
+    found_position: int,
+    name: str,
+    classification_score: float,
+    classification_label: int,
+) -> None:
     with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_places
                 (autokmdb_news_id, place_name, place_id, found_name, found_position, name, classification_score, classification_label, version_number)
@@ -373,14 +373,14 @@ def add_auto_place(
 
 def add_auto_other(
     connection: PooledMySQLConnection,
-    autokmdb_news_id,
-    other_id,
-    found_name,
-    found_position,
-    name,
-    classification_score,
-    classification_label,
-):
+    autokmdb_news_id: int,
+    other_id: int,
+    found_name: str,
+    found_position: int,
+    name: str,
+    classification_score: float,
+    classification_label: int,
+) -> None:
     with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_others
                 (autokmdb_news_id, other_id, found_name, found_position, name, classification_score, classification_label, version_number)
@@ -403,14 +403,14 @@ def add_auto_other(
 
 def save_download_step(
     connection: PooledMySQLConnection,
-    id,
-    text,
-    title,
-    description,
-    authors,
-    date,
-    is_paywalled,
-):
+    id: int,
+    text: str,
+    title: str,
+    description: str,
+    authors: str,
+    date: str,
+    is_paywalled: bool,
+) -> None:
     query = """UPDATE autokmdb_news 
             SET text = %s, 
                 title = %s, 
@@ -429,14 +429,14 @@ def save_download_step(
 
 def skip_same_news(
     connection: PooledMySQLConnection,
-    id,
-    text,
-    title,
-    description,
-    authors,
-    date,
-    is_paywalled,
-):
+    id: int,
+    text: str,
+    title: str,
+    description: str,
+    authors: str,
+    date: str,
+    is_paywalled: bool,
+) -> None:
     query = """UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5, text = %s, title = %s, description = %s, processing_step = 1, author = %s, article_date = %s, is_paywalled = %s
                WHERE id = %s"""
     with connection.cursor(dictionary=True) as cursor:
@@ -446,7 +446,7 @@ def skip_same_news(
     connection.commit()
 
 
-def skip_download_error(connection: PooledMySQLConnection, id):
+def skip_download_error(connection: PooledMySQLConnection, id: int) -> None:
     query = """UPDATE autokmdb_news SET skip_reason = 3, processing_step = 5
                WHERE id = %s"""
     with connection.cursor(dictionary=True) as cursor:
@@ -454,7 +454,7 @@ def skip_download_error(connection: PooledMySQLConnection, id):
     connection.commit()
 
 
-def skip_processing_error(connection: PooledMySQLConnection, id):
+def skip_processing_error(connection: PooledMySQLConnection, id: int) -> None:
     query = """UPDATE autokmdb_news SET skip_reason = 4, processing_step = 5
                WHERE id = %s"""
     with connection.cursor(dictionary=True) as cursor:
@@ -464,11 +464,11 @@ def skip_processing_error(connection: PooledMySQLConnection, id):
 
 def save_classification_step(
     connection: PooledMySQLConnection,
-    id,
-    classification_label,
-    classification_score,
-    category,
-):
+    id: int,
+    classification_label: int,
+    classification_score: float,
+    category: int,
+) -> None:
     query = """UPDATE autokmdb_news SET classification_label = %s,
                classification_score = %s, processing_step = 2, category = %s WHERE id = %s"""
     with connection.cursor() as cursor:
@@ -478,61 +478,61 @@ def save_classification_step(
     connection.commit()
 
 
-def get_retries_from(connection, date):
+def get_retries_from(connection: PooledMySQLConnection, date: str) -> list[dict]:
     query = """SELECT id, source_url AS url, source, newspaper_id FROM autokmdb_news WHERE skip_reason = 3 AND cre_time >= %s AND processing_step = 5 ORDER BY source DESC, mod_time DESC"""
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (date,))
         return cursor.fetchall()
 
 
-def get_step_queue(connection, step):
-    fields = {
+def get_step_queue(connection: PooledMySQLConnection, step: int) -> dict[str, Any]:
+    fields: dict[int, str] = {
         0: "clean_url AS url, source, newspaper_id",
         1: "title, description, text, source",
         2: "text",
         3: "text",
         4: "text",
     }
-    query = f"""SELECT id, {fields[step]} FROM autokmdb_news
+    query: str = f"""SELECT id, {fields[step]} FROM autokmdb_news
                WHERE processing_step = {step} ORDER BY source DESC, mod_time DESC LIMIT 1"""
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query)
         return cursor.fetchone()
 
 
-def get_download_queue(connection: PooledMySQLConnection):
+def get_download_queue(connection: PooledMySQLConnection) -> dict[str, Any]:
     return get_step_queue(connection, 0)
 
 
-def get_classification_queue(connection: PooledMySQLConnection):
+def get_classification_queue(connection: PooledMySQLConnection) -> dict[str, Any]:
     return get_step_queue(connection, 1)
 
 
-def get_ner_queue(connection: PooledMySQLConnection):
+def get_ner_queue(connection: PooledMySQLConnection) -> dict[str, Any]:
     return get_step_queue(connection, 2)
 
 
-def get_keyword_queue(connection: PooledMySQLConnection):
+def get_keyword_queue(connection: PooledMySQLConnection) -> dict[str, Any]:
     return get_step_queue(connection, 3)
 
 
-def get_human_queue(connection: PooledMySQLConnection):
+def get_human_queue(connection: PooledMySQLConnection) -> dict[str, Any]:
     return get_step_queue(connection, 4)
 
 
-def paginate_query(query, page_size, page_number):
-    offset = (page_number - 1) * page_size
+def paginate_query(query: str, page_size: int, page_number: int) -> str:
+    offset: int = (page_number - 1) * page_size
     return query + f" LIMIT {page_size} OFFSET {offset}"
 
 
 def get_article_counts(
     connection: PooledMySQLConnection,
-    domains,
+    domains: list[str],
     q="",
     start="2000-01-01",
     end="2050-01-01",
-):
-    article_counts = {}
+) -> dict[str, int]:
+    article_counts: dict[str, int] = {}
     for status in ["mixed", "positive", "negative", "processing", "all"]:
         if status == "mixed":
             query = """WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND (n.skip_reason = 0 OR n.skip_reason is NULL)"""
@@ -545,7 +545,7 @@ def get_article_counts(
         elif status == "all":
             query = """WHERE processing_step >= 0"""
         if domains and domains[0] != -1 and isinstance(domains, list):
-            domain_list = ",".join([str(domain) for domain in domains])
+            domain_list: str = ",".join([str(domain) for domain in domains])
             query += f" AND n.newspaper_id IN ({domain_list})"
         query += " AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)"
         query += " AND DATE(n.cre_time) BETWEEN %s AND %s"
@@ -554,12 +554,12 @@ def get_article_counts(
                 "SELECT COUNT(id) FROM autokmdb_news n " + query,
                 (q, q, q, q, start, end),
             )
-            count = cursor.fetchone()["COUNT(id)"]
+            count: int = cursor.fetchone()["COUNT(id)"]
             article_counts[status] = count
     return article_counts
 
 
-def get_article_persons_kmdb(cursor, id):
+def get_article_persons_kmdb(cursor, id) -> list[dict[str, Any]]:
     query = (
         """SELECT news_id, person_id AS id FROM news_persons_link WHERE news_id = %s"""
     )
@@ -576,7 +576,7 @@ def get_article_persons_kmdb(cursor, id):
     ]
 
 
-def get_article_institutions_kmdb(cursor, id):
+def get_article_institutions_kmdb(cursor, id) -> list[dict[str, Any]]:
     query = """SELECT news_id, institution_id AS id FROM news_institutions_link WHERE news_id = %s"""
     cursor.execute(query, (id,))
     return [
@@ -591,7 +591,7 @@ def get_article_institutions_kmdb(cursor, id):
     ]
 
 
-def get_article_places_kmdb(cursor, id):
+def get_article_places_kmdb(cursor, id) -> list[dict[str, Any]]:
     query = (
         """SELECT news_id, place_id AS id FROM news_places_link WHERE news_id = %s"""
     )
@@ -608,7 +608,7 @@ def get_article_places_kmdb(cursor, id):
     ]
 
 
-def get_article_others_kmdb(cursor, id):
+def get_article_others_kmdb(cursor, id) -> list[dict[str, Any]]:
     query = (
         """SELECT news_id, other_id AS id FROM news_others_link WHERE news_id = %s"""
     )
@@ -625,37 +625,37 @@ def get_article_others_kmdb(cursor, id):
     ]
 
 
-def get_article_persons(cursor, id):
+def get_article_persons(cursor, id) -> list[dict]:
     query = """SELECT name, id, person_id AS db_id, person_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_persons WHERE autokmdb_news_id = %s"""
     cursor.execute(query, (id,))
     return cursor.fetchall()
 
 
-def get_article_institutions(cursor, id):
+def get_article_institutions(cursor, id) -> list[dict]:
     query = """SELECT name, id, institution_id AS db_id, institution_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_institutions WHERE autokmdb_news_id = %s"""
     cursor.execute(query, (id,))
     return cursor.fetchall()
 
 
-def get_article_places(cursor, id):
+def get_article_places(cursor, id) -> list[dict]:
     query = """SELECT name, id, place_id AS db_id, place_name AS db_name, classification_score, classification_label, annotation_label, found_name, found_position FROM autokmdb_places WHERE autokmdb_news_id = %s"""
     cursor.execute(query, (id,))
     return cursor.fetchall()
 
 
-def get_article_others(cursor, id):
+def get_article_others(cursor, id) -> list[dict]:
     query = """SELECT name, id, other_id AS db_id, classification_score, classification_label, annotation_label FROM autokmdb_others WHERE autokmdb_news_id = %s"""
     cursor.execute(query, (id,))
     return cursor.fetchall()
 
 
-def get_article(connection: PooledMySQLConnection, id):
+def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
     query = """SELECT n.id AS id, news_id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason,
             n.text AS text, n.cre_time AS date, category, CONVERT_TZ(article_date, @@session.time_zone, '+00:00') as article_date, u.name AS mod_name FROM autokmdb_news n LEFT JOIN users u ON n.mod_id = u.user_id WHERE id = %s
         """
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (id,))
-        article = cursor.fetchone()
+        article: dict = cursor.fetchone()
         if article["news_id"]:
             article["persons"] = get_article_persons_kmdb(
                 cursor, article["news_id"]
@@ -678,23 +678,23 @@ def get_article(connection: PooledMySQLConnection, id):
 
 
 def get_articles(
-    connection,
-    page,
-    status,
-    domains,
+    connection: PooledMySQLConnection,
+    page: int,
+    status: int,
+    domains: str,
     q="",
     start="2000-01-01",
     end="2050-01-01",
     reverse=False,
-):
-    query = ""
+) -> Optional[tuple[int, list[dict[str, Any]]]]:
+    query: str = ""
 
-    selection = """SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason, negative_reason,
+    selection: str = """SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason, negative_reason,
             n.cre_time AS date, category, u.name AS mod_name
         FROM autokmdb_news n
         LEFT JOIN users u ON n.mod_id = u.user_id
         """
-    group = (
+    group: str = (
         " GROUP BY id ORDER BY source DESC, n.article_date "
         + ("ASC" if reverse else "DESC")
         if status != "positive"
@@ -715,7 +715,7 @@ def get_articles(
         print("Invalid status provided!")
         return
     if domains and domains[0] != -1 and isinstance(domains, list):
-        domain_list = ",".join([str(domain) for domain in domains])
+        domain_list: str = ",".join([str(domain) for domain in domains])
         query += f" AND n.newspaper_id IN ({domain_list})"
 
     query += " AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)"
@@ -726,7 +726,7 @@ def get_articles(
         cursor.execute(
             "SELECT COUNT(id) FROM autokmdb_news n " + query, (q, q, q, q, start, end)
         )
-        count = cursor.fetchone()["COUNT(id)"]
+        count: int = cursor.fetchone()["COUNT(id)"]
         cursor.execute(
             paginate_query(selection + query + group, 10, page),
             (q, q, q, q, start, end),
@@ -734,14 +734,18 @@ def get_articles(
         return count, cursor.fetchall()
 
 
-def force_accept_article(connection: PooledMySQLConnection, id, user_id):
+def force_accept_article(
+    connection: PooledMySQLConnection, id: int, user_id: int
+) -> None:
     query = """UPDATE autokmdb_news SET classification_label = 1, processing_step = 4, skip_reason = NULL, source = 1, mod_id = %s WHERE id = %s;"""
     with connection.cursor() as cursor:
         cursor.execute(query, (user_id, id))
     connection.commit()
 
 
-def annote_negative(connection: PooledMySQLConnection, id, reason, user_id):
+def annote_negative(
+    connection: PooledMySQLConnection, id: int, reason: int, user_id: int
+) -> None:
     query = """UPDATE autokmdb_news SET annotation_label = 0, processing_step = 5, negative_reason = %s, mod_id = %s WHERE id = %s;"""
     query_id = """SELECT news_id FROM autokmdb_news WHERE id = %s;"""
     query_remove = """DELETE FROM news_news WHERE news_id = %s;"""
@@ -755,7 +759,7 @@ def annote_negative(connection: PooledMySQLConnection, id, reason, user_id):
 
     with connection.cursor() as cursor:
         cursor.execute(query_id, (id,))
-        news_id = cursor.fetchone()[0]
+        news_id: int = cursor.fetchone()[0]
         cursor.execute(
             query,
             (
@@ -774,31 +778,37 @@ def annote_negative(connection: PooledMySQLConnection, id, reason, user_id):
     connection.commit()
 
 
-def create_person(connection, name, user_id):
+def create_person(connection: PooledMySQLConnection, name: str, user_id: int) -> int:
     logging.info("adding new person: " + name)
-    query = """INSERT INTO news_persons (status, name, cre_id, mod_id, import_id, cre_time, mod_time) VALUES (%s, %s, %s, %s, %s, %s, %s);"""
-    query_seo = """INSERT INTO tags_seo_data (seo_name, tag_type, item_id) VALUES (%s, %s, %s);"""
-    query_check_person = """SELECT person_id FROM news_persons WHERE name = %s;"""
+    query: str = (
+        """INSERT INTO news_persons (status, name, cre_id, mod_id, import_id, cre_time, mod_time) VALUES (%s, %s, %s, %s, %s, %s, %s);"""
+    )
+    query_seo: str = (
+        """INSERT INTO tags_seo_data (seo_name, tag_type, item_id) VALUES (%s, %s, %s);"""
+    )
+    query_check_person: str = """SELECT person_id FROM news_persons WHERE name = %s;"""
 
-    current_datetime = datetime.now()
-    cre_time = int(current_datetime.timestamp())
+    current_datetime: datetime = datetime.now()
+    cre_time: int = int(current_datetime.timestamp())
 
     with connection.cursor() as cursor:
         cursor.execute(query_check_person, (name,))
-        result = cursor.fetchone()
+        result: Optional[list[int]] = cursor.fetchone()
         if result:
-            person_id = result[0]
+            person_id: int = result[0]
             logging.info(f"Person already exists with ID: {person_id}")
             return person_id
 
         cursor.execute(query, ("Y", name, user_id, user_id, 0, cre_time, cre_time))
-        db_id = cursor.lastrowid
+        db_id: int = cursor.lastrowid
         cursor.execute(query_seo, (slugify(name), "persons", db_id))
     connection.commit()
     return db_id
 
 
-def create_institution(connection, name, user_id):
+def create_institution(
+    connection: PooledMySQLConnection, name: str, user_id: int
+) -> int:
     logging.info("adding new institution: " + name)
     query = """INSERT INTO news_institutions (status, name, cre_id, mod_id, import_id, cre_time, mod_time) VALUES (%s, %s, %s, %s, %s, %s, %s);"""
     query_seo = """INSERT INTO tags_seo_data (seo_name, tag_type, item_id) VALUES (%s, %s, %s);"""
@@ -806,25 +816,25 @@ def create_institution(connection, name, user_id):
         """SELECT institution_id FROM news_institutions WHERE name = %s;"""
     )
 
-    current_datetime = datetime.now()
+    current_datetime: datetime = datetime.now()
     cre_time = int(current_datetime.timestamp())
 
     with connection.cursor() as cursor:
         cursor.execute(query_check_institution, (name,))
-        result = cursor.fetchone()
+        result: list[int] = cursor.fetchone()
         if result:
-            institution_id = result[0]
+            institution_id: int = result[0]
             logging.info(f"Institution already exists with ID: {institution_id}")
             return institution_id
 
         cursor.execute(query, ("Y", name, user_id, user_id, 0, cre_time, cre_time))
-        db_id = cursor.lastrowid
+        db_id: int = cursor.lastrowid
         cursor.execute(query_seo, (slugify(name), "institutions", db_id))
     connection.commit()
     return db_id
 
 
-def get_article_annotation(connection, news_id):
+def get_article_annotation(connection: PooledMySQLConnection, news_id):
     get_annotation = """SELECT annotation_label FROM autokmdb_news WHERE id = %s;"""
     with connection.cursor() as cursor:
         cursor.execute(get_annotation, (news_id,))
@@ -833,22 +843,22 @@ def get_article_annotation(connection, news_id):
 
 def annote_positive(
     connection: PooledMySQLConnection,
-    id,
-    source_url,
-    source_url_string,
-    title,
-    description,
-    text,
-    persons,
-    institutions,
-    places,
-    newspaper_id,
-    user_id,
-    is_active,
-    category,
-    others,
-    file_ids,
-    pub_date,
+    id: int,
+    source_url: str,
+    source_url_string: str,
+    title: str,
+    description: str,
+    text: str,
+    persons: list[dict],
+    institutions: list[dict],
+    places: list[dict],
+    newspaper_id: int,
+    user_id: int,
+    is_active: bool,
+    category: int,
+    others: list[dict],
+    file_ids: list[int],
+    pub_date: str,
 ):
     query_0 = """SELECT news_id FROM autokmdb_news WHERE id = %s LIMIT 1"""
     query_1 = """UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s, title = %s, description = %s, text = %s, mod_id = %s WHERE id = %s;"""
@@ -912,17 +922,17 @@ WHERE
 
     seo_query = """INSERT INTO seo_urls_data (seo_url, modul, action, item_id, lang) VALUES (%s, "news", "view", %s, "hu")"""
 
-    current_datetime = datetime.now()
+    current_datetime: datetime = datetime.now()
     cre_time = int(current_datetime.timestamp())
 
     with connection.cursor() as cursor:
-        category_dict = {0: 5, 1: 6, 2: 7, None: 5}
+        category_dict: dict[int | None, int] = {0: 5, 1: 6, 2: 7, None: 5}
         is_update = False
-        alias = slugify(title)
-        seo_url_default = "hirek/magyar-hirek/" + alias
+        alias: str = slugify(title)
+        seo_url_default: str = "hirek/magyar-hirek/" + alias
 
         cursor.execute(query_0, (id,))
-        news_id = cursor.fetchone()[0]
+        news_id: int = cursor.fetchone()[0]
 
         if news_id:
             is_update = True
@@ -992,7 +1002,7 @@ WHERE
 
         for person in persons:
             if ("db_id" not in person or not person["db_id"]) and person["name"]:
-                db_id = create_person(connection, person["name"], user_id)
+                db_id: int = create_person(connection, person["name"], user_id)
                 person["db_id"] = db_id
         for institution in institutions:
             if ("db_id" not in institution or not institution["db_id"]) and institution[
@@ -1087,23 +1097,25 @@ def get_keyword_synonyms(connection: PooledMySQLConnection) -> list[dict]:
         return cursor.fetchall()
 
 
-def update_session(connection: PooledMySQLConnection, session_id, unix_timestamp):
+def update_session(
+    connection: PooledMySQLConnection, session_id: int, unix_timestamp: int
+):
     query = """UPDATE users_sessions SET session_expires = %s WHERE session_id = %s"""
-    dt = datetime.fromtimestamp(unix_timestamp)
-    new_dt = dt + timedelta(minutes=30)
+    dt: datetime = datetime.fromtimestamp(unix_timestamp)
+    new_dt: datetime = dt + timedelta(minutes=30)
     new_unix_timestamp = int(new_dt.timestamp())
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (new_unix_timestamp, session_id))
     connection.commit()
 
 
-def validate_session(connection: PooledMySQLConnection, session_id):
+def validate_session(connection: PooledMySQLConnection, session_id: int):
     if "NO_LOGIN" in os.environ:
         return True
     query = """SELECT * FROM users_sessions WHERE session_id = %s;"""
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (session_id,))
-        session = cursor.fetchone()
+        session: Optional[dict] = cursor.fetchone()
     if session is None or session["registered"] == 0:
         return None
 
@@ -1112,22 +1124,22 @@ def validate_session(connection: PooledMySQLConnection, session_id):
     return session["registered"]
 
 
-def get_roles(connection: PooledMySQLConnection, session_id):
+def get_roles(connection: PooledMySQLConnection, session_id: int):
     query = """SELECT * FROM users_sessions WHERE session_id = %s;"""
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (session_id,))
-    session = cursor.fetchone()
+    session: dict = cursor.fetchone()
     if session is None or session["registered"] == 0:
         return []
 
-    user_id = session["registered"]
+    user_id: int = session["registered"]
 
     query_u = """SELECT * FROM users_modul_rights WHERE user_id = %s;"""
 
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query_u, (user_id,))
 
-    roles = [
+    roles: list[dict[str, Any]] = [
         {
             "modul_name": r["modul_name"],
             "action_name": r["action_name"],
