@@ -2,7 +2,7 @@ import time
 from typing import Optional
 import feedparser
 from auto_kmdb.options import skip_url_patterns
-from auto_kmdb.db import check_url_exists, init_news, connection_pool, get_rss_urls
+from auto_kmdb import db
 from auto_kmdb.preprocess import clear_url
 import logging
 import requests
@@ -14,8 +14,8 @@ from zoneinfo import ZoneInfo
 def rss_watcher(app_context):
     logging.info("Started RSS watcher")
     app_context.push()
-    with connection_pool.get_connection() as connection:
-        newspapers: list[dict] = get_rss_urls(connection)
+    with db.connection_pool.get_connection() as connection:
+        newspapers: list[dict] = db.get_rss_urls(connection)
     while True:
         logging.info("checking feeds")
         for newspaper in newspapers:
@@ -55,11 +55,11 @@ def get_new_from_rss(newspaper):
         ]
         for url, published_at in urls_dates:
             clean_url = clear_url(url)
-            with connection_pool.get_connection() as connection:
-                if not check_url_exists(connection, clean_url) and not skip_url(
+            with db.connection_pool.get_connection() as connection:
+                if not db.check_url_exists(connection, clean_url) and not skip_url(
                     clean_url
                 ):
-                    init_news(
+                    db.init_news(
                         connection,
                         "rss",
                         url,
@@ -85,11 +85,11 @@ def get_new_from_rss(newspaper):
             # parsed_date = datetime.strptime(release_date, '%Y-%m-%dT%H:%M:%S.%f%z')
             # pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
             clean_url: str = clear_url(url)
-            with connection_pool.get_connection() as connection:
-                if not check_url_exists(connection, clean_url) and not skip_url(
+            with db.connection_pool.get_connection() as connection:
+                if not db.check_url_exists(connection, clean_url) and not skip_url(
                     clean_url
                 ):
-                    init_news(
+                    db.init_news(
                         connection,
                         "rss",
                         url,
@@ -127,11 +127,11 @@ def get_new_from_rss(newspaper):
                     logging.warning("No parsing for: " + str(entry.published))
             except Exception:
                 pub_time = None
-            with connection_pool.get_connection() as connection:
-                if not check_url_exists(connection, clean_url) and not skip_url(
+            with db.connection_pool.get_connection() as connection:
+                if not db.check_url_exists(connection, clean_url) and not skip_url(
                     clean_url
                 ):
-                    init_news(
+                    db.init_news(
                         connection,
                         "rss",
                         entry.link,

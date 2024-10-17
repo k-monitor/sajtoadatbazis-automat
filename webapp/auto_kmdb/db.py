@@ -1080,7 +1080,7 @@ def get_rss_urls(connection: PooledMySQLConnection):
 
 
 @cache
-def get_keyword_synonyms(connection: PooledMySQLConnection):
+def get_keyword_synonyms(connection: PooledMySQLConnection) -> list[dict]:
     query = """SELECT synonym, name, db_id FROM autokmdb_keyword_synonyms"""
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query)

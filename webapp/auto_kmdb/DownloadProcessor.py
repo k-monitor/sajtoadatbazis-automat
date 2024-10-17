@@ -5,12 +5,7 @@ from playwright._impl._api_structures import Cookie
 from playwright.sync_api._generated import Browser, BrowserContext, Page
 from auto_kmdb.Processor import Processor
 from auto_kmdb.same_news import same_news
-from auto_kmdb.db import (
-    get_download_queue,
-    save_download_step,
-    skip_same_news,
-    skip_download_error,
-)
+from auto_kmdb import db
 from auto_kmdb.preprocess import (
     do_replacements,
     replacements,
@@ -19,7 +14,6 @@ from auto_kmdb.preprocess import (
 )
 from time import sleep
 import newspaper
-from auto_kmdb.db import connection_pool
 import os
 import requests
 from bs4 import BeautifulSoup
@@ -129,14 +123,28 @@ def save_article(
     news_id: int,
 ):
     if same_news_id and same_news_id != newspaper_id and source != 1:
-        with connection_pool.get_connection() as connection:
-            skip_same_news(
-                connection, news_id, text, title, description, authors, date, is_paywalled
+        with db.connection_pool.get_connection() as connection:
+            db.skip_same_news(
+                connection,
+                news_id,
+                text,
+                title,
+                description,
+                authors,
+                date,
+                is_paywalled,
             )
     else:
-        with connection_pool.get_connection() as connection:
-            save_download_step(
-                connection, news_id, text, title, description, authors, date, is_paywalled
+        with db.connection_pool.get_connection() as connection:
+            db.save_download_step(
+                connection,
+                news_id,
+                text,
+                title,
+                description,
+                authors,
+                date,
+                is_paywalled,
             )
 
 
@@ -277,7 +285,7 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
             same_news_id,
             row["newspaper_id"],
             row["source"],
-            row["id"]
+            row["id"],
         )
         sleep(3)
 
@@ -301,8 +309,8 @@ class DownloadProcessor(Processor):
         logging.info("initialized download processor")
 
     def process_next(self) -> None:
-        with connection_pool.get_connection() as connection:
-            next_row = get_download_queue(connection)
+        with db.connection_pool.get_connection() as connection:
+            next_row = db.get_download_queue(connection)
         if next_row is None:
             sleep(30)
             return
@@ -331,5 +339,5 @@ class DownloadProcessor(Processor):
             )
         except Exception as e:
             logging.error(e)
-            with connection_pool.get_connection() as connection:
-                skip_download_error(connection, id)
+            with db.connection_pool.get_connection() as connection:
+                db.skip_download_error(connection, id)

@@ -3,11 +3,6 @@ from numpy import ndarray
 from sklearn.svm import SVC
 from transformers.tokenization_utils_base import BatchEncoding
 from auto_kmdb.Processor import Processor
-from auto_kmdb.db import (
-    get_classification_queue,
-    save_classification_step,
-    skip_processing_error,
-)
 from time import sleep
 from transformers import (
     BertForSequenceClassification,
@@ -16,7 +11,7 @@ from transformers import (
     PreTrainedModel,
 )
 import torch.nn.functional as F
-from auto_kmdb.db import connection_pool
+from auto_kmdb import db
 from joblib import load
 import torch
 import logging
@@ -85,13 +80,15 @@ class ClassificationProcessor(Processor):
     def _save_classification(self, connection, next_row, label, score, category):
         """Saves the classification result to the database."""
         if next_row["source"] == 1:
-            save_classification_step(connection, next_row["id"], 1, 1.0, category)
+            db.save_classification_step(connection, next_row["id"], 1, 1.0, category)
         else:
-            save_classification_step(connection, next_row["id"], label, score, category)
+            db.save_classification_step(
+                connection, next_row["id"], label, score, category
+            )
 
     def process_next(self):
-        with connection_pool.get_connection() as connection:
-            next_row = get_classification_queue(connection)
+        with db.connection_pool.get_connection() as connection:
+            next_row = db.get_classification_queue(connection)
 
         if next_row is None:
             sleep(30)
@@ -104,11 +101,11 @@ class ClassificationProcessor(Processor):
 
         try:
             label, score, category = self.predict(text)
-            with connection_pool.get_connection() as connection:
+            with db.connection_pool.get_connection() as connection:
                 self._save_classification(connection, next_row, label, score, category)
         except Exception as e:
-            with connection_pool.get_connection() as connection:
-                skip_processing_error(connection, next_row["id"])
+            with db.connection_pool.get_connection() as connection:
+                db.skip_processing_error(connection, next_row["id"])
 
             logging.warning(f"Exception during: {next_row['id']}")
             logging.error(e)
