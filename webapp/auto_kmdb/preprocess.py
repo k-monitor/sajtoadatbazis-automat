@@ -80,6 +80,7 @@ title_papers = [
     "BOON - ",
     " - pecsma.hu",
     " - Direkt36",
+    " | hvg.hu",
 ]
 
 replacements = [
