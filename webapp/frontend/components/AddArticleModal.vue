@@ -4,13 +4,8 @@
             <p>Új cikk</p>
             <UInput class="my-2" v-model="newUrlInternal" placeholder="https://telex.hu/..." />
             <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
-                <UInputMenu
-                    class="w-48"
-                    placeholder="válassz egy hírportált"
-                    v-model="selectedDomainInternal"
-                    option-attribute="name"
-                    :options="domains"
-                />
+                <UInputMenu class="w-48" placeholder="válassz egy hírportált" v-model="selectedDomainInternal"
+                    option-attribute="name" :options="domains" />
                 <UButton @click="handleAddUrl">Hozzáad</UButton>
             </UContainer>
         </div>
