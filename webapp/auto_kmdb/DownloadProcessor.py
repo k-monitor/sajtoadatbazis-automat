@@ -269,24 +269,28 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
         rows = db.get_retries_from(connection, formatted_date)
     for row in rows:
         logging.info("retrying: " + row["url"])
-        text, title, description, authors, date, is_paywalled, same_news_id = (
-            process_article(
-                row["id"], row["url"], row["source"], row["newspaper_id"], cookies
+        try:
+            text, title, description, authors, date, is_paywalled, same_news_id = (
+                process_article(
+                    row["id"], row["url"], row["source"], row["newspaper_id"], cookies
+                )
             )
-        )
-        save_article(
-            text,
-            title,
-            description,
-            authors,
-            date,
-            is_paywalled,
-            same_news_id,
-            row["newspaper_id"],
-            row["source"],
-            row["id"],
-        )
-        sleep(3)
+            save_article(
+                text,
+                title,
+                description,
+                authors,
+                date,
+                is_paywalled,
+                same_news_id,
+                row["newspaper_id"],
+                row["source"],
+                row["id"],
+            )
+            sleep(3)
+        except Exception:
+            logging.error(traceback.format_exc())
+
 
 
 class DownloadProcessor(Processor):
