@@ -42,8 +42,19 @@ class Mediaworks(Newspaper):
 
         parsed_text: list[str] = []
         for p in paragraphs:
-            text: str = p.get_text(strip=True)
-            if text:
-                parsed_text.append(text)
+            text_parts = []
+            for element in p.contents:
+                if element.name == 'a':
+                    link_text = element.get_text(strip=True)
+                    if link_text:
+                        text_parts.append(link_text)
+                elif element.string is not None:
+                    clean_text = element.string.strip()
+                    if clean_text:
+                        text_parts.append(clean_text)
+
+            combined_text = ' '.join(text_parts)
+            if combined_text:
+                parsed_text.append(combined_text)
 
         return "\n".join(parsed_text)

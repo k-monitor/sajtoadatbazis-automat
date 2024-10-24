@@ -487,6 +487,7 @@ async function submitArticle() {
       body: {
         id: article.value.id,
         newspaper_id: article.value.newspaper_id,
+        newspaper_name: article.value.newspaper_name,
         url: article.value.url,
         title: article.value.title,
         description: article.value.description,

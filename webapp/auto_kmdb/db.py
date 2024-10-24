@@ -841,24 +841,64 @@ def get_article_annotation(connection: PooledMySQLConnection, news_id):
         return cursor.fetchone()[0]
 
 
+def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
+    def to_names(lst):
+        result = []
+        seen = set()
+        for e in lst:
+            if 'db_name' in e and e['db_name'] and e['db_name'] not in seen:
+                result.append(e['db_name'])
+                seen.add(e['db_name'])
+            elif 'name' in e and e['name'] and e['name'] not in seen:
+                result.append(e['name'])
+                seen.add(e['name'])
+            else:
+                logging.warning(f"no names in: {e}")
+        return result
+
+    logging.info('setTags')
+    names: list[str] = to_names(persons)
+    names.append(newspaper)
+    names += to_names(institutions)
+    names += to_names(places)
+    names += to_names(others)
+
+    names_str: str = '|'.join(names)
+
+    tag_query = """SELECT tag_id FROM news_tags WHERE news_id = %s"""
+    tag_update = """UPDATE news_tags SET names = %s WHERE tag_id = %s"""
+    tag_insert = """INSERT INTO news_tags (names, news_id) VALUES (%s, %s)"""
+
+    cursor.execute(tag_query, (news_id,))
+    tag_id: list[Optional[int]] = cursor.fetchone()
+
+    if tag_id and tag_id[0]:
+        cursor.execute(tag_update, (names_str, news_id,))
+        logging.info(f"updating tag_id={tag_id[0]} news_id={news_id} with text: {names_str}")
+    else:
+        cursor.execute(tag_insert, (names_str, news_id,))
+        logging.info(f"updating news_id={news_id} with text: {names_str}")
+
+
 def annote_positive(
     connection: PooledMySQLConnection,
-    id: int,
-    source_url: str,
-    source_url_string: str,
-    title: str,
-    description: str,
-    text: str,
-    persons: list[dict],
-    institutions: list[dict],
-    places: list[dict],
-    newspaper_id: int,
-    user_id: int,
-    is_active: bool,
-    category: int,
-    others: list[dict],
-    file_ids: list[int],
-    pub_date: str,
+    id,
+    source_url,
+    source_url_string,
+    title,
+    description,
+    text,
+    persons,
+    institutions,
+    places,
+    newspaper_id,
+    newspaper_name,
+    user_id,
+    is_active,
+    category,
+    others,
+    file_ids,
+    pub_date,
 ):
     query_0 = """SELECT news_id FROM autokmdb_news WHERE id = %s LIMIT 1"""
     query_1 = """UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, news_id = %s, title = %s, description = %s, text = %s, mod_id = %s WHERE id = %s;"""
@@ -1064,6 +1104,8 @@ WHERE
             cursor.execute(delete_file, (news_id,))
         for file_id in file_ids:
             cursor.execute(query_file, (news_id, file_id))
+
+        setTags(cursor, news_id, persons, newspaper_name, institutions, places, others)
 
     connection.commit()
 
