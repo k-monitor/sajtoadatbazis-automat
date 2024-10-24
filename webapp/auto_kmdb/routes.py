@@ -163,18 +163,19 @@ def annote():
             409,
         )
 
-    url: str = content["url"]
-    title: str = content["title"]
-    description: str = content["description"]
-    text: str = content["text"]
-    persons: list[dict] = content["positive_persons"]
-    institutions: list[dict] = content["positive_institutions"]
-    places: list[dict] = content["positive_places"]
-    others: list[dict] = content["tags"]
-    newspaper_id: int = content["newspaper_id"]
-    is_active: bool = content["active"]
-    pub_date: str = content["pub_date"]
-    parsed_date: datetime = datetime.strptime(pub_date, "%a, %d %b %Y %H:%M:%S %Z")
+    url = request.json["url"]
+    title = request.json["title"]
+    description = request.json["description"]
+    text = request.json["text"]
+    persons = request.json["positive_persons"]
+    institutions = request.json["positive_institutions"]
+    places = request.json["positive_places"]
+    others = request.json["tags"]
+    newspaper_id = request.json["newspaper_id"]
+    newspaper_name = request.json["newspaper_name"]
+    is_active = request.json["active"]
+    pub_date = request.json["pub_date"]
+    parsed_date = datetime.strptime(pub_date, "%a, %d %b %Y %H:%M:%S %Z")
     category = 0
     if "category" in content:
         category: int = content["category"]
@@ -209,6 +210,7 @@ def annote():
             institutions,
             places,
             newspaper_id,
+            newspaper_name,
             user_id,
             is_active,
             category,
