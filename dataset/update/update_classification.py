@@ -14,7 +14,7 @@ def filter_list_end_biased(input_list, min_prob=0.3, max_prob=1.0):
     
     return [item for index, item in enumerate(input_list) if random.random() < get_probability(index)]
 
-positive_dataset = Dataset.from_list(filter_list_end_biased(load_dataset("K-Monitor/kmdb_base").remove_columns(['news_id', 'archive_url', 'kmdb_url', 'newspaper', 'category', 'files', 'persons', 'institutions', 'places', 'others']).rename_column('source_url', 'url').rename_column('pub_time', 'date').map(lambda row: {'label': 1, 'is_hand_annoted': True})['train']))
+positive_dataset = Dataset.from_list(filter_list_end_biased(load_dataset("K-Monitor/kmdb_base").remove_columns(['news_id', 'archive_url', 'kmdb_url', 'category', 'files', 'persons', 'institutions', 'places', 'others']).rename_column('source_url', 'url').rename_column('pub_time', 'date').map(lambda row: {'label': 1, 'is_hand_annoted': True})['train']))
 dataset = load_dataset("boapps/kmdb_classification")
 dataset = dataset.filter(lambda row: row['label'] == 0)
 
@@ -32,7 +32,7 @@ print(sorted(dataset['validation'].filter(lambda row: row['date'])['date'])[-1])
 
 with mysql_db.cursor(dictionary=True) as cursor:
     query = '''
-SELECT text, title, description, annotation_label AS label, clean_url as url
+SELECT text, title, newspaper_name as newspaper, description, annotation_label AS label, clean_url as url
 FROM autokmdb_news
 WHERE annotation_label = 0 AND negative_reason = 0
 ORDER BY id;'''
@@ -55,7 +55,7 @@ mysql_db = mysql.connector.connect(
 
 with mysql_db.cursor(dictionary=True) as cursor:
     query = '''
-SELECT text, title, description, annotation_label AS label, clean_url as url
+SELECT text, title, newspaper_name as newspaper, description, annotation_label AS label, clean_url as url
 FROM autokmdb_news
 WHERE annotation_label = 0 AND negative_reason = 0
 ORDER BY id;'''

@@ -1,21 +1,10 @@
 <template>
   <div>
-    <p  class="font-bold" style="text-transform: capitalize">{{ type }}:</p>
-    <USelectMenu
-      @close="() => $emit('update:positiveList', localPositiveList)"
-      :searchable="search"
-      searchable-placeholder="Keresés..."
-      class="my-2"
-      v-model="localPositiveList"
-      :options="list"
-      option-attribute="label"
-      show-create-option-when="always"
-      :creatable="creatable"
-      multiple
-      v-model:query="query"
-      @update:model-value="handleUpdate"
-      @keyup="onPress"
-    >
+    <p class="font-bold" style="text-transform: capitalize">{{ type }}:</p>
+    <USelectMenu @close="() => $emit('update:positiveList', localPositiveList)" :searchable="search"
+      searchable-placeholder="Keresés..." class="my-2" v-model="localPositiveList" :options="list"
+      option-attribute="label" show-create-option-when="always" :creatable="creatable" multiple v-model:query="query"
+      @update:model-value="handleUpdate" @keyup="onPress">
       <template #label>
         <span v-if="localPositiveList.length">{{
           localPositiveList
@@ -23,8 +12,8 @@
               item.db_name != null && item.db_name
                 ? item.db_name
                 : item.name != null
-                ? item.name
-                : item.label
+                  ? item.name
+                  : item.label
             )
             .join(", ")
         }}</span>
@@ -41,27 +30,19 @@
             option.db_name != null
               ? option.db_name
               : option.name != null
-              ? option.name
-              : option.label
+                ? option.name
+                : option.label
           }}
           {{
             option.classification_score != null
               ? "(" + (option.classification_score * 100).toFixed(0) + "%"
               : ""
           }}
-          <Icon
-            v-if="
-              option.classification_label == 1 &&
-              option.classification_score != null
-            "
-            name="mdi:emoticon-devil"
-            class="text-red-500"
-          />
-          <Icon
-            v-else-if="option.classification_score != null"
-            name="mdi:account-cowboy-hat"
-            class="text-yellow-500"
-          />
+          <Icon v-if="
+            option.classification_label == 1 &&
+            option.classification_score != null
+          " name="mdi:emoticon-devil" class="text-red-500" />
+          <Icon v-else-if="option.classification_score != null" name="mdi:account-cowboy-hat" class="text-yellow-500" />
           {{ option.classification_score != null ? ")" : "" }}
         </span>
       </template>
@@ -156,12 +137,8 @@ const { list, creatable, positiveList, labels, type } = defineProps([
   "labels",
   "type",
 ]);
-console.log("list");
-console.log(list);
-console.log(positiveList);
 const query = ref("");
 // Local state
-const localList = list;
 const localPositiveList = ref(positiveList);
 console.log("localPositiveList.value");
 console.log(localPositiveList.value);

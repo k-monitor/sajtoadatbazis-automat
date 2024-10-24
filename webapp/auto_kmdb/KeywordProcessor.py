@@ -1,6 +1,6 @@
 from auto_kmdb.Processor import Processor
 from time import sleep
-from auto_kmdb.db import connection_pool, get_keyword_queue, save_keyword_step
+from auto_kmdb import db
 import logging
 
 
@@ -22,8 +22,8 @@ class KeywordProcessor(Processor):
         pass
 
     def process_next(self):
-        with connection_pool.get_connection() as connection:
-            next_row = get_keyword_queue(connection)
+        with db.connection_pool.get_connection() as connection:
+            next_row = db.get_keyword_queue(connection)
         if next_row is None:
             sleep(30)
             return
@@ -32,5 +32,5 @@ class KeywordProcessor(Processor):
 
         # TODO
 
-        with connection_pool.get_connection() as connection:
-            save_keyword_step(connection, next_row["id"])
+        with db.connection_pool.get_connection() as connection:
+            db.save_keyword_step(connection, next_row["id"])
