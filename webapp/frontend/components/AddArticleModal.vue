@@ -32,6 +32,8 @@ const newUrlInternal = ref("");
 const selectedDomainInternal = ref(null);
 
 function handleAddUrl() {
-    emit('add-url', newUrlInternal.value, selectedDomainInternal.value);
+    const url = newUrlInternal.value;
+    emit('add-url', url, selectedDomainInternal.value);
+    newUrlInternal.value = "";
 }
 </script>
