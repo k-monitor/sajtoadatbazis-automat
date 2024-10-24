@@ -41,7 +41,7 @@
             article.newspaper_name }} </UButton>
         <a :href="article.url" target="_blank" class="font-bold text-xl mb-2 ml-1">{{
           article.title
-          }}</a>
+        }}</a>
 
       </p>
       <UBadge v-if="article.source == 1" class="m-1" color="orange">
@@ -73,8 +73,7 @@
       <div class="flex justify-between">
         <UButton v-if="article.skip_reason >= 1" color="orange" @click="retryArticle">Újra feldolgoz</UButton>
         <UButton v-if="(article.skip_reason >= 1)" @click="forceAccept" class="ml-auto r-0" color="purple">{{
-          "Szerkesztésre
-          küld" }}</UButton>
+          "Szerkesztésre küld" }}</UButton>
       </div>
     </div>
     <UModal v-model="isOpen" :ui="{ width: 'sm:max-w-7xl' }">
@@ -159,6 +158,8 @@
 </template>
 
 <script setup lang="ts">
+import { $authFetch } from "~/auth_fetch";
+
 const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
 
@@ -252,7 +253,7 @@ const items = [
 ];
 
 async function postUrl(url, data) {
-  return await $fetch(url, data);
+  return await $authFetch(url, data);
 }
 
 let allPersons = ref([]);
@@ -328,7 +329,7 @@ function openModal() {
     isOpen.value = true;
     isOpening.value = false;
   } else {
-    $fetch(baseUrl + "/api/article/" + article.value.id, {
+    $authFetch(baseUrl + "/api/article/" + article.value.id, {
       query: {},
       onResponse({ request, response, options }) {
         let original = article.value;
@@ -481,7 +482,7 @@ async function submitArticle() {
   });
 
   try {
-    await $fetch(baseUrl + "/api/" + getMethod() + "/positive", {
+    await $authFetch(baseUrl + "/api/" + getMethod() + "/positive", {
       method: "POST",
       body: {
         id: article.value.id,

@@ -4,6 +4,7 @@ definePageMeta({
 });
 
 import { sub, format } from "date-fns";
+import { useAuthLazyFetch, useAuthFetch, $authFetch } from "~/auth_fetch";
 import NewspaperSelectMenu from '~/components/NewspaperSelectMenu.vue';
 
 const route = useRoute();
@@ -36,8 +37,8 @@ let loadingDelete = ref(false);
 const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
 
-const allLabels = useFetch(baseUrl + "/api/all_labels").data;
-const keywordSynonyms = useFetch(baseUrl + "/api/keyword_synonyms").data;
+const allLabels = useAuthFetch(baseUrl + "/api/all_labels").data;
+const keywordSynonyms = useAuthFetch(baseUrl + "/api/keyword_synonyms").data;
 
 let allFiles = computed(() =>
   allLabels.value == null ? [] : allLabels.value?.files
@@ -90,7 +91,7 @@ function updateFromURL() {
   }
 }
 
-const { data: articleCounts, refresh: refreshArticleCounts } = useLazyFetch(
+const { data: articleCounts, refresh: refreshArticleCounts } = useAuthLazyFetch(
   baseUrl + "/api/article_counts",
   {
     method: "POST",
@@ -160,7 +161,7 @@ const {
   pending,
   data: articleQuery,
   refresh: refreshArticles,
-} = useLazyFetch(baseUrl + "/api/articles", {
+} = useAuthLazyFetch(baseUrl + "/api/articles", {
   method: "POST",
   body: {
     page: page,
@@ -261,7 +262,7 @@ async function deleteArticles(reason) {
   loadingDelete.value = true;
   for (const article of articles.value) {
     if (article.selected) {
-      await $fetch(baseUrl + "/api/annote/negative", {
+      await $authFetch(baseUrl + "/api/annote/negative", {
         method: "POST",
         body: { id: article.id, reason: reason },
       });
@@ -274,7 +275,7 @@ async function deleteArticles(reason) {
 async function handleAddUrl(newUrl, selectedDomain) {
   isOpen.value = false;
   try {
-    await $fetch(baseUrl + "/api/add_url", {
+    await $authFetch(baseUrl + "/api/add_url", {
       method: "POST",
       body: {
         url: newUrl,
