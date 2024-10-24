@@ -3,7 +3,8 @@ definePageMeta({
   colorMode: "light",
 });
 
-import { sub, format, isSameDay, type Duration } from "date-fns";
+import { sub, format } from "date-fns";
+import NewspaperSelectMenu from '~/components/NewspaperSelectMenu.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -20,17 +21,6 @@ const ranges = [
 ];
 
 const selected = ref({ start: sub(new Date(), { days: 14 }), end: new Date() });
-function selectRange(duration: Duration) {
-  selected.value = { start: sub(new Date(), duration), end: new Date() };
-}
-
-function isRangeSelected(duration: Duration) {
-  return (
-    isSameDay(selected.value.start, sub(new Date(), duration)) &&
-    isSameDay(selected.value.end, new Date())
-  );
-}
-let newUrl = "";
 let isOpen = ref(false);
 let isOpenError = ref(false);
 let errorText = ref("");
@@ -58,26 +48,6 @@ let allDomains = computed(() =>
     : [{ name: "mind", id: -1 }].concat(allLabels.value?.domains)
 );
 const selectedDomains = ref([{ name: "mind", id: -1 }]);
-
-watch(
-  selectedDomains,
-  (newVal) => {
-    const mindIndex = newVal.findIndex((domain) => domain.id === -1);
-    const hasOtherSelections = newVal.some((domain) => domain.id !== -1);
-
-    if (hasOtherSelections) {
-      if (mindIndex === 0)
-        selectedDomains.value = newVal.filter((domain) => domain.id !== -1);
-      else if (mindIndex !== -1)
-        selectedDomains.value = newVal.filter((domain) => domain.id == -1);
-    }
-
-    if (!hasOtherSelections && mindIndex === -1) {
-      selectedDomains.value = [{ name: "mind", id: -1 }];
-    }
-  },
-  { immediate: true }
-);
 
 const status = computed(() => statusItems.value[statusId.value].key);
 const from = computed(() => format(selected.value.start, "yyyy-MM-dd"));
@@ -227,8 +197,6 @@ function refresh() {
   refreshArticles();
 }
 
-const selectedDomainAdd = ref(null);
-
 function resetPageRefresh() {
   page.value = 1;
   updateURL();
@@ -241,12 +209,19 @@ function refreshAll() {
   refresh();
 }
 
-function filterNewspaper(selectedNewspaper) {
-  selectedDomains.value = [selectedNewspaper]
+function updateSelectedDomains(newDomains) {
+  selectedDomains.value = newDomains;
+}
+
+function updateSelectedDateRange(newRange) {
+  selected.value = newRange;
+}
+
+function updateReverseSort(newValue) {
+  reverseSort.value = newValue;
 }
 
 function openNewUrl() {
-  newUrl = "";
   isOpen.value = true;
 }
 
@@ -296,27 +271,19 @@ async function deleteArticles(reason) {
   resetPageRefresh();
 }
 
-async function addUrl() {
+async function handleAddUrl(newUrl, selectedDomain) {
   isOpen.value = false;
   try {
     await $fetch(baseUrl + "/api/add_url", {
       method: "POST",
       body: {
         url: newUrl,
-        newspaper_name: selectedDomainAdd.value.name,
-        newspaper_id: selectedDomainAdd.value.id,
-      },
-      onResponse({ request, response, options }) {},
-      onResponseError({ request, response, options }) {
-        console.log("1");
-        isOpenError.value = true;
-        errorText.value = response._data.error;
-        errorTitle.value = "Hiba " + response.status;
+        newspaper_name: selectedDomain.name,
+        newspaper_id: selectedDomain.id,
       },
     });
   } catch (error) {
-    console.log("3");
-    console.log(error);
+    console.error(error);
     if (!isOpenError.value) {
       isOpenError.value = true;
       errorText.value = error;
@@ -334,92 +301,26 @@ async function addUrl() {
       <UContainer class="my-1 flex lg:px-0 px-2 sm:px-0 ml-auto mr-1 flex-wrap">
         <UButton class="mr-1 h-fit my-1" @click="openNewUrl">Új cikk</UButton>
         <div class="flex my-auto px-1 my-1">
-          <p>Kiválasztott hírportál: &nbsp;</p>
-          <USelectMenu
-            searchable
-            :search-attributes="['name']"
-            searchable-placeholder="Keresés..."
-            clear-search-on-close
-            multiple
-            class="w-48"
-            v-model="selectedDomains"
-            by="id"
-            :options="allDomains"
-            @change="refresh"
-          >
-            <template #option="{ option }">
-              <span
-                ><Icon v-if="option.has_rss" name="mdi:rss" class="text-yellow-500" />
-                {{ option.name }}</span
-              >
-            </template>
-            <template #empty> betöltés... </template>
-            <template #label>
-              <span>{{
-                selectedDomains
-                  .map((item) => ("name" in item ? item.name : "mind"))
-                  .join(", ")
-              }}</span>
-            </template>
-          </USelectMenu>
+          <NewspaperSelectMenu 
+            :allDomains="allDomains"
+            :selectedDomains="selectedDomains"
+            @update:selectedDomains="updateSelectedDomains"
+            @refresh="refresh"
+          />
         </div>
-        <UButton
-          class="h-fit my-1"
-          :icon="
-            reverseSort ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'
-          "
-          size="sm"
-          color="primary"
-          square
-          variant="solid"
-          @click="
-            () => {
-              reverseSort = !reverseSort;
-              refresh();
-            }
-          "
+
+        <ReverseSortButton
+          :reverseSort="reverseSort"
+          @update:reverseSort="updateReverseSort"
+          @refresh="refresh"
         />
-        <UPopover class="px-1" :popper="{ placement: 'bottom-start' }">
-          <UButton icon="i-heroicons-calendar-days-20-solid" class=" my-1">
-            {{ format(selected.start, "yyyy. MM. dd.") }} -
-            {{ format(selected.end, "yyyy. MM. dd.") }}
-          </UButton>
 
-          <template #panel="{ close }">
-            <div
-              class="flex items-center sm:divide-x divide-gray-200 dark:divide-gray-800"
-            >
-              <div class="hidden sm:flex flex-col py-4">
-                <UButton
-                  v-for="(range, index) in ranges"
-                  :key="index"
-                  :label="range.label"
-                  color="gray"
-                  variant="ghost"
-                  class="rounded-none px-6"
-                  :class="[
-                    isRangeSelected(range.duration)
-                      ? 'bg-gray-100 dark:bg-gray-800'
-                      : 'hover:bg-gray-50 dark:hover:bg-gray-800/50',
-                  ]"
-                  truncate
-                  @click="selectRange(range.duration)"
-                />
-              </div>
-
-              <DatePicker
-                v-model="selected"
-                is-required
-                @close="
-                  () => {
-                    close();
-                    refresh();
-                  }
-                "
-              />
-            </div>
-          </template>
-        </UPopover>
+        <DateRangeSelector
+          :selected="selected"
+          :ranges="ranges"
+          @update:selected="updateSelectedDateRange"
+          @refresh="refresh"
+        />
 
         <UInput
           class="px-1 my-1"
@@ -429,42 +330,20 @@ async function addUrl() {
           variant="outline"
           placeholder="Keresés..."
         />
-        <UDropdown class="left-5 bottom-5 fixed z-10 my-1" label="Elutasít" :items="items"
-          :popper="{ placement: 'bottom-end' }" v-if="articles && articles.some((v) => v.selected)">
-          <UButton
-            color="red"
-            :label="'Kijelöltet elutasít (' + articles.filter((v) => v.selected).length + ')'"
-            trailing-icon="i-heroicons-chevron-down-20-solid"
-            :loading="loadingDelete"
-            />
-          <template #item="{ item }">
-            <span class="">{{ item.label }}</span>
-          </template>
-        </UDropdown>
+        <AnnoteMultiple
+          :articles="articles"
+          :items="items"
+          :loadingDelete="loadingDelete"
+        />
       </UContainer>
     </UContainer>
 
-    <UModal v-model="isOpen">
-      <div class="p-4">
-        <p>Új cikk</p>
-        <UInput
-          class="my-2"
-          v-model="newUrl"
-          placeholder="https://telex.hu/..."
-        />
-        <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0">
-          <UInputMenu
-            class="w-48"
-            placeholder="válassz egy hírportált"
-            v-model="selectedDomainAdd"
-            option-attribute="name"
-            :options="allLabels['domains']"
-          >
-          </UInputMenu>
-          <UButton @click="addUrl">Hozzáad</UButton>
-        </UContainer>
-      </div>
-    </UModal>
+    <AddArticleModal
+      :isOpen="isOpen"
+      :domains="allLabels ? allLabels['domains'] : []"
+      @update:isOpen="isOpen = $event"
+      @add-url="handleAddUrl"
+    />
 
     <UModal v-model="isOpenError" :prevent-close="true">
       <div class="p-4">

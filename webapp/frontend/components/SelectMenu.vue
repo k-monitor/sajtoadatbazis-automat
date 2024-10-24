@@ -156,12 +156,8 @@ const { list, creatable, positiveList, labels, type } = defineProps([
   "labels",
   "type",
 ]);
-console.log("list");
-console.log(list);
-console.log(positiveList);
 const query = ref("");
 // Local state
-const localList = list;
 const localPositiveList = ref(positiveList);
 console.log("localPositiveList.value");
 console.log(localPositiveList.value);
