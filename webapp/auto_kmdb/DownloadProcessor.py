@@ -50,7 +50,7 @@ def get_custom_description(url: str, html: str) -> Optional[str]:
 
 def process_article(
     id: int, url: str, source: int, newspaper_id: str, cookies: dict[str, str]
-) -> tuple[str, str, str, str, datetime, int, Optional[int]]:
+) -> tuple[str, str, str, str, Optional[datetime], int, Optional[int]]:
     headers: dict[str, str] = {"User-Agent": "autokmdb"}
     response: requests.Response = requests.get(url, headers=headers, cookies=cookies)
     if response.status_code == 403:
@@ -100,7 +100,7 @@ def process_article(
         if "." not in article_lines[:400]:
             description = article_lines[:400]
 
-    date: Optional[datetime]
+    date: Optional[datetime] = None
     if article.publish_date:
         date = article.publish_date.astimezone(timezone.utc)
 
@@ -343,4 +343,4 @@ class DownloadProcessor(Processor):
         except Exception as e:
             logging.error(e)
             with db.connection_pool.get_connection() as connection:
-                db.skip_download_error(connection, id)
+                db.skip_download_error(connection, next_row["id"])
