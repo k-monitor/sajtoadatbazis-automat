@@ -10,7 +10,7 @@ check_for_errors() {
         output_file="podman_logs_$current_time.txt"
 
         # Execute podman-compose logs and redirect the output to the file
-        echo result > "$output_file"
+        echo "${result}" > "$output_file"
 
         return 0 # Return true
     else
