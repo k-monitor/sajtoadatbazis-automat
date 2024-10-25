@@ -13,7 +13,7 @@ api = Blueprint("api", __name__, url_prefix="/api")
 
 
 def get_session_id(request):
-    return request.headers.get("Authorization")
+    return request.headers.get("Auth")
 
 
 @api.route("/keyword_synonyms", methods=["GET"])
