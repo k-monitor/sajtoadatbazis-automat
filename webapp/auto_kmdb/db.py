@@ -1,11 +1,12 @@
 from functools import cache
-from typing import Any, Optional
+from typing import Literal, Any, Optional
 from mysql.connector.pooling import MySQLConnectionPool, PooledMySQLConnection
 import os
-from datetime import datetime
 from slugify import slugify
 import logging
 from datetime import datetime, timedelta
+from collections import defaultdict
+
 
 connection_pool: MySQLConnectionPool = MySQLConnectionPool(
     pool_name="cnx_pool",
@@ -649,6 +650,81 @@ def get_article_others(cursor, id) -> list[dict]:
     return cursor.fetchall()
 
 
+def group_dicts_by_name(dict_list):
+    groups = []
+    visited = set()  # To keep track of the processed dictionaries
+
+    for i, dict_i in enumerate(dict_list):
+        if i in visited:
+            continue  # Skip if this dictionary has already been grouped
+
+        current_group = [dict_i]
+        visited.add(i)
+
+        for j, dict_j in enumerate(dict_list):
+            if j in visited:
+                continue
+
+            # Check if either name is a substring of the other
+            if dict_i["name"] in dict_j["name"] or dict_j["name"] in dict_i["name"]:
+                current_group.append(dict_j)
+                visited.add(j)
+
+        groups.append(current_group)
+
+    return groups
+
+
+def map_entities(entities: list[dict]):
+    def normalized_score(e):
+        label: Literal[1] | Literal[-1] = 1 if e["classification_label"] else -1
+        score: float = e["classification_score"]
+        return (score * label + 1) / 2
+
+    def avg(l):
+        return sum(l) / len(l) if l else 0
+
+    entity_map: dict[Optional[int], list] = defaultdict(list)
+
+    for entity in entities:
+        entity_map[entity["db_id"]].append(entity)
+
+    map_non_db = group_dicts_by_name(entity_map[0])
+    entity_list = []
+
+    for db_id, entity_group in entity_map.items():
+        if db_id is not None and db_id != 0:
+            score = avg([normalized_score(e) for e in entity_group])
+            label = 1 if score > 0.5 else 0
+            new_label = 1 if score > 0.5 else -1
+            old_score = (score / 2 - 1) * new_label
+            entity = {
+                "db_id": db_id,
+                "name": entity_group[0]["db_name"],
+                "score": score,
+                "classification_score": old_score,
+                "classification_label": label,
+                "occurences": entity_group,
+            }
+            entity_list.append(entity)
+    for entity_group in map_non_db:
+        score = avg([normalized_score(e) for e in entity_group])
+        label = 1 if score > 0.5 else 0
+        new_label = 1 if score > 0.5 else -1
+        old_score = (score / 2 - 1) * new_label
+        entity = {
+            "db_id": entity_group[0]["db_id"],
+            "name": entity_group[0]["name"],
+            "score": score,
+            "classification_score": old_score,
+            "classification_label": label,
+            "occurences": entity_group,
+        }
+        entity_list.append(entity)
+
+    return entity_list
+
+
 def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
     query = """SELECT n.id AS id, news_id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason,
             n.text AS text, n.cre_time AS date, category, CONVERT_TZ(article_date, @@session.time_zone, '+00:00') as article_date, u.name AS mod_name FROM autokmdb_news n LEFT JOIN users u ON n.mod_id = u.user_id WHERE id = %s
@@ -674,6 +750,10 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
             article["institutions"] = get_article_institutions(cursor, id)
             article["places"] = get_article_places(cursor, id)
             article["others"] = get_article_others(cursor, id)
+        article["mapped_persons"] = map_entities(article["persons"])
+        article["mapped_institutions"] = map_entities(article["institutions"])
+        article["mapped_places"] = map_entities(article["places"])
+        article["mapped_others"] = map_entities(article["others"])
         return article
 
 
@@ -846,24 +926,24 @@ def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
         result = []
         seen = set()
         for e in lst:
-            if 'db_name' in e and e['db_name'] and e['db_name'] not in seen:
-                result.append(e['db_name'])
-                seen.add(e['db_name'])
-            elif 'name' in e and e['name'] and e['name'] not in seen:
-                result.append(e['name'])
-                seen.add(e['name'])
+            if "db_name" in e and e["db_name"] and e["db_name"] not in seen:
+                result.append(e["db_name"])
+                seen.add(e["db_name"])
+            elif "name" in e and e["name"] and e["name"] not in seen:
+                result.append(e["name"])
+                seen.add(e["name"])
             else:
                 logging.warning(f"no names in: {e}")
         return result
 
-    logging.info('setTags')
+    logging.info("setTags")
     names: list[str] = to_names(persons)
     names.append(newspaper)
     names += to_names(institutions)
     names += to_names(places)
     names += to_names(others)
 
-    names_str: str = '|'.join(names)
+    names_str: str = "|".join(names)
 
     tag_query = """SELECT tag_id FROM news_tags WHERE news_id = %s"""
     tag_update = """UPDATE news_tags SET names = %s WHERE tag_id = %s"""
@@ -873,10 +953,24 @@ def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
     tag_id: list[Optional[int]] = cursor.fetchone()
 
     if tag_id and tag_id[0]:
-        cursor.execute(tag_update, (names_str, news_id,))
-        logging.info(f"updating tag_id={tag_id[0]} news_id={news_id} with text: {names_str}")
+        cursor.execute(
+            tag_update,
+            (
+                names_str,
+                news_id,
+            ),
+        )
+        logging.info(
+            f"updating tag_id={tag_id[0]} news_id={news_id} with text: {names_str}"
+        )
     else:
-        cursor.execute(tag_insert, (names_str, news_id,))
+        cursor.execute(
+            tag_insert,
+            (
+                names_str,
+                news_id,
+            ),
+        )
         logging.info(f"updating news_id={news_id} with text: {names_str}")
 
 

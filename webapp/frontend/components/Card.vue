@@ -340,6 +340,7 @@ function openModal() {
             arr.findIndex((obj2) => obj2.name === obj1.name) === i ||
             !("name" in obj1)
         );
+        allPersons.value = article.value.mapped_persons
         allInstitutions.value = mapEntities(article.value.institutions).filter(
           (obj1, i, arr) =>
             arr.findIndex((obj2) => obj2.name === obj1.name) === i ||
@@ -537,7 +538,7 @@ function getRichText() {
 
   let allPersons = article.value.persons
     .filter((obj) => obj.found_position != null)
-    .map((person) => person.list ?? [person])
+    .map((person) => person.occurences ?? [person])
     .flat();
   allPersons.forEach((element) => {
     element.etype = "person";
