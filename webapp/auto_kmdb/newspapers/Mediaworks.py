@@ -4,7 +4,7 @@ from urllib.parse import urlparse
 
 
 class Mediaworks(Newspaper):
-    def is_url_this(self, url, html):
+    def is_url_this(self, url: str, html: str) -> bool:
         return urlparse(url).netloc in [
             "www.baon.hu",
             "www.bama.hu",

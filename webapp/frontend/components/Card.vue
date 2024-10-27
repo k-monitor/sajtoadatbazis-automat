@@ -3,66 +3,42 @@
     <div class="max-w-2xl w-full rounded overflow-hidden shadow-lg mb-4 p-4">
       <p class="inline">
         <UBadge class="m-1 inline p-2" color="gray">
-          <UTooltip
-            v-if="article.skip_reason == 2"
-            :text="'átvett cikk'"
-          >
+          <UTooltip v-if="article.skip_reason == 2" :text="'átvett cikk'">
             <Icon size="1.2em" name="mdi:alert-circle-outline" color="orange" />
           </UTooltip>
-          <UTooltip
-            v-else-if="article.skip_reason == 3"
-            :text="'letöltési hiba'"
-          >
+          <UTooltip v-else-if="article.skip_reason == 3" :text="'letöltési hiba'">
             <Icon size="1.2em" name="mdi:alert-circle-outline" class="text-orange-500" />
           </UTooltip>
-          <UTooltip
-            v-else-if="article.skip_reason == 4"
-            :text="'feldolgozási hiba'"
-          >
+          <UTooltip v-else-if="article.skip_reason == 4" :text="'feldolgozási hiba'">
             <Icon size="1.2em" name="mdi:alert-circle-outline" color="orange" />
           </UTooltip>
-          <UTooltip
-            v-else-if="article.processing_step < 4"
-            :text="'feldolgozás alatt'"
-          >
+          <UTooltip v-else-if="article.processing_step < 4" :text="'feldolgozás alatt'">
             <Icon size="1.2em" name="mdi:database-clock-outline" class="text-gray-500" />
           </UTooltip>
-          <UTooltip
-            v-else-if="
-              article.annotation_label == null &&
-              article.classification_label == 0
-            "
-            :text="'nem illik az adatbázisba'"
-          >
+          <UTooltip v-else-if="
+            article.annotation_label == null &&
+            article.classification_label == 0
+          " :text="'nem illik az adatbázisba'">
             <Icon size="1.2em" name="mdi:window-close" class="text-gray-500" />
           </UTooltip>
-          <UTooltip
-            v-else-if="
-              article.annotation_label == null &&
-              article.classification_label == 1
-            "
-            :text="article.mod_name ? ('ellenőrizendő, hozzáadta: ' + article.mod_name) : 'ellenőrizendő'"
-          >
+          <UTooltip v-else-if="
+            article.annotation_label == null &&
+            article.classification_label == 1
+          " :text="article.mod_name ? ('ellenőrizendő, hozzáadta: ' + article.mod_name) : 'ellenőrizendő'">
             <Icon size="1.2em" name="mdi:question-mark" class="text-gray-500" />
           </UTooltip>
-          <UTooltip
-            v-else-if="article.annotation_label == 0"
-            :text="'elutasított : ' + (article.mod_name ?? '') + ' : ' + reasons[article.negative_reason.toString()]"
-          >
+          <UTooltip v-else-if="article.annotation_label == 0"
+            :text="'elutasított : ' + (article.mod_name ?? '') + ' : ' + reasons[article.negative_reason.toString()]">
             <Icon size="1.2em" name="mdi:database-remove-outline" class="text-red-500" />
           </UTooltip>
-          <UTooltip
-            v-else-if="article.annotation_label == 1"
-            :text="'elfogadott : ' + (article.mod_name ?? '')"
-          >
-            <Icon
-              size="1.2em"
-              name="mdi:database-check-outline"
-              class="text-green-500"
-            />
+          <UTooltip v-else-if="article.annotation_label == 1" :text="'elfogadott : ' + (article.mod_name ?? '')">
+            <Icon size="1.2em" name="mdi:database-check-outline" class="text-green-500" />
           </UTooltip>
         </UBadge>
-        <UButton class="m-1 px-2 py-1 inline" color="blue" @click="() => $emit('update:filter_newspaper', {name: article.newspaper_name, id: article.newspaper_id})"> {{ article.newspaper_name }} </UButton>
+        <UButton class="m-1 px-2 py-1 inline" color="blue"
+          @click="() => $emit('update:filter_newspaper', { name: article.newspaper_name, id: article.newspaper_id })">
+          {{
+            article.newspaper_name }} </UButton>
         <a :href="article.url" target="_blank" class="font-bold text-xl mb-2 ml-1">{{
           article.title
         }}</a>
@@ -73,54 +49,31 @@
       </UBadge>
       <p class="text-base text-pretty">{{ article.description }}</p>
       <p class="text-base text-right py-1">{{ article.date }}</p>
-      <UContainer
-        v-if="
-          article.processing_step >= 4 && article.skip_reason == null
-        "
-        class="flex justify-between px-0 sm:px-0 lg:px-0"
-      >
+      <UContainer v-if="
+        article.processing_step >= 4 && article.skip_reason == null
+      " class="flex justify-between px-0 sm:px-0 lg:px-0">
         <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }" v-if="true">
-          <UButton
-            color="red"
+          <UButton color="red"
             :label="article.annotation_label == null ? 'Elutasít' : article.annotation_label == 1 ? 'Mégis elutasít' : reasons[article.negative_reason.toString()]"
-            trailing-icon="i-heroicons-chevron-down-20-solid"
-          />
+            trailing-icon="i-heroicons-chevron-down-20-solid" />
           <template #item="{ item }">
             <span class="">{{ item.label }}</span>
           </template>
         </UDropdown>
-        <UCheckbox
-          v-if="article.annotation_label != 0"
-          @change="selected"
-          class="items-center p-2 scale-125"
-          color="red"
-          v-model="selection"
-          name="selection"
-          label=""
-        />
-        <UButton
-          v-if="true"
-          @click="openModal"
-          :loading="isOpening"
-          class="ml-auto"
-          >{{
-            article.annotation_label == null
-              ? "Szerkesztés"
-              : article.annotation_label == 0
+        <UCheckbox v-if="article.annotation_label != 0" @change="selected" class="items-center p-2 scale-125"
+          color="red" v-model="selection" name="selection" label="" />
+        <UButton v-if="true" @click="openModal" :loading="isOpening" class="ml-auto">{{
+          article.annotation_label == null
+            ? "Szerkesztés"
+            : article.annotation_label == 0
               ? "Mégis elfogad"
               : "Szerkesztés"
-          }}</UButton
-        >
+        }}</UButton>
       </UContainer>
       <div class="flex justify-between">
         <UButton v-if="article.skip_reason >= 1" color="orange" @click="retryArticle">Újra feldolgoz</UButton>
-        <UButton
-          v-if="(article.skip_reason >= 1)"
-          @click="forceAccept"
-          class="ml-auto r-0"
-          color="purple"
-          >{{ "Szerkesztésre küld" }}</UButton
-        >
+        <UButton v-if="(article.skip_reason >= 1)" @click="forceAccept" class="ml-auto r-0" color="purple">{{
+          "Szerkesztésre küld" }}</UButton>
       </div>
     </div>
     <UModal v-model="isOpen" :ui="{ width: 'sm:max-w-7xl' }">
@@ -128,88 +81,40 @@
         <div class="my-2 flex justify-center px-0 sm:px-0 lg:px-0 flex-wrap">
           <div class="max-w-2xl mx-4 flex-grow">
             <p class="font-bold">Cím:</p>
-            <UTextarea
-              class="my-2 min-h-0"
-              rows="1"
-              autoresize
-              v-model="article.title"
-            />
+            <UTextarea class="my-2 min-h-0" rows="1" autoresize v-model="article.title" />
             <p class="font-bold">URL:</p>
             <UInput class="my-2" v-model="article.url" />
             <p class="font-bold">Leírás:</p>
             <UTextarea class="my-2" resize v-model="article.description" />
             <div class="flex justify-between">
-              <p class="font-bold">Szöveg ({{articleLength}}):</p>
+              <p class="font-bold">Szöveg ({{ articleLength }}):</p>
               <div class="flex items-center">
                 <p>szerkeszt:</p>
                 <UToggle class="m-2" size="md" color="primary" v-model="edit" />
               </div>
             </div>
-            <UTextarea
-              v-if="edit"
-              class="my-2"
-              v-model="article.text"
-              rows="20"
-            />
+            <UTextarea v-if="edit" class="my-2" v-model="article.text" rows="20" />
             <div v-if="!edit" style="overflow-y: scroll; height: 400px">
               <span class="my-2" v-html="richText"></span>
             </div>
           </div>
 
           <div class="max-w-lg mx-4 flex-grow">
-            <SelectMenu
-              :list="allPersons"
-              type="személy"
-              :creatable="true"
-              :positive-list="positivePersons"
-              @update:positiveList="updatePositivePersons"
-              :labels="allLabels['person']"
-            />
-            <SelectMenu
-              :list="allInstitutions"
-              type="intézmény"
-              :creatable="true"
-              :positive-list="positiveInstitutions"
-              @update:positiveList="updatePositiveInstitutions"
-              :labels="allLabels['institution']"
-            />
-            <SelectMenu
-              :list="allPlaces"
-              type="helyszín"
-              :creatable="false"
-              :positive-list="positivePlaces"
-              @update:positiveList="updatePositivePlaces"
-              :labels="allLabels['place']"
-            />
-            <SelectMenu
-              :list="allOthers"
-              type="egyéb"
-              :creatable="false"
-              :positive-list="positiveOthers"
-              @update:positiveList="updatePositiveOthers"
-              :labels="allLabels['keywords']"
-            />
+            <SelectMenu :list="allPersons" type="személy" :creatable="true" :positive-list="positivePersons"
+              @update:positiveList="updatePositivePersons" :labels="allLabels['person']" />
+            <SelectMenu :list="allInstitutions" type="intézmény" :creatable="true" :positive-list="positiveInstitutions"
+              @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
+            <SelectMenu :list="allPlaces" type="helyszín" :creatable="false" :positive-list="positivePlaces"
+              @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
+            <SelectMenu :list="allOthers" type="egyéb" :creatable="false" :positive-list="positiveOthers"
+              @update:positiveList="updatePositiveOthers" :labels="allLabels['keywords']" />
             <p class="font-bold">Kategória:</p>
-            <USelect
-              class="my-2"
-              v-model="category"
-              :options="categories"
-              option-attribute="name"
-              value-attribute="id"
-            />
+            <USelect class="my-2" v-model="category" :options="categories" option-attribute="name"
+              value-attribute="id" />
             <p class="font-bold">Akta:</p>
-            <USelectMenu
-              class="my-2"
-              searchable
-              multiple
-              :search-attributes="['name']"
-              searchable-placeholder="Keresés..."
-              clear-search-on-close
-              v-model="file"
-              :options="allFiles"
-              option-attribute="name"
-              value-attribute="id"
-            >
+            <USelectMenu class="my-2" searchable multiple :search-attributes="['name']"
+              searchable-placeholder="Keresés..." clear-search-on-close v-model="file" :options="allFiles"
+              option-attribute="name" value-attribute="id">
               <template #empty> betöltés... </template>
               <template #label>
                 <span>{{
@@ -222,12 +127,8 @@
             </USelectMenu>
             <p>publikálás: {{ article.article_date }}</p>
             <p>{{ errorText }}</p>
-            <UButton
-              class="my-5"
-              v-if="article.annotation_label == 1"
-              target="_blank"
-              :to="`${config.public.adminUrl}?mod=news&action=news&do=news&news_id=${article.news_id}`"
-            >
+            <UButton class="my-5" v-if="article.annotation_label == 1" target="_blank"
+              :to="`${config.public.adminUrl}?mod=news&action=news&do=news&news_id=${article.news_id}`">
               szerkesztés az adminban
             </UButton>
           </div>
@@ -236,22 +137,19 @@
           <UButton color="gray" @click="closeModal">Mégse</UButton>
 
           <div class="my-2 flex justify-between">
-            <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }" v-if="article.annotation_label != 0">
-              <UButton
-                color="red"
-                :label="article.annotation_label == null ? 'Elutasít' : 'Mégis elutasít'"
-                trailing-icon="i-heroicons-chevron-down-20-solid"
-              />
+            <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }"
+              v-if="article.annotation_label != 0">
+              <UButton color="red" :label="article.annotation_label == null ? 'Elutasít' : 'Mégis elutasít'"
+                trailing-icon="i-heroicons-chevron-down-20-solid" />
               <template #item="{ item }">
                 <span class="">{{ item.label }}</span>
               </template>
             </UDropdown>
             <div class="mx-4 flex">
-              <p class="mr-2 my-auto">Aktív: </p><UToggle class="my-auto" v-model="is_active" />
+              <p class="mr-2 my-auto">Aktív: </p>
+              <UToggle class="my-auto" v-model="is_active" />
             </div>
-            <UButton @click="submitArticle" :loading="submitted"
-              >Elfogad</UButton
-            >
+            <UButton @click="submitArticle" :loading="submitted">Elfogad</UButton>
           </div>
         </UContainer>
       </div>
@@ -260,6 +158,8 @@
 </template>
 
 <script setup lang="ts">
+import { $authFetch } from "~/auth_fetch";
+
 const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
 
@@ -283,17 +183,18 @@ async function forceAccept() {
   refresh();
   accepting.value = false;
 }
+
 function selected() {
   console.log("selected " + selection.value);
   article.value.selected = selection.value;
   if (article.value.original) article.value.original.selected = selection.value;
 }
 
-const reasons = {'0': 'Nem releváns', '1': 'Átvett', '2': 'Külföldi', '3': 'Már szerepel', '100': 'Egyéb'}
+const reasons = { '0': 'Nem releváns', '1': 'Átvett', '2': 'Külföldi', '3': 'Már szerepel', '100': 'Egyéb' }
 
 const items = [
   [
-  {
+    {
       label: "Nem releváns",
       slot: "item",
       click: async () => {
@@ -352,7 +253,7 @@ const items = [
 ];
 
 async function postUrl(url, data) {
-  return await $fetch(url, data);
+  return await $authFetch(url, data);
 }
 
 let allPersons = ref([]);
@@ -417,7 +318,7 @@ function getKeywords(text) {
 
   let allKeywords = Array();
   for (const keywordCandidate of keywordSynonyms)
-    allKeywords = allKeywords.concat(findAllKeywords(text, keywordCandidate)); 
+    allKeywords = allKeywords.concat(findAllKeywords(text, keywordCandidate));
 
   return allKeywords;
 }
@@ -428,7 +329,7 @@ function openModal() {
     isOpen.value = true;
     isOpening.value = false;
   } else {
-    $fetch(baseUrl + "/api/article/" + article.value.id, {
+    $authFetch(baseUrl + "/api/article/" + article.value.id, {
       query: {},
       onResponse({ request, response, options }) {
         let original = article.value;
@@ -489,13 +390,13 @@ function openModal() {
           );
         }
 
-        article.value.institutions = article.value.institutions??[];
-        article.value.persons = article.value.persons??[];
-        article.value.places = article.value.places??[];
-        article.value.others = article.value.others??[];
-        article.value.text = article.value.text??"";
-        article.value.title = article.value.title??"";
-        article.value.description = article.value.description??"";
+        article.value.institutions = article.value.institutions ?? [];
+        article.value.persons = article.value.persons ?? [];
+        article.value.places = article.value.places ?? [];
+        article.value.others = article.value.others ?? [];
+        article.value.text = article.value.text ?? "";
+        article.value.title = article.value.title ?? "";
+        article.value.description = article.value.description ?? "";
 
         category.value = article.value.category;
         richText.value = getRichText();
@@ -506,6 +407,7 @@ function openModal() {
     });
   }
 }
+
 function closeModal() {
   isOpen.value = false;
 }
@@ -517,6 +419,7 @@ const {
   refresh,
   keywordSynonyms,
 } = defineProps(["article", "allLabels", "allFiles", "refresh", "keywordSynonyms"]);
+
 const article = ref(articleValue);
 article.value.text = "";
 article.value.institutions = [];
@@ -529,7 +432,7 @@ const is_active = ref(true);
 let file = ref([]);
 let submitted = ref(false);
 let errorText = ref("");
-let articleLength = computed(() => (article.value.text??"").length)
+let articleLength = computed(() => (article.value.text ?? "").length)
 
 async function retryArticle() {
   // TODO
@@ -551,6 +454,7 @@ async function deleteArticle() {
   });
   refresh();
 }
+
 async function submitArticle() {
   submitted.value = true;
 
@@ -578,7 +482,7 @@ async function submitArticle() {
   });
 
   try {
-    await $fetch(baseUrl + "/api/"+getMethod()+"/positive", {
+    await $authFetch(baseUrl + "/api/" + getMethod() + "/positive", {
       method: "POST",
       body: {
         id: article.value.id,
@@ -600,7 +504,7 @@ async function submitArticle() {
       onResponseError({ request, response, options }) {
         submitted.value = false;
         errorText.value = response._data.error;
-        },
+      },
       onResponse({ request, response, options }) {
         submitted.value = false;
         if (response.status >= 300) {
@@ -621,6 +525,7 @@ async function submitArticle() {
     }
   }
 }
+
 const isOpen = ref(false);
 const isOpening = ref(false);
 
@@ -658,7 +563,7 @@ function getRichText() {
     .filter(
       (obj1, i, arr) =>
         arr.findIndex((obj2) => obj2.found_position === obj1.found_position) ===
-          i || !("found_position" in obj1)
+        i || !("found_position" in obj1)
     );
 
   allEntities.sort(function (a, b) {
@@ -697,6 +602,7 @@ function getRichText() {
 
   return richText.split("\n").join("<br>");
 }
+
 const richText = ref("");
 
 // Handle update event for positivePeople

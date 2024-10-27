@@ -1,4 +1,4 @@
-from transformers import pipeline, AutoTokenizer
+from transformers import pipeline, AutoTokenizer, Pipeline
 from auto_kmdb.db import get_ner_queue, add_auto_person, add_auto_institution
 from auto_kmdb.db import add_auto_place, get_all_persons, get_all_institutions
 from auto_kmdb.db import save_ner_step, get_all_places, skip_processing_error
@@ -17,12 +17,12 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 import pandas as pd
 import logging
 import torch
-from typing import Literal
+from typing import Literal, Optional
 import traceback
 import gc
 
 
-def join_entities(classifications: list[dir]):
+def join_entities(classifications: list[dict]) -> list[dict]:
     """
     Joins detected entities if entity_i and entity_i+1 are beside eachother in the text. This is
     necessary as BERT sometimes mistakenly splits some entities e.g. in case of detached ending:
@@ -42,7 +42,7 @@ def join_entities(classifications: list[dir]):
             - entity_group: classification is POS if any of the entities is POS, entity type is
             taken from the first entity
     """
-    new_classifications = []
+    new_classifications: list[dict] = []
     last_end = -1
     for classification in classifications:
         if classification["start"] == last_end:
@@ -67,7 +67,7 @@ def join_entities(classifications: list[dir]):
     return new_classifications
 
 
-def strip_entity(entity):
+def strip_entity(entity: dict):
     entity["word"] = entity["word"].strip("-")
     return entity
 
@@ -76,7 +76,8 @@ class NERProcessor(Processor):
     def __init__(self):
         # super().__init__()
         logging.info("initialized ner processor")
-        self.done = False
+        self.done: bool = False
+        self.classifier: Pipeline
 
     def load_model(self):
         logging.info("ner processor is loading model")
@@ -96,20 +97,20 @@ class NERProcessor(Processor):
     def is_done(self):
         return self.done
 
-    def predict(self):
+    def predict(self, text) -> tuple[list[dict], list[dict], list[dict]]:
         logging.info("ner processor is running prediction")
-        self.people = []
-        self.institutions = []
-        self.places = []
-        self.classifications = [
+        people: list[dict] = []
+        institutions: list[dict] = []
+        places: list[dict] = []
+        classifications: list[dict] = [
             strip_entity(e)
-            for e in join_entities(self.classifier(self.text))
+            for e in join_entities(self.classifier(text))
             if len(e["word"]) > 3
         ]
-        for entity in self.classifications:
+        for entity in classifications:
             logging.info(entity)
             label, e_type = entity["entity_group"].split("_")
-            found_name = self.text[entity["start"] : entity["end"]]
+            found_name = text[entity["start"] : entity["end"]]
             entity_object = {
                 "classification_label": 1 if label == "POS" else 0,
                 "classification_score": float(entity["score"]),
@@ -118,17 +119,18 @@ class NERProcessor(Processor):
                 "found_position": entity["start"],
             }
             if e_type == "PER":
-                self.people.append(entity_object)
+                people.append(entity_object)
             elif e_type == "ORG":
-                self.institutions.append(entity_object)
+                institutions.append(entity_object)
             elif e_type == "LOC":
-                self.places.append(entity_object)
+                places.append(entity_object)
 
             # TODO: add_auto_person(autokmdb_news_id, person_id, found_name, found_position, name, classification_score, classification_label)
+        return people, institutions, places
 
     def get_db_entity_linking(
         self,
-        detected_entities: list[dir],
+        detected_entities: list[dict],
         entity_type: Literal["people", "places", "institutions"],
     ) -> pd.DataFrame:
         """
@@ -158,14 +160,16 @@ class NERProcessor(Processor):
         """
         logging.info(entity_type)
         logging.info(detected_entities)
-        synonym_mapping = (
+        synonym_mapping: Optional[pd.DataFrame] = (
             get_synonyms_file(entity_type)
             if (entity_type in ["places", "institutions"])
             else None
         )
-        keywords = get_entities_freq(entity_type)
-        mapping = get_mapping(detected_entities, keywords.index, synonym_mapping)
-        combed_mapping = comb_mappings(mapping, keywords)
+        keywords: pd.DataFrame = get_entities_freq(entity_type)
+        mapping: pd.DataFrame = get_mapping(
+            detected_entities, keywords.index, synonym_mapping
+        )
+        combed_mapping: pd.DataFrame = comb_mappings(mapping, keywords)
 
         # drop single-word person suggestions if we failed to map them to db
         if entity_type == "people":
@@ -182,19 +186,21 @@ class NERProcessor(Processor):
         return combed_mapping
 
     def do_process(self, next_row):
-        self.text = next_row["text"]
-        self.predict()
+        text: str = next_row["text"]
+        people, institutions, places = self.predict(text)
 
         print("ner processing: " + str(next_row["id"]))
         logging.info("ner processing next: " + str(next_row["id"]))
 
         for type, detected_entities, db_function in [
-            ("people", self.people, add_auto_person),
-            ("places", self.places, add_auto_place),
-            ("institutions", self.institutions, add_auto_institution),
+            ("people", people, add_auto_person),
+            ("places", places, add_auto_place),
+            ("institutions", institutions, add_auto_institution),
         ]:
             if len(detected_entities) > 0:
-                mapping = self.get_db_entity_linking(detected_entities, type)
+                mapping: pd.DataFrame = self.get_db_entity_linking(
+                    detected_entities, type
+                )
                 logging.info(mapping)
                 assert mapping.index.is_unique, (
                     "Database " + type + " keywords to be added should be unique"
@@ -221,7 +227,7 @@ class NERProcessor(Processor):
 
     def process_next(self):
         with connection_pool.get_connection() as connection:
-            next_row = get_ner_queue(connection)
+            next_row: dict = get_ner_queue(connection)
         if next_row is None:
             sleep(30)
             return

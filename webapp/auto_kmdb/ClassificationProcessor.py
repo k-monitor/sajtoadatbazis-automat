@@ -1,46 +1,42 @@
+from typing import Any
+from numpy import ndarray
+from sklearn.svm import SVC
+from transformers.tokenization_utils_base import BatchEncoding
 from auto_kmdb.Processor import Processor
-from auto_kmdb.db import (
-    get_classification_queue,
-    save_classification_step,
-    skip_processing_error,
-)
 from time import sleep
-from transformers import BertForSequenceClassification, BertTokenizer
+from transformers import (
+    BertForSequenceClassification,
+    BertTokenizer,
+    PreTrainedTokenizer,
+    PreTrainedModel,
+)
 import torch.nn.functional as F
-from auto_kmdb.db import connection_pool
+from auto_kmdb import db
 from joblib import load
 import torch
 import logging
 import gc
 import traceback
-import os
-
 
 article_classification_prompt = """{title}
 {description}"""
 
-
-def to_category_id(category):
-    if category == "hungarian-news":
-        return 0
-    elif category == "eu-news":
-        return 1
-    elif category == "world-news":
-        return 2
-    return 0
+CATEGORY_MAP: dict[str, int] = {"hungarian-news": 0, "eu-news": 1, "world-news": 2}
 
 
 class ClassificationProcessor(Processor):
-    def __init__(self):
-        # super().__init__()
-        logging.info("initialized classification processor")
-        self.done = False
+    def __init__(self) -> None:
+        logging.info("Initializing classification processor")
+        self.done: bool = False
+        self.model: PreTrainedModel
+        self.tokenizer: PreTrainedTokenizer
+        self.svm_classifier: SVC
 
-    def is_done(self):
+    def is_done(self) -> bool:
         return self.done
 
-    def load_model(self):
-        logging.info("loading classification model")
+    def load_model(self) -> None:
+        logging.info("Loading classification model")
         self.model = BertForSequenceClassification.from_pretrained(
             "K-Monitor/kmdb_classification_hubert"
         )
@@ -48,62 +44,71 @@ class ClassificationProcessor(Processor):
             "SZTAKI-HLT/hubert-base-cc", max_length=512
         )
         self.svm_classifier = load("data/svm_classifier_category.joblib")
-        self.is_done = True
-        logging.info("loaded classification model")
+        self.done = True
+        logging.info("Classification model loaded")
 
-    def predict(self):
-        logging.info("running classification prediction")
+    def _prepare_input(self, text) -> BatchEncoding:
+        """Prepares the input for prediction."""
+        return self.tokenizer(text, return_tensors="pt")
+
+    def _extract_outputs(self, inputs) -> tuple[ndarray, ndarray]:
+        """Extracts logits and CLS embedding from model outputs."""
+        output = self.model(**inputs, output_hidden_states=True)
+        cls_embedding: ndarray = output.hidden_states[-1][:, 0, :].squeeze().numpy()
+        return output.logits, cls_embedding
+
+    def predict(self, text: str) -> tuple[int, float, int]:
+        logging.info("Running classification prediction")
+        inputs = self._prepare_input(text)
+
+        score: float
+        label: int
+        category: int
         with torch.no_grad():
-            inputs = self.tokenizer(self.text, return_tensors="pt")
-            self.output = self.model(**inputs, output_hidden_states=True)
-            cls_embedding = self.output.hidden_states[-1][:, 0, :].squeeze().numpy()
+            logits, cls_embedding = self._extract_outputs(inputs)
 
-            logits = self.output.logits
             probabilities = F.softmax(logits[0], dim=-1)
-            self.score = float(probabilities[1])
-            self.label = 1 if self.score > 0.42 else 0
-
-            self.category = to_category_id(
-                self.svm_classifier.predict([cls_embedding])[0]
+            score = float(probabilities[1])
+            label = 1 if score > 0.42 else 0
+            category = CATEGORY_MAP.get(
+                self.svm_classifier.predict([cls_embedding])[0], 0
             )
-            del inputs, logits, probabilities
+
+        del inputs, logits, probabilities
+        return label, score, category
+
+    def _save_classification(self, connection, next_row, label, score, category):
+        """Saves the classification result to the database."""
+        if next_row["source"] == 1:
+            db.save_classification_step(connection, next_row["id"], 1, 1.0, category)
+        else:
+            db.save_classification_step(
+                connection, next_row["id"], label, score, category
+            )
 
     def process_next(self):
-        with connection_pool.get_connection() as connection:
-            next_row = get_classification_queue(connection)
+        with db.connection_pool.get_connection() as connection:
+            next_row = db.get_classification_queue(connection)
+
         if next_row is None:
             sleep(30)
             return
-        logging.info("processing next classification")
 
-        self.text = article_classification_prompt.format(
-            title=next_row["title"], description=next_row["description"]
+        logging.info("Processing next classification")
+        text: str = article_classification_prompt.format(
+            title=next_row["title"], description=next_row["description"],
         )
-        self.article_text = next_row["text"]
 
         try:
-            self.predict()
-            if next_row["source"] == 1:
-                with connection_pool.get_connection() as connection:
-                    save_classification_step(
-                        connection, next_row["id"], 1, 1.0, self.category
-                    )
-            else:
-                with connection_pool.get_connection() as connection:
-                    save_classification_step(
-                        connection,
-                        next_row["id"],
-                        self.label,
-                        self.score,
-                        self.category,
-                    )
-            del self.output
+            label, score, category = self.predict(text)
+            with db.connection_pool.get_connection() as connection:
+                self._save_classification(connection, next_row, label, score, category)
         except Exception as e:
-            with connection_pool.get_connection() as connection:
-                skip_processing_error(connection, next_row["id"])
-            logging.warn("exception during: " + str(next_row["id"]))
+            with db.connection_pool.get_connection() as connection:
+                db.skip_processing_error(connection, next_row["id"])
+
+            logging.warning(f"Exception during: {next_row['id']}")
             logging.error(e)
-            print(traceback.format_exc())
             logging.error(traceback.format_exc())
 
         torch.cuda.empty_cache()
