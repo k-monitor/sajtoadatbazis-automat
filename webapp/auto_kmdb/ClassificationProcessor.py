@@ -18,7 +18,8 @@ import logging
 import gc
 import traceback
 
-article_classification_prompt = """{title}
+article_classification_prompt = """{newspaper}
+{title}
 {description}"""
 
 CATEGORY_MAP: dict[str, int] = {"hungarian-news": 0, "eu-news": 1, "world-news": 2}
@@ -96,7 +97,7 @@ class ClassificationProcessor(Processor):
 
         logging.info("Processing next classification")
         text: str = article_classification_prompt.format(
-            title=next_row["title"], description=next_row["description"]
+            newspaper=next_row["newspaper_name"], title=next_row["title"], description=next_row["description"],
         )
 
         try:
