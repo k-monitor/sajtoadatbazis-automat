@@ -19,4 +19,4 @@ typing
 pandas
 playwright
 requests[socks]
-numpy
+numpy<2
