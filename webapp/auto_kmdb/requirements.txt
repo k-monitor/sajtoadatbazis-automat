@@ -19,3 +19,4 @@ typing
 pandas
 playwright
 requests[socks]
+numpy
