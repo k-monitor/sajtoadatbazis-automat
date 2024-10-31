@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 connection_pool: MySQLConnectionPool = MySQLConnectionPool(
     pool_name="cnx_pool",
-    pool_size=10,
+    pool_size=20,
     pool_reset_session=True,
     host=os.environ["MYSQL_HOST"],
     port=os.environ["MYSQL_PORT"],
