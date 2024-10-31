@@ -9,7 +9,7 @@ RUN apt install -y wget git gcc g++
 
 RUN pip install pip==23.3.2
 RUN pip install -r auto_kmdb/requirements.txt
-# RUN python auto_kmdb/init_container.py
+RUN python auto_kmdb/init_container.py
 
 RUN playwright install-deps
 RUN playwright install firefox
