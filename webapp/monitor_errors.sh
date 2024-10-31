@@ -2,7 +2,7 @@
 
 check_for_errors() {
     result=$(podman-compose logs 2>&1)
-    if [[ "${result}" == *"ERROR"* ]] || [[ "${result}" == *"CRITICAL"* ]] || [[ "${result}" == *"mysql.connector.errors.OperationalError"* ]]; then
+    if [[ "${result}" == *"ERROR"* ]] || [[ "${result}" == *"CRITICAL"* ]] || [[ "${result}" == *"mysql.connector.errors.OperationalError"* ]] || [[ "${result}" == *"mysql.connector.errors.PoolError"* ]]; then
         # Get the current date and time in the desired format
         current_time=$(date +"%Y-%m-%d_%H-%M-%S")
 
