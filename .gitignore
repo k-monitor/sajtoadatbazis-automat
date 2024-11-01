@@ -10,3 +10,10 @@ __pycache__/
 .env.prod
 autokmdb.log
 screenshot.png
+webapp/secrets/
+webapp/data/.cache
+dataset/*.jsonl
+scripts/*.csv
+auto_kmdb.env
+webapp/data/*.joblib
+webapp/data/log.txt
