@@ -6,8 +6,6 @@ node_modules/
 .output/
 __pycache__/
 .ipynb_checkpoints/
-.env
-.env.prod
 autokmdb.log
 screenshot.png
 webapp/secrets/
@@ -17,3 +15,4 @@ scripts/*.csv
 auto_kmdb.env
 webapp/data/*.joblib
 webapp/data/log.txt
+**.env*
