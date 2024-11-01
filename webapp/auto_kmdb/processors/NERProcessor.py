@@ -20,6 +20,8 @@ import torch
 from typing import Literal, Optional
 import traceback
 import gc
+import spacy
+from spacy.language import Language
 
 
 def join_entities(classifications: list[dict]) -> list[dict]:
@@ -78,6 +80,7 @@ class NERProcessor(Processor):
         logging.info("initialized ner processor")
         self.done: bool = False
         self.classifier: Pipeline
+        self.nlp: Language
 
     def load_model(self):
         logging.info("ner processor is loading model")
@@ -89,6 +92,16 @@ class NERProcessor(Processor):
             tokenizer=AutoTokenizer.from_pretrained(
                 "SZTAKI-HLT/hubert-base-cc", model_max_length=512
             ),
+        )
+        self.nlp = spacy.load(
+            "hu_core_news_lg",
+            disable=[
+                "parser",
+                "ner",
+                "lookup_lemmatizer",
+                "tagger",
+                "senter",
+            ],
         )
 
         self.done = True
@@ -167,7 +180,7 @@ class NERProcessor(Processor):
         )
         keywords: pd.DataFrame = get_entities_freq(entity_type)
         mapping: pd.DataFrame = get_mapping(
-            detected_entities, keywords.index, synonym_mapping
+            detected_entities, keywords.index, self.nlp, synonym_mapping
         )
         combed_mapping: pd.DataFrame = comb_mappings(mapping, keywords)
 
