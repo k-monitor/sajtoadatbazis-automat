@@ -292,9 +292,12 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
             logging.error(traceback.format_exc())
 
 
-
 class DownloadProcessor(Processor):
     def __init__(self) -> None:
+        logging.info("initialized download processor")
+        self.cookies: dict[str, str] = {}
+
+    def load_model(self):
         cookies_24: dict[str, str] = {}
         cookies_444: dict[str, str] = {}
         try:
@@ -307,8 +310,8 @@ class DownloadProcessor(Processor):
         except Exception:
             logging.error(traceback.format_exc())
             logging.error("Failed to login to 444.hu")
-
         self.cookies: dict[str, str] = {**cookies_24, **cookies_444}
+        self.done = True
         logging.info("initialized download processor")
 
     def process_next(self) -> None:
