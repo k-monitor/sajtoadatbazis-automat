@@ -335,17 +335,9 @@ function openModal() {
         let original = article.value;
         article.value = response._data;
         article.value.original = original;
-        allPersons.value = mapEntities(article.value.persons).filter(
-          (obj1, i, arr) =>
-            arr.findIndex((obj2) => obj2.name === obj1.name) === i ||
-            !("name" in obj1)
-        );
-        allInstitutions.value = mapEntities(article.value.institutions).filter(
-          (obj1, i, arr) =>
-            arr.findIndex((obj2) => obj2.name === obj1.name) === i ||
-            !("name" in obj1)
-        );
-        allPlaces.value = mapEntities(article.value.places);
+        allPersons.value = article.value.mapped_persons;
+        allInstitutions.value = article.value.mapped_institutions;
+        allPlaces.value = article.value.mapped_places;
         const keywords = getKeywords(article.value.text);
         allOthers.value = mapEntities(keywords);
         article.value.original_date = article.value.article_date;
@@ -365,6 +357,7 @@ function openModal() {
               (article.value.annotation_label == 1 &&
                 person.annotation_label == 1)
           );
+          // allPersons.value = article.value.mapped_persons
           positiveInstitutions.value = allInstitutions.value.filter(
             (institution) =>
               (article.value.annotation_label != 1 &&
@@ -459,7 +452,7 @@ async function submitArticle() {
   submitted.value = true;
 
   let positivePersonsList = positivePersons.value
-    .map((person) => person.list ?? person)
+    .map((person) => person.occurences ?? person)
     .flat();
   positivePersonsList.forEach((element) => {
     element.annotation_label = 1;
@@ -467,7 +460,7 @@ async function submitArticle() {
   });
 
   let positiveInstitutionsList = positiveInstitutions.value
-    .map((institution) => institution.list ?? institution)
+    .map((institution) => institution.occurences ?? institution)
     .flat();
   positiveInstitutionsList.forEach((element) => {
     element.annotation_label = 1;
@@ -475,7 +468,7 @@ async function submitArticle() {
   });
 
   let positivePlacesList = positivePlaces.value
-    .map((place) => place.list ?? place)
+    .map((place) => place.occurences ?? place)
     .flat();
   positivePlacesList.forEach((element) => {
     element.annotation_label = 1;
@@ -493,8 +486,8 @@ async function submitArticle() {
         description: article.value.description,
         text: article.value.text,
         positive_persons: positivePersonsList,
-        positive_institutions: positiveInstitutions.value,
-        positive_places: positivePlaces.value,
+        positive_institutions: positiveInstitutionsList,
+        positive_places: positivePlacesList,
         category: parseInt(category.value),
         tags: positiveOthers.value,
         active: is_active.value,
@@ -537,7 +530,7 @@ function getRichText() {
 
   let allPersons = article.value.persons
     .filter((obj) => obj.found_position != null)
-    .map((person) => person.list ?? [person])
+    .map((person) => person.occurences ?? [person])
     .flat();
   allPersons.forEach((element) => {
     element.etype = "person";
