@@ -20,6 +20,7 @@ class Processor:
         return True
 
     def process_loop(self):
+        self.load_model()
         logging.info("started process_loop")
         while True:
             try:

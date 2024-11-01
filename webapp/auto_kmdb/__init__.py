@@ -55,7 +55,6 @@ def create_app() -> Flask:
         KeywordProcessor(),
     ]
     for processor in processors:
-        processor.load_model()
         Thread(target=processor.process_loop, args=(), daemon=True).start()
 
     @app.route("/hello")
