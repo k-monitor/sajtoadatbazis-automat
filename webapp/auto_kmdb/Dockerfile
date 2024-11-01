@@ -19,4 +19,4 @@ RUN wget 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTJLsof1CkRQ4hkw_bPSxt
 
 EXPOSE 8000
 
-CMD ["python", "auto_kmdb/__init__.py"]
+CMD ["python", "-m", "auto_kmdb"]
