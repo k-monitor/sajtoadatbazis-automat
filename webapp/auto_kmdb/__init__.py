@@ -57,10 +57,6 @@ def create_app() -> Flask:
     for processor in processors:
         Thread(target=processor.process_loop, args=(), daemon=True).start()
 
-    @app.route("/hello")
-    def hello():
-        return "Hello, World!"
-
     return app
 
 
