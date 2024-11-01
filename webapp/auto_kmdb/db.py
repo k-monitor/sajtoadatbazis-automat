@@ -534,6 +534,7 @@ def get_article_counts(
 ) -> dict[str, int]:
     article_counts: dict[str, int] = {}
     for status in ["mixed", "positive", "negative", "processing", "all"]:
+        query: str = ""
         if status == "mixed":
             query = """WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND (n.skip_reason = 0 OR n.skip_reason is NULL)"""
         elif status == "positive":
@@ -846,24 +847,24 @@ def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
         result = []
         seen = set()
         for e in lst:
-            if 'db_name' in e and e['db_name'] and e['db_name'] not in seen:
-                result.append(e['db_name'])
-                seen.add(e['db_name'])
-            elif 'name' in e and e['name'] and e['name'] not in seen:
-                result.append(e['name'])
-                seen.add(e['name'])
+            if "db_name" in e and e["db_name"] and e["db_name"] not in seen:
+                result.append(e["db_name"])
+                seen.add(e["db_name"])
+            elif "name" in e and e["name"] and e["name"] not in seen:
+                result.append(e["name"])
+                seen.add(e["name"])
             else:
                 logging.warning(f"no names in: {e}")
         return result
 
-    logging.info('setTags')
+    logging.info("setTags")
     names: list[str] = to_names(persons)
     names.append(newspaper)
     names += to_names(institutions)
     names += to_names(places)
     names += to_names(others)
 
-    names_str: str = '|'.join(names)
+    names_str: str = "|".join(names)
 
     tag_query = """SELECT tag_id FROM news_tags WHERE news_id = %s"""
     tag_update = """UPDATE news_tags SET names = %s WHERE tag_id = %s"""
@@ -873,10 +874,24 @@ def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
     tag_id: list[Optional[int]] = cursor.fetchone()
 
     if tag_id and tag_id[0]:
-        cursor.execute(tag_update, (names_str, news_id,))
-        logging.info(f"updating tag_id={tag_id[0]} news_id={news_id} with text: {names_str}")
+        cursor.execute(
+            tag_update,
+            (
+                names_str,
+                news_id,
+            ),
+        )
+        logging.info(
+            f"updating tag_id={tag_id[0]} news_id={news_id} with text: {names_str}"
+        )
     else:
-        cursor.execute(tag_insert, (names_str, news_id,))
+        cursor.execute(
+            tag_insert,
+            (
+                names_str,
+                news_id,
+            ),
+        )
         logging.info(f"updating news_id={news_id} with text: {names_str}")
 
 
