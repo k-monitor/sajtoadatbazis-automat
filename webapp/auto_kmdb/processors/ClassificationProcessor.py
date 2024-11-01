@@ -2,7 +2,7 @@ from typing import Any
 from numpy import ndarray
 from sklearn.svm import SVC
 from transformers.tokenization_utils_base import BatchEncoding
-from auto_kmdb.processors.Processor import Processor
+from auto_kmdb.processors import Processor
 from time import sleep
 from transformers import (
     BertForSequenceClassification,

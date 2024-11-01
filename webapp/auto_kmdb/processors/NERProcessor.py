@@ -2,13 +2,13 @@ from transformers import pipeline, AutoTokenizer, Pipeline
 from auto_kmdb.db import get_ner_queue, add_auto_person, add_auto_institution
 from auto_kmdb.db import add_auto_place, get_all_persons, get_all_institutions
 from auto_kmdb.db import save_ner_step, get_all_places, skip_processing_error
-from auto_kmdb.entity_linking import (
+from auto_kmdb.utils.entity_linking import (
     get_entities_freq,
     get_mapping,
     comb_mappings,
     get_synonyms_file,
 )
-from auto_kmdb.processors.Processor import Processor
+from auto_kmdb.processors import Processor
 from time import sleep
 from auto_kmdb.db import connection_pool
 import warnings
