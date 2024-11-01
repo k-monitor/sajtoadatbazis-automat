@@ -3,7 +3,7 @@ from typing import List, Optional
 from flask.ctx import AppContext
 from playwright._impl._api_structures import Cookie
 from playwright.sync_api._generated import Browser, BrowserContext, Page
-from auto_kmdb.Processor import Processor
+from auto_kmdb.processors.Processor import Processor
 from auto_kmdb.same_news import same_news
 from auto_kmdb import db
 from auto_kmdb.preprocess import (

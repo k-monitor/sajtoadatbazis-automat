@@ -8,7 +8,7 @@ from auto_kmdb.entity_linking import (
     comb_mappings,
     get_synonyms_file,
 )
-from auto_kmdb.Processor import Processor
+from auto_kmdb.processors.Processor import Processor
 from time import sleep
 from auto_kmdb.db import connection_pool
 import warnings
