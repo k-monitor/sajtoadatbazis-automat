@@ -11,14 +11,15 @@ const route = useRoute();
 const router = useRouter();
 
 const ranges = [
-  { label: "Last 7 days", duration: { days: 7 } },
-  { label: "Last 14 days", duration: { days: 14 } },
-  { label: "Last 30 days", duration: { days: 30 } },
-  { label: "Last 3 months", duration: { months: 3 } },
-  { label: "Last 6 months", duration: { months: 6 } },
-  { label: "Last year", duration: { years: 1 } },
-  { label: "2 years", duration: { years: 2 } },
-  { label: "3 years", duration: { years: 3 } },
+  { label: "Elmúlt 1 nap", duration: { days: 1 } },
+  { label: "Elmúlt 2 nap", duration: { days: 2 } },
+  { label: "Elmúlt 7 nap", duration: { days: 7 } },
+  { label: "Elmúlt 2 hét", duration: { days: 14 } },
+  { label: "Elmúlt 1 hónap", duration: { days: 30 } },
+  { label: "Elmúlt 3 hónap", duration: { months: 3 } },
+  { label: "Elmúlt 6 hónap", duration: { months: 6 } },
+  { label: "Elmúlt 1 év", duration: { years: 1 } },
+  { label: "Elmúlt 3 év", duration: { years: 3 } },
 ];
 
 const selected = ref({ start: sub(new Date(), { days: 14 }), end: new Date() });
