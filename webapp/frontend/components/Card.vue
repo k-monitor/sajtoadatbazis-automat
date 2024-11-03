@@ -152,6 +152,9 @@
             <UButton @click="submitArticle" :loading="submitted">Elfogad</UButton>
           </div>
         </UContainer>
+        <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0 mx-4">
+          <UAlert v-if="showThanks" color="primary" icon="i-heroicons-heart" title="Köszi, hogy ezzel a cikkel is bővítetted a K-Monitor sajtóadatbázisát!" />
+        </UContainer>
       </div>
     </UModal>
   </div>
@@ -163,6 +166,7 @@ import { $authFetch } from "~/auth_fetch";
 const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
 
+const showThanks = ref(false);
 const edit = ref(false);
 const selection = ref(false);
 let accepting = ref(false);
@@ -192,63 +196,43 @@ function selected() {
 
 const reasons = { '0': 'Nem releváns', '1': 'Átvett', '2': 'Külföldi', '3': 'Már szerepel', '100': 'Egyéb' }
 
+async function annoteNegative(reason) {
+  showThanks.value = true;
+  await postUrl(baseUrl + "/api/annote/negative", {
+    method: "POST",
+    body: { id: article.value.id, reason: reason },
+  });
+  refresh();
+  showThanks.value = false;
+}
+
 const items = [
   [
     {
       label: "Nem releváns",
       slot: "item",
-      click: async () => {
-        await postUrl(baseUrl + "/api/annote/negative", {
-          method: "POST",
-          body: { id: article.value.id, reason: 0 },
-        });
-        refresh();
-      },
+      click: () => annoteNegative(0),
     },
     {
       label: "Átvett",
       slot: "item",
-      click: async () => {
-        await postUrl(baseUrl + "/api/annote/negative", {
-          method: "POST",
-          body: { id: article.value.id, reason: 1 },
-        });
-        refresh();
-      },
+      click: () => annoteNegative(1),
     },
     {
       label: "Már szerepel",
       slot: "item",
-      click: async () => {
-        await postUrl(baseUrl + "/api/annote/negative", {
-          method: "POST",
-          body: { id: article.value.id, reason: 3 },
-        });
-        refresh();
-      },
+      click: () => annoteNegative(3),
     },
     {
       label: "Külföldi",
       slot: "item",
-      click: async () => {
-        await postUrl(baseUrl + "/api/annote/negative", {
-          method: "POST",
-          body: { id: article.value.id, reason: 2 },
-        });
-        refresh();
-      },
+      click: () => annoteNegative(2),
     },
     {
       label: "Egyéb",
       slot: "item",
-      click: async () => {
-        await postUrl(baseUrl + "/api/annote/negative", {
-          method: "POST",
-          body: { id: article.value.id, reason: 100 },
-        });
-        refresh();
-      },
-    },
+      click: () => annoteNegative(100),
+    }
   ],
 ];
 
@@ -325,6 +309,7 @@ function getKeywords(text) {
 
 function openModal() {
   isOpening.value = true;
+  showThanks.value = false;
   if (article.value.isDownloaded) {
     isOpen.value = true;
     isOpening.value = false;
@@ -403,6 +388,7 @@ function openModal() {
 
 function closeModal() {
   isOpen.value = false;
+  showThanks.value = false;
 }
 
 const {
@@ -450,6 +436,7 @@ async function deleteArticle() {
 
 async function submitArticle() {
   submitted.value = true;
+  showThanks.value = true;
 
   let positivePersonsList = positivePersons.value
     .map((person) => person.occurences ?? person)
@@ -517,6 +504,7 @@ async function submitArticle() {
       errorText.value = error;
     }
   }
+  showThanks.value = false;
 }
 
 const isOpen = ref(false);
