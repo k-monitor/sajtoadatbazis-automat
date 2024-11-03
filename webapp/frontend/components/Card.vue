@@ -516,26 +516,29 @@ article.value.date = new Date(Date.parse(article.value.date)).toLocaleString();
 function getRichText() {
   let texthtml = article.value.text ?? '';
 
-  let allPersons = article.value.persons
-    .filter((obj) => obj.found_position != null)
+  let allPersons = article.value.mapped_persons
     .map((person) => person.occurences ?? [person])
-    .flat();
+    .flat()
+    .filter((obj) => obj.found_position != null);
   allPersons.forEach((element) => {
     element.etype = "person";
   });
 
-  let allInstitutions = article.value.institutions
-    .filter((obj) => obj.found_position != null)
-    .map((person) => person.list ?? [person])
-    .flat();
+  console.log('allPersons');
+  console.log(allPersons);
+
+  let allInstitutions = article.value.mapped_institutions
+    .map((person) => person.occurences ?? [person])
+    .flat()
+    .filter((obj) => obj.found_position != null);
   allInstitutions.forEach((element) => {
     element.etype = "institution";
   });
 
-  let allPlaces = article.value.places
-    .filter((obj) => obj.found_position != null)
-    .map((person) => person.list ?? [person])
-    .flat();
+  let allPlaces = article.value.mapped_places
+    .map((person) => person.occurences ?? [person])
+    .flat()
+    .filter((obj) => obj.found_position != null);
   allPlaces.forEach((element) => {
     element.etype = "place";
   });
@@ -553,7 +556,6 @@ function getRichText() {
 
   let richText = "";
   let lastIndex = 0;
-
   for (const entity of allEntities) {
     richText += texthtml.substring(lastIndex, entity.found_position);
     if (entity.etype == "person")
