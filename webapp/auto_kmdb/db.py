@@ -693,9 +693,9 @@ def map_entities(entities: list[dict]):
     entity_list = []
     for db_id, entity_group in entity_map.items():
         annotation_label = None
-        if any([e['annotation_label'] == 1 for e in entity_group]):
+        if any([e["annotation_label"] == 1 for e in entity_group]):
             annotation_label = 1
-        elif any([e['annotation_label'] == 0 for e in entity_group]):
+        elif any([e["annotation_label"] == 0 for e in entity_group]):
             annotation_label = 0
         if db_id is not None and db_id != 0:
             score = avg(
@@ -1030,12 +1030,12 @@ WHERE
     query_cat = (
         """INSERT INTO news_categories_link (news_id, cid, head) VALUES (%s, %s, %s);"""
     )
-    query_cat_update = """UPDATE news_categories_link
-SET 
-    cid = %s, 
-    head = %s
-WHERE 
-    news_id = %s;"""
+    query_cat_update = (
+        """UPDATE news_categories_link SET cid = %s, head = %s WHERE news_id = %s;"""
+    )
+    query_cat_autokmdb = (
+        """UPDATE autokmdb_news SET category = %s WHERE news_id = %s;"""
+    )
     query_p = """INSERT INTO news_persons_link (news_id, person_id) VALUES (%s, %s)"""
     delete_p = """DELETE FROM news_persons_link WHERE news_id = %s"""
     query_auto_p = """UPDATE autokmdb_persons SET annotation_label = 1 WHERE id = %s;"""
@@ -1156,6 +1156,7 @@ WHERE
             cursor.execute(query_cat_update, (category_dict[category], "Y", news_id))
         else:
             cursor.execute(query_cat, (news_id, category_dict[category], "Y"))
+        cursor.execute(query_cat_autokmdb, (news_id, category))
 
         done_person_ids = set()
         done_institution_ids = set()
