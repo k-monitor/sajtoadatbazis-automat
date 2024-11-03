@@ -31,7 +31,13 @@ def rss_watcher(app_context):
         logging.info("checking feeds")
         for newspaper in newspapers:
             if newspaper["rss_url"]:
-                get_new_from_rss(newspaper)
+                try:
+                    get_new_from_rss(newspaper)
+                except requests.exceptions.JSONDecodeError:
+                    logging.error('JSONDecodeError for ' + newspaper['name'])
+                except Exception as e:
+                    logging.error('Error for ' + newspaper['name'] + ': ' + str(e))
+        logging.info('done checking feeds')
         time.sleep(5 * 60)
 
 
