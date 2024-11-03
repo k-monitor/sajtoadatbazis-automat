@@ -230,8 +230,8 @@ def init_news(
     clean_url: str,
     newspaper_name: str,
     newspaper_id: int,
-    user_id: int,
-    pub_time: str,
+    user_id: Optional[int],
+    pub_time: Optional[str],
 ) -> None:
     current_datetime: datetime = datetime.now()
     cre_time: str = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
