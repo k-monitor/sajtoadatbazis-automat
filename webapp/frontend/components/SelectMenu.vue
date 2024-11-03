@@ -80,9 +80,9 @@ function search(q: string) {
       .filter(
         (obj1, i, arr) =>
           arr.findIndex((obj2) => obj2.db_id === obj1.db_id) === i ||
-          !("db_id" in obj1)
+          !("db_id" in obj1) || obj1.db_id == 0
       ).map(item => {
-        const count = labels.find(label => label.id == item.db_id)?.count;
+        const count = labels.find(label => label.id == item.db_id)?.count ?? 0;
         item['count'] = count;
         return item;
       }
@@ -150,6 +150,4 @@ const { list, creatable, positiveList, labels, type } = defineProps([
 const query = ref("");
 // Local state
 const localPositiveList = ref(positiveList);
-console.log("localPositiveList.value");
-console.log(localPositiveList.value);
 </script>
