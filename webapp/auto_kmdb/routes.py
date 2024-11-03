@@ -262,9 +262,9 @@ def all_labels():
         return (
             jsonify(
                 {
-                    "person": db.get_all_persons(connection),
-                    "institution": db.get_all_institutions(connection),
-                    "place": db.get_all_places(connection),
+                    "person": db.get_all_persons_freq(connection),
+                    "institution": db.get_all_institutions_freq(connection),
+                    "place": db.get_all_places_freq(connection),
                     "keywords": db.get_all_others(connection),
                     "domains": db.get_all_newspapers(connection),
                     "files": db.get_all_files(connection),
