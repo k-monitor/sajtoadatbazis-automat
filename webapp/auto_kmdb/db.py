@@ -1,11 +1,11 @@
 from functools import cache
-from typing import Any, Optional
+from typing import Literal, Any, Optional
 from mysql.connector.pooling import MySQLConnectionPool, PooledMySQLConnection
 import os
-from datetime import datetime
 from slugify import slugify
 import logging
 from datetime import datetime, timedelta
+from collections import defaultdict
 
 connection_pool: MySQLConnectionPool = MySQLConnectionPool(
     pool_name="cnx_pool",
@@ -230,8 +230,8 @@ def init_news(
     clean_url: str,
     newspaper_name: str,
     newspaper_id: int,
-    user_id: int,
-    pub_time: str,
+    user_id: Optional[int],
+    pub_time: Optional[str],
 ) -> None:
     current_datetime: datetime = datetime.now()
     cre_time: str = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
@@ -534,6 +534,7 @@ def get_article_counts(
 ) -> dict[str, int]:
     article_counts: dict[str, int] = {}
     for status in ["mixed", "positive", "negative", "processing", "all"]:
+        query: str = ""
         if status == "mixed":
             query = """WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND (n.skip_reason = 0 OR n.skip_reason is NULL)"""
         elif status == "positive":
@@ -649,6 +650,90 @@ def get_article_others(cursor, id) -> list[dict]:
     return cursor.fetchall()
 
 
+def group_dicts_by_name(dict_list):
+    groups = []
+    visited = set()  # To keep track of the processed dictionaries
+    for i, dict_i in enumerate(dict_list):
+        if i in visited:
+            continue  # Skip if this dictionary has already been grouped
+        current_group = [dict_i]
+        visited.add(i)
+        for j, dict_j in enumerate(dict_list):
+            if j in visited:
+                continue
+            # Check if either name is a substring of the other
+            if dict_i["name"] in dict_j["name"] or dict_j["name"] in dict_i["name"]:
+                current_group.append(dict_j)
+                visited.add(j)
+        groups.append(current_group)
+    return groups
+
+
+def map_entities(entities: list[dict]):
+    def normalized_score(e):
+        if e["classification_label"] == 1:
+            return e["classification_score"]
+        else:
+            return 1 - e["classification_score"]
+
+    def unnormalized_score(score):  # -> Any:
+        label: Literal[1] | Literal[-1] = 1 if score > 0.5 else -1
+        if label == 1:
+            return score
+        else:
+            return 1 - score
+
+    def avg(l):
+        return sum(l) / len(l) if l else 0
+
+    entity_map: dict[Optional[int], list] = defaultdict(list)
+    for entity in entities:
+        entity_map[entity["db_id"]].append(entity)
+    map_non_db = group_dicts_by_name(entity_map[0])
+    entity_list = []
+    for db_id, entity_group in entity_map.items():
+        annotation_label = None
+        if any([e["annotation_label"] == 1 for e in entity_group]):
+            annotation_label = 1
+        elif any([e["annotation_label"] == 0 for e in entity_group]):
+            annotation_label = 0
+        if db_id is not None and db_id != 0:
+            score = avg(
+                [
+                    normalized_score(e)
+                    for e in entity_group
+                    if "classification_label" in e
+                ]
+            )
+            label = 1 if score > 0.5 else 0
+            old_score = unnormalized_score(score)
+            entity = {
+                "db_id": db_id,
+                "name": entity_group[0]["db_name"],
+                "score": score,
+                "classification_score": old_score,
+                "classification_label": label,
+                "annotation_label": annotation_label,
+                "occurences": entity_group,
+            }
+            entity_list.append(entity)
+    for entity_group in map_non_db:
+        score = avg([normalized_score(e) for e in entity_group])
+        label = 1 if score > 0.5 else 0
+        old_score = unnormalized_score(score)
+        entity = {
+            "db_id": entity_group[0]["db_id"],
+            "name": entity_group[0]["name"],
+            "score": score,
+            "classification_score": old_score,
+            "classification_label": label,
+            "annotation_label": annotation_label,
+            "occurences": entity_group,
+        }
+        entity_list.append(entity)
+    return entity_list
+
+
 def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
     query = """SELECT n.id AS id, news_id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason,
             n.text AS text, n.cre_time AS date, category, CONVERT_TZ(article_date, @@session.time_zone, '+00:00') as article_date, u.name AS mod_name FROM autokmdb_news n LEFT JOIN users u ON n.mod_id = u.user_id WHERE id = %s
@@ -656,24 +741,21 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (id,))
         article: dict = cursor.fetchone()
-        if article["news_id"]:
-            article["persons"] = get_article_persons_kmdb(
-                cursor, article["news_id"]
-            ) + get_article_persons(cursor, id)
-            article["institutions"] = get_article_institutions_kmdb(
-                cursor, article["news_id"]
-            ) + get_article_institutions(cursor, id)
-            article["places"] = get_article_places_kmdb(
-                cursor, article["news_id"]
-            ) + get_article_places(cursor, id)
-            article["others"] = get_article_others_kmdb(
-                cursor, article["news_id"]
-            ) + get_article_others(cursor, id)
-        else:
-            article["persons"] = get_article_persons(cursor, id)
-            article["institutions"] = get_article_institutions(cursor, id)
-            article["places"] = get_article_places(cursor, id)
-            article["others"] = get_article_others(cursor, id)
+        persons = get_article_persons(cursor, id)
+        institutions = get_article_institutions(cursor, id)
+        places = get_article_places(cursor, id)
+        others = get_article_others(cursor, id)
+        news_id = article["news_id"]
+        if news_id:
+            persons += get_article_persons_kmdb(cursor, news_id)
+            institutions += get_article_institutions_kmdb(cursor, news_id)
+            places += get_article_places_kmdb(cursor, news_id)
+            others += get_article_others_kmdb(cursor, news_id)
+        article["mapped_persons"] = map_entities(persons)
+        article["mapped_institutions"] = map_entities(institutions)
+        article["mapped_places"] = map_entities(places)
+        article["others"] = others
+
         return article
 
 
@@ -846,24 +928,24 @@ def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
         result = []
         seen = set()
         for e in lst:
-            if 'db_name' in e and e['db_name'] and e['db_name'] not in seen:
-                result.append(e['db_name'])
-                seen.add(e['db_name'])
-            elif 'name' in e and e['name'] and e['name'] not in seen:
-                result.append(e['name'])
-                seen.add(e['name'])
+            if "db_name" in e and e["db_name"] and e["db_name"] not in seen:
+                result.append(e["db_name"])
+                seen.add(e["db_name"])
+            elif "name" in e and e["name"] and e["name"] not in seen:
+                result.append(e["name"])
+                seen.add(e["name"])
             else:
                 logging.warning(f"no names in: {e}")
         return result
 
-    logging.info('setTags')
+    logging.info("setTags")
     names: list[str] = to_names(persons)
     names.append(newspaper)
     names += to_names(institutions)
     names += to_names(places)
     names += to_names(others)
 
-    names_str: str = '|'.join(names)
+    names_str: str = "|".join(names)
 
     tag_query = """SELECT tag_id FROM news_tags WHERE news_id = %s"""
     tag_update = """UPDATE news_tags SET names = %s WHERE tag_id = %s"""
@@ -873,10 +955,24 @@ def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
     tag_id: list[Optional[int]] = cursor.fetchone()
 
     if tag_id and tag_id[0]:
-        cursor.execute(tag_update, (names_str, news_id,))
-        logging.info(f"updating tag_id={tag_id[0]} news_id={news_id} with text: {names_str}")
+        cursor.execute(
+            tag_update,
+            (
+                names_str,
+                news_id,
+            ),
+        )
+        logging.info(
+            f"updating tag_id={tag_id[0]} news_id={news_id} with text: {names_str}"
+        )
     else:
-        cursor.execute(tag_insert, (names_str, news_id,))
+        cursor.execute(
+            tag_insert,
+            (
+                names_str,
+                news_id,
+            ),
+        )
         logging.info(f"updating news_id={news_id} with text: {names_str}")
 
 
@@ -934,12 +1030,12 @@ WHERE
     query_cat = (
         """INSERT INTO news_categories_link (news_id, cid, head) VALUES (%s, %s, %s);"""
     )
-    query_cat_update = """UPDATE news_categories_link
-SET 
-    cid = %s, 
-    head = %s
-WHERE 
-    news_id = %s;"""
+    query_cat_update = (
+        """UPDATE news_categories_link SET cid = %s, head = %s WHERE news_id = %s;"""
+    )
+    query_cat_autokmdb = (
+        """UPDATE autokmdb_news SET category = %s WHERE news_id = %s;"""
+    )
     query_p = """INSERT INTO news_persons_link (news_id, person_id) VALUES (%s, %s)"""
     delete_p = """DELETE FROM news_persons_link WHERE news_id = %s"""
     query_auto_p = """UPDATE autokmdb_persons SET annotation_label = 1 WHERE id = %s;"""
@@ -1060,6 +1156,7 @@ WHERE
             cursor.execute(query_cat_update, (category_dict[category], "Y", news_id))
         else:
             cursor.execute(query_cat, (news_id, category_dict[category], "Y"))
+        cursor.execute(query_cat_autokmdb, (news_id, category))
 
         done_person_ids = set()
         done_institution_ids = set()

@@ -1,4 +1,4 @@
-from auto_kmdb.Processor import Processor
+from auto_kmdb.processors import Processor
 from time import sleep
 from auto_kmdb import db
 import logging

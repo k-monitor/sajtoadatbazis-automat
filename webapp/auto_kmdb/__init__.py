@@ -1,7 +1,4 @@
 from dotenv import load_dotenv
-
-from auto_kmdb.Processor import Processor
-
 load_dotenv("data/.env")
 
 from flask import Flask
@@ -9,13 +6,14 @@ from threading import Thread
 from time import sleep
 
 sleep(10)  # TODO better wait handling
-from auto_kmdb.DownloadProcessor import (
+from auto_kmdb.processors.DownloadProcessor import do_retries
+from auto_kmdb.processors import (
+    Processor,
+    ClassificationProcessor,
     DownloadProcessor,
-    do_retries,
+    NERProcessor,
+    KeywordProcessor,
 )
-from auto_kmdb.ClassificationProcessor import ClassificationProcessor
-from auto_kmdb.NERProcessor import NERProcessor
-from auto_kmdb.KeywordProcessor import KeywordProcessor
 from auto_kmdb.rss_watcher import rss_watcher
 import logging
 
@@ -27,8 +25,8 @@ def create_app() -> Flask:
     logfile = "data/log.txt"
     logging.basicConfig(
         level=logging.INFO,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S',
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
         filename=logfile,
     )
 
@@ -57,12 +55,7 @@ def create_app() -> Flask:
         KeywordProcessor(),
     ]
     for processor in processors:
-        processor.load_model()
         Thread(target=processor.process_loop, args=(), daemon=True).start()
-
-    @app.route("/hello")
-    def hello():
-        return "Hello, World!"
 
     return app
 

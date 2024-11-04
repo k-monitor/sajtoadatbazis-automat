@@ -11,14 +11,15 @@ const route = useRoute();
 const router = useRouter();
 
 const ranges = [
-  { label: "Last 7 days", duration: { days: 7 } },
-  { label: "Last 14 days", duration: { days: 14 } },
-  { label: "Last 30 days", duration: { days: 30 } },
-  { label: "Last 3 months", duration: { months: 3 } },
-  { label: "Last 6 months", duration: { months: 6 } },
-  { label: "Last year", duration: { years: 1 } },
-  { label: "2 years", duration: { years: 2 } },
-  { label: "3 years", duration: { years: 3 } },
+  { label: "Elmúlt 1 nap", duration: { days: 1 } },
+  { label: "Elmúlt 2 nap", duration: { days: 2 } },
+  { label: "Elmúlt 7 nap", duration: { days: 7 } },
+  { label: "Elmúlt 2 hét", duration: { days: 14 } },
+  { label: "Elmúlt 1 hónap", duration: { days: 30 } },
+  { label: "Elmúlt 3 hónap", duration: { months: 3 } },
+  { label: "Elmúlt 6 hónap", duration: { months: 6 } },
+  { label: "Elmúlt 1 év", duration: { years: 1 } },
+  { label: "Elmúlt 3 év", duration: { years: 3 } },
 ];
 
 const selected = ref({ start: sub(new Date(), { days: 14 }), end: new Date() });
@@ -119,33 +120,28 @@ const { data: articleCounts, refresh: refreshArticleCounts } = useAuthLazyFetch(
 
 const statusItems = computed(() => [
   {
-    label: `Ellenőrizendő (${
-      articleCounts.value ? articleCounts.value["mixed"] : "..."
-    })`,
+    label: `Ellenőrizendő (${articleCounts.value ? articleCounts.value["mixed"] : "..."
+      })`,
     key: "mixed",
   },
   {
-    label: `Elfogadott (${
-      articleCounts.value ? articleCounts.value["positive"] : "..."
-    })`,
+    label: `Elfogadott (${articleCounts.value ? articleCounts.value["positive"] : "..."
+      })`,
     key: "positive",
   },
   {
-    label: `Elutasított (${
-      articleCounts.value ? articleCounts.value["negative"] : "..."
-    })`,
+    label: `Elutasított (${articleCounts.value ? articleCounts.value["negative"] : "..."
+      })`,
     key: "negative",
   },
   {
-    label: `Feldolgozás alatt (${
-      articleCounts.value ? articleCounts.value["processing"] : "..."
-    })`,
+    label: `Feldolgozás alatt (${articleCounts.value ? articleCounts.value["processing"] : "..."
+      })`,
     key: "processing",
   },
   {
-    label: `Mindegyik (${
-      articleCounts.value ? articleCounts.value["all"] : "..."
-    })`,
+    label: `Mindegyik (${articleCounts.value ? articleCounts.value["all"] : "..."
+      })`,
     key: "all",
   },
 ]);
@@ -274,21 +270,31 @@ async function deleteArticles(reason) {
 
 async function handleAddUrl(newUrl, selectedDomain) {
   isOpen.value = false;
-  try {
-    await $authFetch(baseUrl + "/api/add_url", {
-      method: "POST",
-      body: {
-        url: newUrl,
-        newspaper_name: selectedDomain.name,
-        newspaper_id: selectedDomain.id,
-      },
-    });
-  } catch (error) {
-    console.error(error);
-    if (!isOpenError.value) {
-      isOpenError.value = true;
-      errorText.value = error;
-      errorTitle.value = "Hiba ";
+  if (selectedDomain === null) {
+    isOpenError.value = true;
+    errorText.value = "Válaszd ki a listából a cikkhez tartozó hírportált!";
+    errorTitle.value = "Hiba ";
+  } else if (newUrl === '') {
+    isOpenError.value = true;
+    errorText.value = "Adj meg url-t is!";
+    errorTitle.value = "Hiba ";
+  } else {
+    try {
+      await $authFetch(baseUrl + "/api/add_url", {
+        method: "POST",
+        body: {
+          url: newUrl,
+          newspaper_name: selectedDomain.name,
+          newspaper_id: selectedDomain.id,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      if (!isOpenError.value) {
+        isOpenError.value = true;
+        errorText.value = error;
+        errorTitle.value = "Hiba ";
+      }
     }
   }
 }
@@ -296,92 +302,44 @@ async function handleAddUrl(newUrl, selectedDomain) {
 
 <template>
   <div>
-    <UContainer
-      class="my-1 justify-between flex lg:px-0 px-4 sm:px-0 ml-1 max-w-full"
-    >
+    <UContainer class="my-1 justify-between flex lg:px-0 px-4 sm:px-0 ml-1 max-w-full">
       <UContainer class="my-1 flex lg:px-0 px-2 sm:px-0 ml-auto mr-1 flex-wrap">
         <UButton class="mr-1 h-fit my-1" @click="openNewUrl">Új cikk</UButton>
         <div class="flex my-auto px-1 my-1">
-          <NewspaperSelectMenu 
-            :allDomains="allDomains"
-            :selectedDomains="selectedDomains"
-            @update:selectedDomains="updateSelectedDomains"
-            @refresh="refresh"
-          />
+          <NewspaperSelectMenu :allDomains="allDomains" :selectedDomains="selectedDomains"
+            @update:selectedDomains="updateSelectedDomains" @refresh="refresh" />
         </div>
 
-        <ReverseSortButton
-          :reverseSort="reverseSort"
-          @update:reverseSort="updateReverseSort"
-          @refresh="refresh"
-        />
+        <ReverseSortButton :reverseSort="reverseSort" @update:reverseSort="updateReverseSort" @refresh="refresh" />
 
-        <DateRangeSelector
-          :selected="selected"
-          :ranges="ranges"
-          @update:selected="updateSelectedDateRange"
-          @refresh="refresh"
-        />
+        <DateRangeSelector :selected="selected" :ranges="ranges" @update:selected="updateSelectedDateRange"
+          @refresh="refresh" />
 
-        <UInput
-          class="px-1 my-1"
-          name="q"
-          v-model="q"
-          color="primary"
-          variant="outline"
-          placeholder="Keresés..."
-        />
-        <AnnoteMultiple
-          :articles="articles"
-          :items="items"
-          :loadingDelete="loadingDelete"
-        />
+        <UInput class="px-1 my-1" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
+        <AnnoteMultiple :articles="articles" :items="items" :loadingDelete="loadingDelete" />
       </UContainer>
     </UContainer>
 
-    <AddArticleModal
-      :isOpen="isOpen"
-      :domains="allLabels ? allLabels['domains'] : []"
-      @update:isOpen="isOpen = $event"
-      @add-url="handleAddUrl"
-    />
+    <AddArticleModal :isOpen="isOpen" :domains="allLabels ? allLabels['domains'] : []" @update:isOpen="isOpen = $event"
+      @add-url="handleAddUrl" />
 
     <UModal v-model="isOpenError" :prevent-close="true">
       <div class="p-4">
         <h1 class="font-bold">{{ errorTitle }}</h1>
         <p class="py-5">{{ errorText }}</p>
-        <p v-if="loginError"><a :href="config.public.adminUrl" target="_blank" class="text-blue-700">admin felület</a></p>
+        <p v-if="loginError"><a :href="config.public.adminUrl" target="_blank" class="text-blue-700">admin felület</a>
+        </p>
         <UButton v-else @click="isOpenError = false">Bezárás</UButton>
       </div>
     </UModal>
 
     <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh">
       <template #item="{ item }" v-if="!pending">
-        <UPagination
-          class="p-4 justify-center"
-          v-model="page"
-          :page-count="10"
-          :total="itemsCount"
-          @change="refresh"
-        />
-        <Card
-          class="flex justify-center"
-          v-for="article in articles"
-          :key="article.id"
-          :article="article"
-          :allLabels="allLabels"
-          :keywordSynonyms="keywordSynonyms"
-          :allFiles="allFiles"
-          :refresh="refreshAll"
-          @update:filter_newspaper="filterNewspaper"
-        />
-        <UPagination
-          class="p-4 justify-center"
-          v-model="page"
-          :page-count="10"
-          :total="itemsCount"
-          @change="refresh"
-        />
+        <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @change="refresh" />
+        <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article"
+          :allLabels="allLabels" :keywordSynonyms="keywordSynonyms" :allFiles="allFiles" :refresh="refreshAll"
+          @update:filter_newspaper="filterNewspaper" />
+        <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @change="refresh" />
       </template>
       <template #item="{ item }" v-else>
         <UProgress animation="elastic" v-if="pending" />

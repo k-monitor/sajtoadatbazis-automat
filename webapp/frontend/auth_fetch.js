@@ -18,13 +18,9 @@ export function useAuthLazyFetch(url, options = {}) {
     const cookieValue = getCookieValue(cookieName);
     console.log("PHPSESSID: "+cookieValue);
     
-    if (!cookieValue) {
-        throw new Error('Cookie not found');
-    }
-
     const headers = {
         ...options.headers,
-        'Auth': `${cookieValue}`,
+        'Authorization': `${cookieValue}`,
     };
 
     return useLazyFetch(url, {
@@ -38,13 +34,9 @@ export function useAuthFetch(url, options = {}) {
     const cookieValue = getCookieValue(cookieName);
     console.log("PHPSESSID: "+cookieValue);
     
-    if (!cookieValue) {
-        throw new Error('Cookie not found');
-    }
-
     const headers = {
         ...options.headers,
-        'Auth': `${cookieValue}`,
+        'Authorization': `${cookieValue}`,
     };
 
     return useFetch(url, {
@@ -58,13 +50,9 @@ export function $authFetch(url, options = {}) {
     const cookieValue = getCookieValue(cookieName);
     console.log("PHPSESSID: "+cookieValue);
     
-    if (!cookieValue) {
-        throw new Error('Cookie not found');
-    }
-
     const headers = {
         ...options.headers,
-        'Auth': `${cookieValue}`,
+        'Authorization': `${cookieValue}`,
     };
 
     return $fetch(url, {

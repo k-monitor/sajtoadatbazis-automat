@@ -3,10 +3,10 @@ from typing import List, Optional
 from flask.ctx import AppContext
 from playwright._impl._api_structures import Cookie
 from playwright.sync_api._generated import Browser, BrowserContext, Page
-from auto_kmdb.Processor import Processor
-from auto_kmdb.same_news import same_news
+from auto_kmdb.processors import Processor
+from auto_kmdb.utils.same_news import same_news
 from auto_kmdb import db
-from auto_kmdb.preprocess import (
+from auto_kmdb.utils.preprocess import (
     do_replacements,
     replacements,
     common_descriptions,
@@ -292,9 +292,12 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
             logging.error(traceback.format_exc())
 
 
-
 class DownloadProcessor(Processor):
     def __init__(self) -> None:
+        logging.info("initialized download processor")
+        self.cookies: dict[str, str] = {}
+
+    def load_model(self):
         cookies_24: dict[str, str] = {}
         cookies_444: dict[str, str] = {}
         try:
@@ -307,8 +310,8 @@ class DownloadProcessor(Processor):
         except Exception:
             logging.error(traceback.format_exc())
             logging.error("Failed to login to 444.hu")
-
         self.cookies: dict[str, str] = {**cookies_24, **cookies_444}
+        self.done = True
         logging.info("initialized download processor")
 
     def process_next(self) -> None:

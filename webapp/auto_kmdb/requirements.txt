@@ -1,8 +1,6 @@
-Flask-SQLAlchemy==3.1.1
 Flask==3.0.0
 git+https://github.com/boapps/newspaper4k.git
-uvicorn[standard]==0.24.0
-gunicorn
+waitress
 jsonlines
 mysql-connector-python
 transformers==4.34.0

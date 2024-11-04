@@ -6,19 +6,8 @@ warnings.simplefilter(action="ignore", category=FutureWarning)
 import pandas as pd
 import numpy as np
 from typing import Literal, Optional, Sequence
-import spacy
 import logging
-
-nlp = spacy.load(
-    "hu_core_news_lg",
-    disable=[
-        "parser",
-        "ner",
-        "lookup_lemmatizer",
-        "tagger",
-        "senter",
-    ],
-)
+from spacy.language import Language
 
 from auto_kmdb.db import connection_pool
 from auto_kmdb.db import (
@@ -84,7 +73,7 @@ def get_synonyms_file(
             for word in synonyms:
                 synonym_mapping.loc[word.strip()] = db_keyword
         else:
-            logging.warn(f"didn't find db_id {db_id} in db.")
+            logging.warning(f"didn't find db_id {db_id} in db.")
     assert synonym_mapping.index.duplicated().sum() == 0
     return synonym_mapping
 
@@ -207,8 +196,9 @@ def get_mapping_by_synonym(entity: str, synonym_mapping: pd.DataFrame) -> list[s
 
 
 def get_mapping(
-    detected_entities: list[dir],
+    detected_entities: list[dict],
     keyword_list: Sequence[str],
+    nlp: Language,
     synonym_mapping: Optional[pd.DataFrame] = None,
 ) -> pd.DataFrame:
     """

@@ -152,6 +152,9 @@
             <UButton @click="submitArticle" :loading="submitted">Elfogad</UButton>
           </div>
         </UContainer>
+        <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0 mx-4">
+          <UAlert v-if="showThanks" color="primary" icon="i-heroicons-heart" title="Köszi, hogy ezzel a cikkel is bővítetted a K-Monitor sajtóadatbázisát!" />
+        </UContainer>
       </div>
     </UModal>
   </div>
@@ -163,6 +166,7 @@ import { $authFetch } from "~/auth_fetch";
 const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
 
+const showThanks = ref(false);
 const edit = ref(false);
 const selection = ref(false);
 let accepting = ref(false);
@@ -192,63 +196,43 @@ function selected() {
 
 const reasons = { '0': 'Nem releváns', '1': 'Átvett', '2': 'Külföldi', '3': 'Már szerepel', '100': 'Egyéb' }
 
+async function annoteNegative(reason) {
+  showThanks.value = true;
+  await postUrl(baseUrl + "/api/annote/negative", {
+    method: "POST",
+    body: { id: article.value.id, reason: reason },
+  });
+  refresh();
+  showThanks.value = false;
+}
+
 const items = [
   [
     {
       label: "Nem releváns",
       slot: "item",
-      click: async () => {
-        await postUrl(baseUrl + "/api/annote/negative", {
-          method: "POST",
-          body: { id: article.value.id, reason: 0 },
-        });
-        refresh();
-      },
+      click: () => annoteNegative(0),
     },
     {
       label: "Átvett",
       slot: "item",
-      click: async () => {
-        await postUrl(baseUrl + "/api/annote/negative", {
-          method: "POST",
-          body: { id: article.value.id, reason: 1 },
-        });
-        refresh();
-      },
+      click: () => annoteNegative(1),
     },
     {
       label: "Már szerepel",
       slot: "item",
-      click: async () => {
-        await postUrl(baseUrl + "/api/annote/negative", {
-          method: "POST",
-          body: { id: article.value.id, reason: 3 },
-        });
-        refresh();
-      },
+      click: () => annoteNegative(3),
     },
     {
       label: "Külföldi",
       slot: "item",
-      click: async () => {
-        await postUrl(baseUrl + "/api/annote/negative", {
-          method: "POST",
-          body: { id: article.value.id, reason: 2 },
-        });
-        refresh();
-      },
+      click: () => annoteNegative(2),
     },
     {
       label: "Egyéb",
       slot: "item",
-      click: async () => {
-        await postUrl(baseUrl + "/api/annote/negative", {
-          method: "POST",
-          body: { id: article.value.id, reason: 100 },
-        });
-        refresh();
-      },
-    },
+      click: () => annoteNegative(100),
+    }
   ],
 ];
 
@@ -325,6 +309,7 @@ function getKeywords(text) {
 
 function openModal() {
   isOpening.value = true;
+  showThanks.value = false;
   if (article.value.isDownloaded) {
     isOpen.value = true;
     isOpening.value = false;
@@ -335,17 +320,9 @@ function openModal() {
         let original = article.value;
         article.value = response._data;
         article.value.original = original;
-        allPersons.value = mapEntities(article.value.persons).filter(
-          (obj1, i, arr) =>
-            arr.findIndex((obj2) => obj2.name === obj1.name) === i ||
-            !("name" in obj1)
-        );
-        allInstitutions.value = mapEntities(article.value.institutions).filter(
-          (obj1, i, arr) =>
-            arr.findIndex((obj2) => obj2.name === obj1.name) === i ||
-            !("name" in obj1)
-        );
-        allPlaces.value = mapEntities(article.value.places);
+        allPersons.value = article.value.mapped_persons;
+        allInstitutions.value = article.value.mapped_institutions;
+        allPlaces.value = article.value.mapped_places;
         const keywords = getKeywords(article.value.text);
         allOthers.value = mapEntities(keywords);
         article.value.original_date = article.value.article_date;
@@ -365,6 +342,7 @@ function openModal() {
               (article.value.annotation_label == 1 &&
                 person.annotation_label == 1)
           );
+          // allPersons.value = article.value.mapped_persons
           positiveInstitutions.value = allInstitutions.value.filter(
             (institution) =>
               (article.value.annotation_label != 1 &&
@@ -410,6 +388,7 @@ function openModal() {
 
 function closeModal() {
   isOpen.value = false;
+  showThanks.value = false;
 }
 
 const {
@@ -457,9 +436,10 @@ async function deleteArticle() {
 
 async function submitArticle() {
   submitted.value = true;
+  showThanks.value = true;
 
   let positivePersonsList = positivePersons.value
-    .map((person) => person.list ?? person)
+    .map((person) => person.occurences ?? person)
     .flat();
   positivePersonsList.forEach((element) => {
     element.annotation_label = 1;
@@ -467,7 +447,7 @@ async function submitArticle() {
   });
 
   let positiveInstitutionsList = positiveInstitutions.value
-    .map((institution) => institution.list ?? institution)
+    .map((institution) => institution.occurences ?? institution)
     .flat();
   positiveInstitutionsList.forEach((element) => {
     element.annotation_label = 1;
@@ -475,7 +455,7 @@ async function submitArticle() {
   });
 
   let positivePlacesList = positivePlaces.value
-    .map((place) => place.list ?? place)
+    .map((place) => place.occurences ?? place)
     .flat();
   positivePlacesList.forEach((element) => {
     element.annotation_label = 1;
@@ -493,8 +473,8 @@ async function submitArticle() {
         description: article.value.description,
         text: article.value.text,
         positive_persons: positivePersonsList,
-        positive_institutions: positiveInstitutions.value,
-        positive_places: positivePlaces.value,
+        positive_institutions: positiveInstitutionsList,
+        positive_places: positivePlacesList,
         category: parseInt(category.value),
         tags: positiveOthers.value,
         active: is_active.value,
@@ -524,6 +504,7 @@ async function submitArticle() {
       errorText.value = error;
     }
   }
+  showThanks.value = false;
 }
 
 const isOpen = ref(false);
@@ -535,26 +516,29 @@ article.value.date = new Date(Date.parse(article.value.date)).toLocaleString();
 function getRichText() {
   let texthtml = article.value.text ?? '';
 
-  let allPersons = article.value.persons
-    .filter((obj) => obj.found_position != null)
-    .map((person) => person.list ?? [person])
-    .flat();
+  let allPersons = article.value.mapped_persons
+    .map((person) => person.occurences ?? [person])
+    .flat()
+    .filter((obj) => obj.found_position != null);
   allPersons.forEach((element) => {
     element.etype = "person";
   });
 
-  let allInstitutions = article.value.institutions
-    .filter((obj) => obj.found_position != null)
-    .map((person) => person.list ?? [person])
-    .flat();
+  console.log('allPersons');
+  console.log(allPersons);
+
+  let allInstitutions = article.value.mapped_institutions
+    .map((person) => person.occurences ?? [person])
+    .flat()
+    .filter((obj) => obj.found_position != null);
   allInstitutions.forEach((element) => {
     element.etype = "institution";
   });
 
-  let allPlaces = article.value.places
-    .filter((obj) => obj.found_position != null)
-    .map((person) => person.list ?? [person])
-    .flat();
+  let allPlaces = article.value.mapped_places
+    .map((person) => person.occurences ?? [person])
+    .flat()
+    .filter((obj) => obj.found_position != null);
   allPlaces.forEach((element) => {
     element.etype = "place";
   });
@@ -572,7 +556,6 @@ function getRichText() {
 
   let richText = "";
   let lastIndex = 0;
-
   for (const entity of allEntities) {
     richText += texthtml.substring(lastIndex, entity.found_position);
     if (entity.etype == "person")
