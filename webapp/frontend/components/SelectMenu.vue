@@ -44,8 +44,8 @@
           " name="mdi:emoticon-devil" class="text-red-500" />
           <Icon v-else-if="option.classification_score != null" name="mdi:account-cowboy-hat" class="text-yellow-500" />
           {{ option.classification_score != null ? ")" : "" }}
-        </span >
-        <span class="right-3 absolute">
+        </span>
+        <span class="right-8 absolute">
           {{ option.count ?? '' }}
         </span>
       </template>
