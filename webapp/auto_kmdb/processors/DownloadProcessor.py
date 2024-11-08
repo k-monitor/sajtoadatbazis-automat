@@ -121,6 +121,9 @@ def save_article(
     source: int,
     news_id: int,
 ):
+    str_date: Optional[str] = None
+    if date is not None and source == 1:
+        str_date = date.strftime("%Y-%m-%d %H:%M:%S")
     if same_news_id and same_news_id != newspaper_id and source != 1:
         with db.connection_pool.get_connection() as connection:
             db.skip_same_news(
@@ -130,7 +133,7 @@ def save_article(
                 title,
                 description,
                 authors,
-                date,
+                str_date,
                 is_paywalled,
             )
     else:
@@ -142,7 +145,7 @@ def save_article(
                 title,
                 description,
                 authors,
-                date,
+                str_date,
                 is_paywalled,
             )
 

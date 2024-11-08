@@ -408,8 +408,8 @@ def save_download_step(
     title: str,
     description: str,
     authors: str,
-    date: str,
-    is_paywalled: bool,
+    date: Optional[str],
+    is_paywalled: int,
 ) -> None:
     query = """UPDATE autokmdb_news 
             SET text = %s, 
@@ -417,7 +417,7 @@ def save_download_step(
                 description = %s, 
                 processing_step = 1, 
                 author = %s, 
-                article_date = COALESCE(article_date, %s), 
+                article_date = COALESCE(%s, article_date),
                 is_paywalled = %s
             WHERE id = %s;"""
     with connection.cursor(dictionary=True) as cursor:
@@ -434,10 +434,10 @@ def skip_same_news(
     title: str,
     description: str,
     authors: str,
-    date: str,
-    is_paywalled: bool,
+    date: Optional[str],
+    is_paywalled: int,
 ) -> None:
-    query = """UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5, text = %s, title = %s, description = %s, processing_step = 1, author = %s, article_date = %s, is_paywalled = %s
+    query = """UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5, text = %s, title = %s, description = %s, processing_step = 1, author = %s, article_date = COALESCE(%s, article_date), is_paywalled = %s
                WHERE id = %s"""
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(
