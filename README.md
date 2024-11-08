@@ -6,7 +6,7 @@ További info: [wiki](https://github.com/k-monitor/sajtoadatbazis-automat/wiki)
 
 ### Backend
 
-A backend egy flask applikáció, amit gunicorn futtat.
+A backend egy flask applikáció.
 
 ### Frontend
 
