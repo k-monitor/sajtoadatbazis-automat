@@ -772,7 +772,7 @@ def get_articles(
     query: str = ""
 
     selection: str = """SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason, negative_reason,
-            n.cre_time AS date, category, u.name AS mod_name
+            n.article_date AS date, category, u.name AS mod_name
         FROM autokmdb_news n
         LEFT JOIN users u ON n.mod_id = u.user_id
         """
