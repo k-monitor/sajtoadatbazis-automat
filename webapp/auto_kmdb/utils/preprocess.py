@@ -43,8 +43,8 @@ def trim_title(title):
     return title
 
 
-common_descriptions = read_file("auto_kmdb/data/common_descriptions.txt")
-common_lines = read_file("auto_kmdb/data/common_lines.txt")
+common_descriptions = read_file("data/common_descriptions.txt")
+common_lines = read_file("data/common_lines.txt")
 
 picture_pattern = re.compile(r"Fotó: (\w+\/[^\s]+ [^\s]+|MTI)")
 picture_pattern = re.compile(r"Fotó: .*")
