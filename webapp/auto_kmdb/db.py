@@ -527,7 +527,7 @@ def paginate_query(query: str, page_size: int, page_number: int) -> str:
 
 def get_article_counts(
     connection: PooledMySQLConnection,
-    domains: list[str],
+    domains: list[int],
     q="",
     start="2000-01-01",
     end="2050-01-01",
@@ -762,8 +762,8 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
 def get_articles(
     connection: PooledMySQLConnection,
     page: int,
-    status: int,
-    domains: str,
+    status: str,
+    domains: list[int],
     q="",
     start="2000-01-01",
     end="2050-01-01",
@@ -1237,7 +1237,7 @@ def get_keyword_synonyms(connection: PooledMySQLConnection) -> list[dict]:
 
 
 def update_session(
-    connection: PooledMySQLConnection, session_id: int, unix_timestamp: int
+    connection: PooledMySQLConnection, session_id: Optional[str], unix_timestamp: int
 ):
     query = """UPDATE users_sessions SET session_expires = %s WHERE session_id = %s"""
     dt: datetime = datetime.fromtimestamp(unix_timestamp)
@@ -1248,7 +1248,7 @@ def update_session(
     connection.commit()
 
 
-def validate_session(connection: PooledMySQLConnection, session_id: int):
+def validate_session(connection: PooledMySQLConnection, session_id: Optional[str]):
     if "NO_LOGIN" in os.environ:
         return True
     query = """SELECT * FROM users_sessions WHERE session_id = %s;"""
