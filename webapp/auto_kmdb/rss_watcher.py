@@ -80,7 +80,7 @@ def get_hvg360():
 
 
 def get_rss(rssurl):
-    feed: feedparser.FeedParserDict = feedparser.parse(rssurl)
+    feed = feedparser.parse(rssurl)
     urls_dates = []
     for entry in feed.entries:
         clean_url = clear_url(entry.link)

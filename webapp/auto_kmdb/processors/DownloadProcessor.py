@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import NamedTuple, List, Optional
 
 from flask.ctx import AppContext
 from playwright._impl._api_structures import Cookie
@@ -25,8 +25,18 @@ from auto_kmdb.newspapers.Atv import Atv
 from auto_kmdb.newspapers.Mediaworks import Mediaworks
 from datetime import timezone
 import traceback
-
 from auto_kmdb.newspapers.Newspaper import Newspaper
+
+
+class ArticleDownload(NamedTuple):
+    text: str
+    title: str
+    description: str
+    authors: str
+    date: Optional[datetime]
+    is_paywalled: int
+    same_news_id: Optional[int]
+
 
 newspapers: list[Newspaper] = [Telex(), Atv(), Mediaworks()]
 proxy_host: str = os.environ["MYSQL_HOST"]
@@ -50,7 +60,7 @@ def get_custom_description(url: str, html: str) -> Optional[str]:
 
 def process_article(
     id: int, url: str, source: int, newspaper_id: str, cookies: dict[str, str]
-) -> tuple[str, str, str, str, Optional[datetime], int, Optional[int]]:
+) -> ArticleDownload:
     headers: dict[str, str] = {"User-Agent": "autokmdb"}
     response: requests.Response = requests.get(url, headers=headers, cookies=cookies)
     if response.status_code == 403:
@@ -106,44 +116,47 @@ def process_article(
 
     same_news_id: Optional[int] = same_news(title, description, text)
 
-    return text, title, description, authors, date, is_paywalled, same_news_id
+    return ArticleDownload(
+        text, title, description, authors, date, is_paywalled, same_news_id
+    )
 
 
 def save_article(
-    text: str,
-    title: str,
-    description: str,
-    authors: str,
-    date: Optional[datetime],
-    is_paywalled: int,
-    same_news_id: Optional[int],
+    article_download: ArticleDownload,
     newspaper_id: int,
     source: int,
     news_id: int,
 ):
-    if same_news_id and same_news_id != newspaper_id and source != 1:
+    str_date: Optional[str] = None
+    if article_download.date is not None and source == 1:
+        str_date = article_download.date.strftime("%Y-%m-%d %H:%M:%S")
+    if (
+        article_download.same_news_id
+        and article_download.same_news_id != newspaper_id
+        and source != 1
+    ):
         with db.connection_pool.get_connection() as connection:
             db.skip_same_news(
                 connection,
                 news_id,
-                text,
-                title,
-                description,
-                authors,
-                date,
-                is_paywalled,
+                article_download.text,
+                article_download.title,
+                article_download.description,
+                article_download.authors,
+                str_date,
+                article_download.is_paywalled,
             )
     else:
         with db.connection_pool.get_connection() as connection:
             db.save_download_step(
                 connection,
                 news_id,
-                text,
-                title,
-                description,
-                authors,
-                date,
-                is_paywalled,
+                article_download.text,
+                article_download.title,
+                article_download.description,
+                article_download.authors,
+                str_date,
+                article_download.is_paywalled,
             )
 
 
@@ -270,19 +283,11 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
     for row in rows:
         logging.info("retrying: " + row["url"])
         try:
-            text, title, description, authors, date, is_paywalled, same_news_id = (
-                process_article(
-                    row["id"], row["url"], row["source"], row["newspaper_id"], cookies
-                )
+            article_download: ArticleDownload = process_article(
+                row["id"], row["url"], row["source"], row["newspaper_id"], cookies
             )
             save_article(
-                text,
-                title,
-                description,
-                authors,
-                date,
-                is_paywalled,
-                same_news_id,
+                article_download,
                 row["newspaper_id"],
                 row["source"],
                 row["id"],
@@ -322,23 +327,15 @@ class DownloadProcessor(Processor):
             return
         logging.info("download processor is processing: " + next_row["url"])
         try:
-            text, title, description, authors, date, is_paywalled, same_news_id = (
-                process_article(
-                    next_row["id"],
-                    next_row["url"],
-                    next_row["source"],
-                    next_row["newspaper_id"],
-                    self.cookies,
-                )
+            article_download: ArticleDownload = process_article(
+                next_row["id"],
+                next_row["url"],
+                next_row["source"],
+                next_row["newspaper_id"],
+                self.cookies,
             )
             save_article(
-                text,
-                title,
-                description,
-                authors,
-                date,
-                is_paywalled,
-                same_news_id,
+                article_download,
                 next_row["newspaper_id"],
                 next_row["source"],
                 next_row["id"],

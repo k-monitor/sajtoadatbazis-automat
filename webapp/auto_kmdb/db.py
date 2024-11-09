@@ -408,8 +408,8 @@ def save_download_step(
     title: str,
     description: str,
     authors: str,
-    date: str,
-    is_paywalled: bool,
+    date: Optional[str],
+    is_paywalled: int,
 ) -> None:
     query = """UPDATE autokmdb_news 
             SET text = %s, 
@@ -417,7 +417,7 @@ def save_download_step(
                 description = %s, 
                 processing_step = 1, 
                 author = %s, 
-                article_date = COALESCE(article_date, %s), 
+                article_date = COALESCE(%s, article_date),
                 is_paywalled = %s
             WHERE id = %s;"""
     with connection.cursor(dictionary=True) as cursor:
@@ -434,10 +434,10 @@ def skip_same_news(
     title: str,
     description: str,
     authors: str,
-    date: str,
-    is_paywalled: bool,
+    date: Optional[str],
+    is_paywalled: int,
 ) -> None:
-    query = """UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5, text = %s, title = %s, description = %s, processing_step = 1, author = %s, article_date = %s, is_paywalled = %s
+    query = """UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5, text = %s, title = %s, description = %s, processing_step = 1, author = %s, article_date = COALESCE(%s, article_date), is_paywalled = %s
                WHERE id = %s"""
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(
@@ -527,7 +527,7 @@ def paginate_query(query: str, page_size: int, page_number: int) -> str:
 
 def get_article_counts(
     connection: PooledMySQLConnection,
-    domains: list[str],
+    domains: list[int],
     q="",
     start="2000-01-01",
     end="2050-01-01",
@@ -736,7 +736,7 @@ def map_entities(entities: list[dict]):
 
 def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
     query = """SELECT n.id AS id, news_id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason,
-            n.text AS text, n.cre_time AS date, category, CONVERT_TZ(article_date, @@session.time_zone, '+00:00') as article_date, u.name AS mod_name FROM autokmdb_news n LEFT JOIN users u ON n.mod_id = u.user_id WHERE id = %s
+            n.text AS text, CONVERT_TZ(article_date, @@session.time_zone, '+00:00') as date, category, CONVERT_TZ(article_date, @@session.time_zone, '+00:00') as article_date, u.name AS mod_name FROM autokmdb_news n LEFT JOIN users u ON n.mod_id = u.user_id WHERE id = %s
         """
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (id,))
@@ -762,8 +762,8 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
 def get_articles(
     connection: PooledMySQLConnection,
     page: int,
-    status: int,
-    domains: str,
+    status: str,
+    domains: list[int],
     q="",
     start="2000-01-01",
     end="2050-01-01",
@@ -772,7 +772,7 @@ def get_articles(
     query: str = ""
 
     selection: str = """SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason, negative_reason,
-            n.cre_time AS date, category, u.name AS mod_name
+            CONVERT_TZ(article_date, @@session.time_zone, '+00:00') AS date, category, u.name AS mod_name
         FROM autokmdb_news n
         LEFT JOIN users u ON n.mod_id = u.user_id
         """
@@ -1237,7 +1237,7 @@ def get_keyword_synonyms(connection: PooledMySQLConnection) -> list[dict]:
 
 
 def update_session(
-    connection: PooledMySQLConnection, session_id: int, unix_timestamp: int
+    connection: PooledMySQLConnection, session_id: Optional[str], unix_timestamp: int
 ):
     query = """UPDATE users_sessions SET session_expires = %s WHERE session_id = %s"""
     dt: datetime = datetime.fromtimestamp(unix_timestamp)
@@ -1248,7 +1248,7 @@ def update_session(
     connection.commit()
 
 
-def validate_session(connection: PooledMySQLConnection, session_id: int):
+def validate_session(connection: PooledMySQLConnection, session_id: Optional[str]):
     if "NO_LOGIN" in os.environ:
         return True
     query = """SELECT * FROM users_sessions WHERE session_id = %s;"""

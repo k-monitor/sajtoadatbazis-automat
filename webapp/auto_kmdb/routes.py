@@ -12,7 +12,7 @@ with db.connection_pool.get_connection() as connection:
 api = Blueprint("api", __name__, url_prefix="/api")
 
 
-def get_session_id(request):
+def get_session_id(request) -> Optional[str]:
     return request.headers.get("Authorization")
 
 
@@ -83,9 +83,12 @@ def api_articles():
     reverse: bool = content.get("reverse", False)
 
     with db.connection_pool.get_connection() as connection:
-        length, articles = db.get_articles(
+        article_response = db.get_articles(
             connection, page, status, domain_ids, "%" + q + "%", start, end, reverse
         )
+        if article_response is None:
+            return jsonify({"error": "Hiba a lekérés során!"}), 500
+        length, articles = article_response
 
     return jsonify({"pages": ceil(length / 10), "articles": articles}), 200
 
@@ -163,18 +166,23 @@ def annote():
             409,
         )
 
-    url = request.json["url"]
-    title = request.json["title"]
-    description = request.json["description"]
-    text = request.json["text"]
-    persons = request.json["positive_persons"]
-    institutions = request.json["positive_institutions"]
-    places = request.json["positive_places"]
-    others = request.json["tags"]
-    newspaper_id = request.json["newspaper_id"]
-    newspaper_name = request.json["newspaper_name"]
-    is_active = request.json["active"]
-    pub_date = request.json["pub_date"]
+    content: Optional[dict] = request.json
+
+    if not content:
+        return jsonify({}), 400
+
+    url = content["url"]
+    title = content["title"]
+    description = content["description"]
+    text = content["text"]
+    persons = content["positive_persons"]
+    institutions = content["positive_institutions"]
+    places = content["positive_places"]
+    others = content["tags"]
+    newspaper_id = content["newspaper_id"]
+    newspaper_name = content["newspaper_name"]
+    is_active = content["active"]
+    pub_date = content["pub_date"]
     parsed_date = datetime.strptime(pub_date, "%a, %d %b %Y %H:%M:%S %Z")
     category = 0
     if "category" in content:
@@ -240,7 +248,7 @@ def add_url():
             return jsonify({"error": "Cikk már létezik"}), 400
         db.init_news(
             connection,
-            1,
+            'manual',
             url,
             url,
             content["newspaper_name"],
