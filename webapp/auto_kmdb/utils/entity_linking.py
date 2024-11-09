@@ -35,7 +35,7 @@ def get_synonyms_file(
         Aliases must be unique.
     """
     synonym_file = (
-        pd.read_csv(f"auto_kmdb/{entity_type}_synonym.csv", index_col=[0])
+        pd.read_csv(f"data/{entity_type}_synonym.csv", index_col=[0])
         .drop(
             columns=[
                 "rész típus",
