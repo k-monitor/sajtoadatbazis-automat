@@ -116,6 +116,10 @@ def process_article(
 
     same_news_id: Optional[int] = same_news(title, description, text)
 
+    if not title:
+        logging.warning("Title is empty")
+        raise Exception("Title is empty")
+
     return ArticleDownload(
         text, title, description, authors, date, is_paywalled, same_news_id
     )
