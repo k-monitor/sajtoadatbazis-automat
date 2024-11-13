@@ -29,7 +29,7 @@ export function useAuthLazyFetch(url, options = {}) {
     });
 }
 
-export function useAuthFetch(url, options = {}) {
+export async function useAuthFetch(url, options = {}) {
     const cookieName = 'PHPSESSID';
     const cookieValue = getCookieValue(cookieName);
     console.log("PHPSESSID: "+cookieValue);
@@ -39,7 +39,7 @@ export function useAuthFetch(url, options = {}) {
         'Authorization': `${cookieValue}`,
     };
 
-    return useFetch(url, {
+    return await useFetch(url, {
         ...options,
         headers,
     });

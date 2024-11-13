@@ -38,8 +38,14 @@ let loadingDelete = ref(false);
 const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
 
-const allLabels = useAuthFetch(baseUrl + "/api/all_labels").data;
-const keywordSynonyms = useAuthFetch(baseUrl + "/api/keyword_synonyms").data;
+let allLabels = (await useAuthFetch(baseUrl + "/api/domains")).data;
+useAuthFetch(baseUrl + "/api/all_labels").then((response) => {
+  allLabels.value = response.data.value;
+});
+let keywordSynonyms = null;
+useAuthFetch(baseUrl + "/api/keyword_synonyms").then((response) => {
+  keywordSynonyms = response.data;
+});
 
 let allFiles = computed(() =>
   allLabels.value == null ? [] : allLabels.value?.files
@@ -208,14 +214,17 @@ function refreshAll() {
 
 function updateSelectedDomains(newDomains) {
   selectedDomains.value = newDomains;
+  updateURL();
 }
 
 function updateSelectedDateRange(newRange) {
   selected.value = newRange;
+  updateURL();
 }
 
 function updateReverseSort(newValue) {
   reverseSort.value = newValue;
+  updateURL();
 }
 
 function openNewUrl() {
