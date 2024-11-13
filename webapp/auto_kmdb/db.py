@@ -108,7 +108,28 @@ def get_all_files(connection: PooledMySQLConnection) -> list[dict]:
     return get_all(connection, "news_files", "file_id", "name_hu")
 
 
+@cache
+def get_all_newspapers(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
+    query = """SELECT n.newspaper_id AS id, n.name AS name, n.rss_url AS rss_url, COUNT(a.newspaper_id) AS article_count FROM news_newspapers n
+    LEFT JOIN autokmdb_news a ON n.newspaper_id = a.newspaper_id WHERE n.status = "Y"
+    GROUP BY n.newspaper_id, n.name, n.rss_url;"""
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query)
+        l = [
+            {
+                "id": r["id"],
+                "name": r["name"],
+                "has_rss": bool(r["rss_url"]),
+                "article_count": r["article_count"],
+            }
+            for r in cursor.fetchall()
+        ]
+        l.sort(key=lambda r: r["article_count"], reverse=True)
+        return l
+
+
 with connection_pool.get_connection() as connection:
+    all_newspapers = get_all_newspapers(connection)
     all_persons = get_all_persons(connection)
     all_institutions = get_all_institutions(connection)
     all_places = get_all_places(connection)
@@ -205,26 +226,6 @@ def get_places_alias(connection: PooledMySQLConnection):
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query)
         return list(cursor.fetchall())
-
-
-@cache
-def get_all_newspapers(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
-    query = """SELECT n.newspaper_id AS id, n.name AS name, n.rss_url AS rss_url, COUNT(a.newspaper_id) AS article_count FROM news_newspapers n
-    LEFT JOIN autokmdb_news a ON n.newspaper_id = a.newspaper_id WHERE n.status = "Y"
-    GROUP BY n.newspaper_id, n.name, n.rss_url;"""
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query)
-        l = [
-            {
-                "id": r["id"],
-                "name": r["name"],
-                "has_rss": bool(r["rss_url"]),
-                "article_count": r["article_count"],
-            }
-            for r in cursor.fetchall()
-        ]
-        l.sort(key=lambda r: r["article_count"], reverse=True)
-        return l
 
 
 def init_news(

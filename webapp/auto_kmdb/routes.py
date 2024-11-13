@@ -1,5 +1,5 @@
 from typing import Optional
-from flask import jsonify, Blueprint, request
+from flask import Response, jsonify, Blueprint, request
 from auto_kmdb import db
 from math import ceil
 import logging
@@ -289,15 +289,14 @@ def domains():
         if not db.validate_session(connection, session_id):
             return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
-    with db.connection_pool.get_connection() as connection:
-        return (
-            jsonify(
-                {
-                    "domains": db.get_all_newspapers(connection),
-                }
-            ),
-            200,
-        )
+    return (
+        jsonify(
+            {
+                "domains": db.all_newspapers,
+            }
+        ),
+        200,
+    )
 
 
 @api.route("/status")
