@@ -189,6 +189,10 @@ def get_all_places_freq(connection: PooledMySQLConnection) -> list[dict]:
     return get_all_freq(connection, "news_places", "place_id", "name_hu")
 
 
+def get_all_others_freq(connection: PooledMySQLConnection) -> list[dict]:
+    return get_all_freq(connection, "news_others", "other_id", "name_hu")
+
+
 def get_places_alias(connection: PooledMySQLConnection):
     query = """
     SELECT

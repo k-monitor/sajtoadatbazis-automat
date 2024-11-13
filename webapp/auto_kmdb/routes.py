@@ -273,7 +273,7 @@ def all_labels():
                     "person": db.get_all_persons_freq(connection),
                     "institution": db.get_all_institutions_freq(connection),
                     "place": db.get_all_places_freq(connection),
-                    "keywords": db.get_all_others(connection),
+                    "keywords": db.get_all_others_freq(connection),
                     "domains": db.get_all_newspapers(connection),
                     "files": db.get_all_files(connection),
                 }

@@ -63,8 +63,8 @@ def process_article(
 ) -> ArticleDownload:
     headers: dict[str, str] = {"User-Agent": "autokmdb"}
     response: requests.Response = requests.get(url, headers=headers, cookies=cookies)
-    if response.status_code == 403:
-        raise Exception("Got 403 forbidden while downloading article.")
+    if response.status_code >= 400:
+        raise Exception("Got error while downloading article.")
     article = newspaper.Article(url=url)
     article.download(input_html=str(response.text).replace("<br>", "\n"))
     article.parse()
