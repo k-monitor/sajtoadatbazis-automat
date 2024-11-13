@@ -248,7 +248,7 @@ def add_url():
             return jsonify({"error": "Cikk már létezik"}), 400
         db.init_news(
             connection,
-            'manual',
+            "manual",
             url,
             url,
             content["newspaper_name"],
@@ -276,6 +276,24 @@ def all_labels():
                     "keywords": db.get_all_others_freq(connection),
                     "domains": db.get_all_newspapers(connection),
                     "files": db.get_all_files(connection),
+                }
+            ),
+            200,
+        )
+
+
+@api.route("/domains", methods=["GET"])
+def domains():
+    session_id: Optional[str] = get_session_id(request)
+    with db.connection_pool.get_connection() as connection:
+        if not db.validate_session(connection, session_id):
+            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    with db.connection_pool.get_connection() as connection:
+        return (
+            jsonify(
+                {
+                    "domains": db.get_all_newspapers(connection),
                 }
             ),
             200,
