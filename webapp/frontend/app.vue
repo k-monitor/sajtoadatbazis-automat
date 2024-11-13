@@ -157,7 +157,7 @@ updateFromURL();
 
 watch(statusId, updateURL);
 watch(q, updateURL);
-watch(allDomains, updateFromURL);
+watch(allDomains, updateURL);
 
 const {
   pending,
