@@ -14,5 +14,7 @@ A frontend egy Single Page App, ami Nuxt-ban készült. Egy REST API-n keresztü
 
 ### GitHub Actions
 
-Egy GitHub Action lefut minden push/merge esetén, ami a main branchet érinti.
-Ez fel ssh-zik a szerverre, leállítja az ott futó backendet, frissíti a repo-t, majd újra build-eli a konténereket és elindítja a webapp-ot.
+~~Egy GitHub Action lefut minden push/merge esetén, ami a main branchet érinti.~~
+~~Ez fel ssh-zik a szerverre, leállítja az ott futó backendet, frissíti a repo-t, majd újra build-eli a konténereket és elindítja a webapp-ot.~~
+
+Jelenleg ki van kapcsolva
