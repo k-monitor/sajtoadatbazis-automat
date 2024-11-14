@@ -41,6 +41,10 @@ const baseUrl = config.public.baseUrl;
 let allLabels = (await useAuthFetch(baseUrl + "/api/domains")).data;
 useAuthFetch(baseUrl + "/api/all_labels").then((response) => {
   allLabels.value = response.data.value;
+  if (response.status.value == "error") {
+    sendLoginError();
+  }
+
 });
 let keywordSynonyms = null;
 useAuthFetch(baseUrl + "/api/keyword_synonyms").then((response) => {
@@ -73,6 +77,13 @@ function updateURL() {
       q: q.value,
     },
   });
+}
+
+function sendLoginError() {
+  loginError.value = true;
+  isOpenError.value = true;
+  errorText.value = 'Kérlek, jelentkezz be a K-Monitor Adatbázis admin felületén, majd töltsd újra ezt a lapot!';
+  errorTitle.value = "Hiba";
 }
 
 function updateFromURL() {
@@ -110,10 +121,7 @@ const { data: articleCounts, refresh: refreshArticleCounts } = useAuthLazyFetch(
     },
     onResponse({ request, response, options }) {
       if (response.status == 401) {
-        loginError.value = true;
-        isOpenError.value = true;
-        errorText.value = 'Kérlek, jelentkezz be a K-Monitor Adatbázis admin felületén, majd töltsd újra ezt a lapot!';
-        errorTitle.value = "Hiba";
+        sendLoginError();
       } else if (response.status >= 300) {
         loginError.value = false;
         isOpenError.value = true;
@@ -176,10 +184,7 @@ const {
   },
   onResponse({ request, response, options }) {
     if (response.status == 401) {
-      loginError.value = true;
-      isOpenError.value = true;
-      errorText.value = 'Kérlek, jelentkezz be a K-Monitor Adatbázis admin felületén, majd töltsd újra ezt a lapot!';
-      errorTitle.value = "Hiba";
+      sendLoginError();
     } else if (response.status >= 300) {
       loginError.value = false;
       isOpenError.value = true;
