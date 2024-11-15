@@ -153,7 +153,7 @@
           </div>
         </UContainer>
         <UContainer class="my-2 flex justify-between px-0 sm:px-0 lg:px-0 mx-4">
-          <UAlert v-if="showThanks" color="primary" icon="i-heroicons-heart" title="Köszi, hogy ezzel a cikkel is bővítetted a K-Monitor sajtóadatbázisát!" />
+          <UAlert v-if="showThanks" color="primary" icon="i-heroicons-heart" :title="thanksMessage" />
         </UContainer>
       </div>
     </UModal>
@@ -165,6 +165,20 @@ import { $authFetch } from "~/auth_fetch";
 
 const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
+
+function getRandomThanks() {
+  const defaultThanks = "Köszi, hogy ezzel a cikkel is bővítetted a K-Monitor sajtóadatbázisát!";
+  const otherThanks = [
+    "Köszi a beküldést, köszi a munkát!",
+    "Ennek a cikknek az elfogadásával Magyarország legnagyobb közpénzes, korrupciós adatbázisát bővítetted! Köszi!",
+    "Együtt építjük a sajtóadatbázist. Köszi!",
+    "A K-Monitor sajtóadatbázisa 2007 óta gyűjti a közpénzes, korrupciós cikkeket. Köszi, hogy része vagy!",
+  ];
+
+  return Math.random() < 0.5 ? defaultThanks : otherThanks[Math.floor(Math.random() * otherThanks.length)];
+}
+
+const thanksMessage = ref(getRandomThanks());
 
 const showThanks = ref(false);
 const edit = ref(false);
@@ -198,6 +212,7 @@ const reasons = { '0': 'Nem releváns', '1': 'Átvett', '2': 'Külföldi', '3': 
 
 async function annoteNegative(reason) {
   showThanks.value = true;
+  thanksMessage.value = getRandomThanks();
   await postUrl(baseUrl + "/api/annote/negative", {
     method: "POST",
     body: { id: article.value.id, reason: reason },
@@ -437,6 +452,7 @@ async function deleteArticle() {
 async function submitArticle() {
   submitted.value = true;
   showThanks.value = true;
+  thanksMessage.value = getRandomThanks();
 
   let positivePersonsList = positivePersons.value
     .map((person) => person.occurences ?? person)

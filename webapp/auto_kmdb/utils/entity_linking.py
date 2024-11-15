@@ -54,9 +54,9 @@ def get_synonyms_file(
 
     with connection_pool.get_connection() as connection:
         if entity_type == "places":
-            db_entities = get_all_places(connection)
+            db_entities = get_all_places()
         elif entity_type == "institutions":
-            db_entities = get_all_institutions(connection)
+            db_entities = get_all_institutions()
 
     entity_dict = {}
     for e in db_entities:
@@ -94,11 +94,11 @@ def get_entities_freq(
     """
     with connection_pool.get_connection() as connection:
         if type == "people":
-            db_entities = get_all_persons_freq(connection)
+            db_entities = get_all_persons_freq()
         elif type == "places":
-            db_entities = get_all_places_freq(connection)
+            db_entities = get_all_places_freq()
         elif type == "institutions":
-            db_entities = get_all_institutions_freq(connection)
+            db_entities = get_all_institutions_freq()
         else:
             raise ValueError(
                 "type parameter should be one of the following: 'people', 'places', 'institutions'"

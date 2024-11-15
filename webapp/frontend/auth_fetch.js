@@ -16,7 +16,6 @@ import { useLazyFetch, useFetch } from '#app';
 export function useAuthLazyFetch(url, options = {}) {
     const cookieName = 'PHPSESSID';
     const cookieValue = getCookieValue(cookieName);
-    console.log("PHPSESSID: "+cookieValue);
     
     const headers = {
         ...options.headers,
@@ -32,7 +31,6 @@ export function useAuthLazyFetch(url, options = {}) {
 export async function useAuthFetch(url, options = {}) {
     const cookieName = 'PHPSESSID';
     const cookieValue = getCookieValue(cookieName);
-    console.log("PHPSESSID: "+cookieValue);
     
     const headers = {
         ...options.headers,
@@ -48,7 +46,6 @@ export async function useAuthFetch(url, options = {}) {
 export function $authFetch(url, options = {}) {
     const cookieName = 'PHPSESSID';
     const cookieValue = getCookieValue(cookieName);
-    console.log("PHPSESSID: "+cookieValue);
     
     const headers = {
         ...options.headers,

@@ -6,6 +6,7 @@ from slugify import slugify
 import logging
 from datetime import datetime, timedelta
 from collections import defaultdict
+from cachetools import cached, LRUCache, TTLCache
 
 connection_pool: MySQLConnectionPool = MySQLConnectionPool(
     pool_name="cnx_pool",
@@ -21,15 +22,14 @@ connection_pool: MySQLConnectionPool = MySQLConnectionPool(
 VERSION_NUMBER: int = 0
 
 
-@cache
+@cached(cache=TTLCache(maxsize=32, ttl=60))
 def get_all(
-    connection: PooledMySQLConnection, table: str, id_column: str, name_column: str
+    table: str, id_column: str, name_column: str
 ) -> list[dict]:
     """
     Queries label id-name pairs from given table.
 
     Args:
-        connection: db connection
         table: name of the table
         id_column: name of the column containing the ids
         name_column: name of the column containing the names
@@ -38,102 +38,89 @@ def get_all(
         List of dicts, each dict containing the 'name' and 'id' of a given label.
     """
     query = f'SELECT {id_column} AS id, {name_column} AS name FROM {table} WHERE status = "Y";'
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query)
-        return list(cursor.fetchall())
+    with connection_pool.get_connection() as connection:
+        with connection.cursor(dictionary=True) as cursor:
+            cursor.execute(query)
+            return list(cursor.fetchall())
 
 
-def get_all_persons(connection: PooledMySQLConnection) -> list[dict]:
+def get_all_persons() -> list[dict]:
     """
     Queries person label id-name pairs.
-
-    Args:
-        connection: db connection
 
     Returns:
         List of dicts, each dict containing the 'name' of a person and 'id' of its label.
     """
-    return get_all(connection, "news_persons", "person_id", "name")
+    return get_all("news_persons", "person_id", "name")
 
 
-def get_all_institutions(connection: PooledMySQLConnection) -> list[dict]:
+def get_all_institutions() -> list[dict]:
     """
     Queries institution label id-name pairs.
-
-    Args:
-        connection: db connection
 
     Returns:
         List of dicts, each dict containing the 'name' of an institution and 'id' of its label.
     """
-    return get_all(connection, "news_institutions", "institution_id", "name")
+    return get_all("news_institutions", "institution_id", "name")
 
 
-def get_all_places(connection: PooledMySQLConnection) -> list[dict]:
+def get_all_places() -> list[dict]:
     """
     Queries place label id-name pairs.
-
-    Args:
-        connection: db connection
 
     Returns:
         List of dicts, each dict containing the 'name' of a place and 'id' of its label.
     """
-    return get_all(connection, "news_places", "place_id", "name_hu")
+    return get_all("news_places", "place_id", "name_hu")
 
 
-def get_all_others(connection: PooledMySQLConnection) -> list[dict]:
+def get_all_others() -> list[dict]:
     """
     Queries other label id-name pairs.
-
-    Args:
-        connection: db connection
 
     Returns:
         List of dicts, each dict containing the 'name' of the label and its 'id'.
     """
-    return get_all(connection, "news_others", "other_id", "name_hu")
+    return get_all("news_others", "other_id", "name_hu")
 
 
-def get_all_files(connection: PooledMySQLConnection) -> list[dict]:
+def get_all_files() -> list[dict]:
     """
     Queries file id-name pairs.
-
-    Args:
-        connection: db connection
 
     Returns:
         List of dicts, each dict containing the 'name' of the file and its 'id'.
     """
-    return get_all(connection, "news_files", "file_id", "name_hu")
+    return get_all("news_files", "file_id", "name_hu")
 
 
-@cache
-def get_all_newspapers(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
+@cached(cache=TTLCache(maxsize=32, ttl=3600))
+def get_all_newspapers() -> list[dict[str, Any]]:
     query = """SELECT n.newspaper_id AS id, n.name AS name, n.rss_url AS rss_url, COUNT(a.newspaper_id) AS article_count FROM news_newspapers n
     LEFT JOIN autokmdb_news a ON n.newspaper_id = a.newspaper_id WHERE n.status = "Y"
     GROUP BY n.newspaper_id, n.name, n.rss_url;"""
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query)
-        l = [
-            {
-                "id": r["id"],
-                "name": r["name"],
-                "has_rss": bool(r["rss_url"]),
-                "article_count": r["article_count"],
-            }
-            for r in cursor.fetchall()
-        ]
-        l.sort(key=lambda r: r["article_count"], reverse=True)
-        return l
+    with connection_pool.get_connection() as connection:
+        with connection.cursor(dictionary=True) as cursor:
+            cursor.execute(query)
+            l = [
+                {
+                    "id": r["id"],
+                    "name": r["name"],
+                    "has_rss": bool(r["rss_url"]),
+                    "article_count": r["article_count"],
+                }
+                for r in cursor.fetchall()
+            ]
+            l.sort(key=lambda r: r["article_count"], reverse=True)
+            return l
 
 
 with connection_pool.get_connection() as connection:
-    all_newspapers = get_all_newspapers(connection)
-    all_persons = get_all_persons(connection)
-    all_institutions = get_all_institutions(connection)
-    all_places = get_all_places(connection)
-    all_others = get_all_others(connection)
+    all_newspapers = get_all_newspapers()
+    all_persons = get_all_persons()
+    all_institutions = get_all_institutions()
+    all_places = get_all_places()
+    all_others = get_all_others()
     all_persons_by_id = {person["id"]: person["name"] for person in all_persons}
     all_institutions_by_id = {
         institution["id"]: institution["name"] for institution in all_institutions
@@ -142,16 +129,15 @@ with connection_pool.get_connection() as connection:
     all_others_by_id = {other["id"]: other["name"] for other in all_others}
 
 
-@cache
+@cached(cache=TTLCache(maxsize=256, ttl=3600))
 def get_all_freq(
-    connection: PooledMySQLConnection, table: str, id_column: str, name_column: str
+    table: str, id_column: str, name_column: str
 ) -> list[dict]:
     """
     Queries label id-name pairs from given table and counts number of times the given label has
     been used on an article.
 
     Args:
-        connection: db connection
         table: name of the table
         id_column: name of the column containing the ids
         name_column: name of the column containing the names
@@ -160,58 +146,50 @@ def get_all_freq(
         List of dicts, each dict containing the 'name', 'id' and 'count' occurrances of a given label.
     """
     query = f'SELECT p.{id_column} AS id, p.{name_column} AS name, COUNT(npl.news_id) AS count FROM {table} p JOIN {table}_link npl ON p.{id_column} = npl.{id_column} WHERE status = "Y" GROUP BY p.{id_column};'
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query)
-        return list(cursor.fetchall())
+    with connection_pool.get_connection() as connection:
+        with connection.cursor(dictionary=True) as cursor:
+            cursor.execute(query)
+            return list(cursor.fetchall())
 
 
-def get_all_persons_freq(connection: PooledMySQLConnection) -> list[dict]:
+def get_all_persons_freq() -> list[dict]:
     """
     Queries person label id-name pairs and counts the number of times the given person label has
     been used on an article.
-
-    Args:
-        connection: db connection
 
     Returns:
         List of dicts, each dict containing the 'name' and 'id' of a person label, as well as the
         'count' occurrances of the given label.
     """
-    return get_all_freq(connection, "news_persons", "person_id", "name")
+    return get_all_freq("news_persons", "person_id", "name")
 
 
-def get_all_institutions_freq(connection: PooledMySQLConnection) -> list[dict]:
+def get_all_institutions_freq() -> list[dict]:
     """
     Queries institution label id-name pairs and counts the number of times the given institution
     label has been used on an article.
-
-    Args:
-        connection: db connection
 
     Returns:
         List of dicts, each dict containing the 'name' and 'id' of an institution label, as well as the
         'count' occurrances of the given label.
     """
-    return get_all_freq(connection, "news_institutions", "institution_id", "name")
+    return get_all_freq("news_institutions", "institution_id", "name")
 
 
-def get_all_places_freq(connection: PooledMySQLConnection) -> list[dict]:
+def get_all_places_freq() -> list[dict]:
     """
     Queries place label id-name pairs and counts the number of times the given place label has been
     used on an article.
-
-    Args:
-        connection: db connection
 
     Returns:
         List of dicts, each dict containing the 'name' and 'id' of a place label, as well as the
         'count' occurrances of the given label.
     """
-    return get_all_freq(connection, "news_places", "place_id", "name_hu")
+    return get_all_freq("news_places", "place_id", "name_hu")
 
 
-def get_all_others_freq(connection: PooledMySQLConnection) -> list[dict]:
-    return get_all_freq(connection, "news_others", "other_id", "name_hu")
+def get_all_others_freq() -> list[dict]:
+    return get_all_freq("news_others", "other_id", "name_hu")
 
 
 def get_places_alias(connection: PooledMySQLConnection):

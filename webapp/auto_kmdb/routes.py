@@ -266,20 +266,19 @@ def all_labels():
         if not db.validate_session(connection, session_id):
             return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
-    with db.connection_pool.get_connection() as connection:
-        return (
-            jsonify(
-                {
-                    "person": db.get_all_persons_freq(connection),
-                    "institution": db.get_all_institutions_freq(connection),
-                    "place": db.get_all_places_freq(connection),
-                    "keywords": db.get_all_others_freq(connection),
-                    "domains": db.get_all_newspapers(connection),
-                    "files": db.get_all_files(connection),
-                }
-            ),
-            200,
-        )
+    return (
+        jsonify(
+            {
+                "person": db.get_all_persons_freq(),
+                "institution": db.get_all_institutions_freq(),
+                "place": db.get_all_places_freq(),
+                "keywords": db.get_all_others_freq(),
+                "domains": db.get_all_newspapers(),
+                "files": db.get_all_files(),
+            }
+        ),
+        200,
+    )
 
 
 @api.route("/domains", methods=["GET"])
@@ -292,7 +291,7 @@ def domains():
     return (
         jsonify(
             {
-                "domains": db.all_newspapers,
+                "domains": db.get_all_newspapers(),
             }
         ),
         200,
