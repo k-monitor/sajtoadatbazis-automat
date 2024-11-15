@@ -17,3 +17,4 @@ typing
 pandas
 playwright
 requests[socks]
+cachetools
