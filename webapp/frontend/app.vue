@@ -290,13 +290,19 @@ async function handleAddUrl(newUrl, selectedDomain) {
     errorTitle.value = "Hiba ";
   } else {
     try {
-      await $authFetch(baseUrl + "/api/add_url", {
+      useAuthFetch(baseUrl + "/api/add_url", {
         method: "POST",
         body: {
           url: newUrl,
           newspaper_name: selectedDomain.name,
           newspaper_id: selectedDomain.id,
         },
+      }).then((response) => {
+        if (response.status.value == "error") {
+          isOpenError.value = true;
+          errorText.value = response.error.value?.data?.error;
+          errorTitle.value = "Hiba";
+        }
       });
     } catch (error) {
       console.error(error);
