@@ -41,10 +41,6 @@ const baseUrl = config.public.baseUrl;
 let allLabels = (await useAuthFetch(baseUrl + "/api/domains")).data;
 useAuthFetch(baseUrl + "/api/all_labels").then((response) => {
   allLabels.value = response.data.value;
-  if (response.status.value == "error") {
-    sendLoginError();
-  }
-
 });
 let keywordSynonyms = null;
 useAuthFetch(baseUrl + "/api/keyword_synonyms").then((response) => {
