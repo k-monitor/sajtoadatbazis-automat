@@ -66,7 +66,7 @@ def get_html(url: str, cookies: dict[str, str]) -> str:
     return str(response.text)
 
 
-def process_article(url: str, html: str) -> ArticleDownload:
+def process_article(url: str, html: str, cookies: dict[str, str]) -> ArticleDownload:
     article = newspaper.Article(url=url)
     article.download(input_html=html.replace("<br>", "\n"))
     article.parse()
@@ -290,7 +290,7 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
         logging.info("retrying: " + row["url"])
         try:
             html: str = get_html(row["url"], cookies)
-            article_download: ArticleDownload = process_article(row["url"], html)
+            article_download: ArticleDownload = process_article(row["url"], html, cookies)
             save_article(
                 article_download,
                 row["newspaper_id"],
@@ -333,7 +333,7 @@ class DownloadProcessor(Processor):
         logging.info("download processor is processing: " + next_row["url"])
         try:
             html: str = get_html(next_row["url"], self.cookies)
-            article_download: ArticleDownload = process_article(next_row["url"], html)
+            article_download: ArticleDownload = process_article(next_row["url"], html, self.cookies)
             save_article(
                 article_download,
                 next_row["newspaper_id"],
