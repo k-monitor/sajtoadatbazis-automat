@@ -37,8 +37,8 @@ let loadingDelete = ref(false);
 
 const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
-
-let allLabels = (await useAuthFetch(baseUrl + "/api/domains")).data;
+let allLabels = ref(null);
+// let allLabels = (await useAuthFetch(baseUrl + "/api/domains")).data;
 useAuthFetch(baseUrl + "/api/all_labels").then((response) => {
   allLabels.value = response.data.value;
 });
