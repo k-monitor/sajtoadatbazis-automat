@@ -135,7 +135,7 @@ def get_new_from_rss(newspaper):
                     clean_url,
                     newspaper["name"],
                     newspaper["id"],
-                    None,
+                    1,
                     release_date,
                 )
                 articles_found += 1
