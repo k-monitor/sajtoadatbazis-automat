@@ -58,15 +58,17 @@ def get_custom_description(url: str, html: str) -> Optional[str]:
             return paper.get_description(url, html)
 
 
-def process_article(
-    id: int, url: str, source: int, newspaper_id: str, cookies: dict[str, str]
-) -> ArticleDownload:
+def get_html(url: str, cookies: dict[str, str]) -> str:
     headers: dict[str, str] = {"User-Agent": "autokmdb"}
     response: requests.Response = requests.get(url, headers=headers, cookies=cookies)
     if response.status_code >= 400:
         raise Exception("Got error while downloading article.")
+    return str(response.text)
+
+
+def process_article(url: str, html: str, cookies: dict[str, str]) -> ArticleDownload:
     article = newspaper.Article(url=url)
-    article.download(input_html=str(response.text).replace("<br>", "\n"))
+    article.download(input_html=html.replace("<br>", "\n"))
     article.parse()
 
     text: str = article.text
@@ -287,9 +289,8 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
     for row in rows:
         logging.info("retrying: " + row["url"])
         try:
-            article_download: ArticleDownload = process_article(
-                row["id"], row["url"], row["source"], row["newspaper_id"], cookies
-            )
+            html: str = get_html(row["url"], cookies)
+            article_download: ArticleDownload = process_article(row["url"], html, cookies)
             save_article(
                 article_download,
                 row["newspaper_id"],
@@ -331,13 +332,8 @@ class DownloadProcessor(Processor):
             return
         logging.info("download processor is processing: " + next_row["url"])
         try:
-            article_download: ArticleDownload = process_article(
-                next_row["id"],
-                next_row["url"],
-                next_row["source"],
-                next_row["newspaper_id"],
-                self.cookies,
-            )
+            html: str = get_html(next_row["url"], self.cookies)
+            article_download: ArticleDownload = process_article(next_row["url"], html, self.cookies)
             save_article(
                 article_download,
                 next_row["newspaper_id"],

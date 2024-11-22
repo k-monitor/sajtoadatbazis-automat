@@ -23,9 +23,7 @@ VERSION_NUMBER: int = 0
 
 
 @cached(cache=TTLCache(maxsize=32, ttl=60))
-def get_all(
-    table: str, id_column: str, name_column: str
-) -> list[dict]:
+def get_all(table: str, id_column: str, name_column: str) -> list[dict]:
     """
     Queries label id-name pairs from given table.
 
@@ -130,9 +128,7 @@ with connection_pool.get_connection() as connection:
 
 
 @cached(cache=TTLCache(maxsize=256, ttl=3600))
-def get_all_freq(
-    table: str, id_column: str, name_column: str
-) -> list[dict]:
+def get_all_freq(table: str, id_column: str, name_column: str) -> list[dict]:
     """
     Queries label id-name pairs from given table and counts number of times the given label has
     been used on an article.
@@ -516,30 +512,49 @@ def get_article_counts(
     end="2050-01-01",
 ) -> dict[str, int]:
     article_counts: dict[str, int] = {}
-    for status in ["mixed", "positive", "negative", "processing", "all"]:
-        query: str = ""
-        if status == "mixed":
-            query = """WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND (n.skip_reason = 0 OR n.skip_reason is NULL)"""
-        elif status == "positive":
-            query = """WHERE processing_step = 5 AND n.annotation_label = 1"""
-        elif status == "negative":
-            query = """WHERE processing_step = 5 AND n.annotation_label = 0"""
-        elif status == "processing":
-            query = """WHERE processing_step < 4"""
-        elif status == "all":
-            query = """WHERE processing_step >= 0"""
-        if domains and domains[0] != -1 and isinstance(domains, list):
-            domain_list: str = ",".join([str(domain) for domain in domains])
-            query += f" AND n.newspaper_id IN ({domain_list})"
-        query += " AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)"
-        query += " AND DATE(n.cre_time) BETWEEN %s AND %s"
-        with connection.cursor(dictionary=True) as cursor:
-            cursor.execute(
-                "SELECT COUNT(id) FROM autokmdb_news n " + query,
-                (q, q, q, q, start, end),
-            )
-            count: int = cursor.fetchone()["COUNT(id)"]
-            article_counts[status] = count
+    start = start + " 00:00:00"
+    end = end + " 23:59:59"
+
+    domain_condition = ""
+    if domains and domains[0] != -1 and isinstance(domains, list):
+        domain_list: str = ",".join([str(domain) for domain in domains])
+        domain_condition = f" AND n.newspaper_id IN ({domain_list})"
+    
+    search_condition = """
+        AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)
+        AND n.cre_time BETWEEN %s AND %s
+    """
+
+    query = f"""
+        SELECT 
+            COUNT(CASE WHEN n.classification_label = 1 AND processing_step = 4 
+                            AND n.annotation_label IS NULL 
+                            AND (n.skip_reason = 0 OR n.skip_reason IS NULL) THEN id END) AS mixed,
+            COUNT(CASE WHEN processing_step = 5 AND n.annotation_label = 1 THEN id END) AS positive,
+            COUNT(CASE WHEN processing_step = 5 AND n.annotation_label = 0 THEN id END) AS negative,
+            COUNT(CASE WHEN processing_step < 4 THEN id END) AS processing,
+            COUNT(CASE WHEN processing_step >= 0 THEN id END) AS all_status
+        FROM autokmdb_news n
+        WHERE 1=1
+        {domain_condition}
+        {search_condition}
+    """
+
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(
+            query,
+            (q, q, q, q, start, end),
+        )
+        result = cursor.fetchone()
+        if result:
+            article_counts = {
+                "mixed": result["mixed"],
+                "positive": result["positive"],
+                "negative": result["negative"],
+                "processing": result["processing"],
+                "all": result["all_status"],
+            }
+
     return article_counts
 
 
@@ -747,12 +762,14 @@ def get_articles(
     page: int,
     status: str,
     domains: list[int],
-    q="",
+    search_query="",
     start="2000-01-01",
     end="2050-01-01",
     reverse=False,
 ) -> Optional[tuple[int, list[dict[str, Any]]]]:
     query: str = ""
+    start = start + " 00:00:00"
+    end = end + " 23:59:59"
 
     selection: str = """SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason, negative_reason,
             CONVERT_TZ(article_date, @@session.time_zone, '+00:00') AS date, category, u.name AS mod_name
@@ -767,7 +784,7 @@ def get_articles(
     )
 
     if status == "mixed":
-        query = """WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND (n.skip_reason = 0 OR n.skip_reason is NULL)"""
+        query = """WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND COALESCE(n.skip_reason, 0) = 0"""
     elif status == "positive":
         query = """WHERE processing_step = 5 AND n.annotation_label = 1"""
     elif status == "negative":
@@ -783,18 +800,19 @@ def get_articles(
         domain_list: str = ",".join([str(domain) for domain in domains])
         query += f" AND n.newspaper_id IN ({domain_list})"
 
-    query += " AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)"
+    query += " AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)"
 
-    query += " AND DATE(n.cre_time) BETWEEN %s AND %s"
+    query += " AND n.cre_time BETWEEN %s AND %s"
 
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(
-            "SELECT COUNT(id) FROM autokmdb_news n " + query, (q, q, q, q, start, end)
+            "SELECT COUNT(id) FROM autokmdb_news n " + query,
+            (search_query, search_query, search_query, start, end),
         )
         count: int = cursor.fetchone()["COUNT(id)"]
         cursor.execute(
             paginate_query(selection + query + group, 10, page),
-            (q, q, q, q, start, end),
+            (search_query, search_query, search_query, start, end),
         )
         return count, cursor.fetchall()
 
