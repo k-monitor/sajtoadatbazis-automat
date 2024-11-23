@@ -14,6 +14,6 @@ classifier = pipeline(
 )
 
 model = BertForSequenceClassification.from_pretrained(
-    "K-Monitor/kmdb_classification_hubert"
+    "K-Monitor/kmdb_classification_hubert_v2"
 )
 tokenizer = BertTokenizer.from_pretrained("SZTAKI-HLT/hubert-base-cc", max_length=512)

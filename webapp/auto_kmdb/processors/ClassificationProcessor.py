@@ -38,7 +38,7 @@ class ClassificationProcessor(Processor):
     def load_model(self) -> None:
         logging.info("Loading classification model")
         self.model = BertForSequenceClassification.from_pretrained(
-            "K-Monitor/kmdb_classification_hubert"
+            "K-Monitor/kmdb_classification_hubert_v2"
         )
         self.tokenizer = BertTokenizer.from_pretrained(
             "SZTAKI-HLT/hubert-base-cc", max_length=512
