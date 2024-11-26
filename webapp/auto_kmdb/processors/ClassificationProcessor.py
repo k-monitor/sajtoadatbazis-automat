@@ -98,7 +98,7 @@ class ClassificationProcessor(Processor):
 
         logging.info("Processing next classification")
         text: str = format_article(
-            next_row["title"], next_row["description"], next_row["url"]
+            next_row["title"], next_row["description"], next_row["clean_url"]
         )
 
         try:
