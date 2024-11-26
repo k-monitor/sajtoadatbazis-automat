@@ -315,20 +315,20 @@ class DownloadProcessor(Processor):
         self.cookies: dict[str, str] = {}
 
     def load_model(self):
-        cookies_24: dict[str, str] = {}
-        cookies_444: dict[str, str] = {}
-        try:
-            cookies_24 = login_24(os.environ["USER_24"], os.environ["PASS_24"])
-        except Exception:
-            logging.error(traceback.format_exc())
-            logging.error("Failed to login to 24.hu")
-        try:
-            cookies_444 = login_444(os.environ["USER_444"], os.environ["PASS_444"])
-        except Exception:
-            logging.error(traceback.format_exc())
-            logging.error("Failed to login to 444.hu")
-        self.cookies: dict[str, str] = {**cookies_24, **cookies_444}
-        self.done = True
+        # cookies_24: dict[str, str] = {}
+        # cookies_444: dict[str, str] = {}
+        # try:
+        #     cookies_24 = login_24(os.environ["USER_24"], os.environ["PASS_24"])
+        # except Exception:
+        #     logging.error(traceback.format_exc())
+        #     logging.error("Failed to login to 24.hu")
+        # try:
+        #     cookies_444 = login_444(os.environ["USER_444"], os.environ["PASS_444"])
+        # except Exception:
+        #     logging.error(traceback.format_exc())
+        #     logging.error("Failed to login to 444.hu")
+        # self.cookies: dict[str, str] = {**cookies_24, **cookies_444}
+        # self.done = True
         logging.info("initialized download processor")
 
     def process_next(self) -> None:
