@@ -62,7 +62,7 @@ def get_html(url: str, cookies: dict[str, str]) -> str:
     headers: dict[str, str] = {"User-Agent": "autokmdb"}
     response: requests.Response = requests.get(url, headers=headers, cookies=cookies)
     if response.status_code >= 400:
-        raise Exception("Got error while downloading article.")
+        raise Exception("Got error while downloading article.", response.status_code, url, response.headers)
     return str(response.text)
 
 
@@ -281,7 +281,7 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
     app_context.push()
 
     current_date: datetime = datetime.now()
-    new_date: datetime = current_date - timedelta(days=3)
+    new_date: datetime = current_date - timedelta(days=7)
     formatted_date: str = new_date.strftime("%Y-%m-%d")
 
     with db.connection_pool.get_connection() as connection:
@@ -297,9 +297,9 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
                 row["source"],
                 row["id"],
             )
-            sleep(3)
         except Exception:
             logging.error(traceback.format_exc())
+        sleep(3)
 
 
 class DownloadProcessor(Processor):
@@ -344,3 +344,4 @@ class DownloadProcessor(Processor):
             logging.error(e)
             with db.connection_pool.get_connection() as connection:
                 db.skip_download_error(connection, next_row["id"])
+            sleep(2)
