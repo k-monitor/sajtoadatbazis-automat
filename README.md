@@ -12,7 +12,7 @@ docker-compose up
 
 ```bash
 cd webapp
-wget 'https://huggingface.co/K-Monitor/kmdb_classification_category/resolve/main/svm_classifier_category.joblib?download=true' -O data/svm_classifier_category.joblib
+wget 'https://huggingface.co/K-Monitor/kmdb_classification_category_v2/resolve/main/svm_classifier_category.joblib?download=true' -O data/svm_classifier_category.joblib
 ```
 
 ## Fejlesztés
