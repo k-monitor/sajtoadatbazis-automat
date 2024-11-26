@@ -467,7 +467,7 @@ def get_retries_from(connection: PooledMySQLConnection, date: str) -> list[dict]
 def get_step_queue(connection: PooledMySQLConnection, step: int) -> dict[str, Any]:
     fields: dict[int, str] = {
         0: "clean_url AS url, source, newspaper_id",
-        1: "title, description, text, source, newspaper_name",
+        1: "title, description, text, source, newspaper_name, clean_url",
         2: "text",
         3: "text",
         4: "text",
