@@ -18,10 +18,12 @@ import logging
 import gc
 import traceback
 
-article_classification_prompt = """{title}
-{description}"""
-
 CATEGORY_MAP: dict[str, int] = {"hungarian-news": 0, "eu-news": 1, "world-news": 2}
+
+
+def format_article(title, description, url):
+    domain = ".".join(url.split("/")[2].split(".")[-2:])
+    return f"{title}\n{description}\n({domain})"
 
 
 class ClassificationProcessor(Processor):
@@ -38,7 +40,7 @@ class ClassificationProcessor(Processor):
     def load_model(self) -> None:
         logging.info("Loading classification model")
         self.model = BertForSequenceClassification.from_pretrained(
-            "K-Monitor/kmdb_classification_hubert"
+            "K-Monitor/kmdb_classification_hubert_v2"
         )
         self.tokenizer = BertTokenizer.from_pretrained(
             "SZTAKI-HLT/hubert-base-cc", max_length=512
@@ -95,8 +97,8 @@ class ClassificationProcessor(Processor):
             return
 
         logging.info("Processing next classification")
-        text: str = article_classification_prompt.format(
-            title=next_row["title"], description=next_row["description"],
+        text: str = format_article(
+            next_row["title"], next_row["description"], next_row["clean_url"]
         )
 
         try:

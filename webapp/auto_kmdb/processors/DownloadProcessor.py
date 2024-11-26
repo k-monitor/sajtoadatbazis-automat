@@ -62,7 +62,12 @@ def get_html(url: str, cookies: dict[str, str]) -> str:
     headers: dict[str, str] = {"User-Agent": "autokmdb"}
     response: requests.Response = requests.get(url, headers=headers, cookies=cookies)
     if response.status_code >= 400:
-        raise Exception("Got error while downloading article.")
+        raise Exception(
+            "Got error while downloading article.",
+            response.status_code,
+            url,
+            response.headers,
+        )
     return str(response.text)
 
 
@@ -281,7 +286,7 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
     app_context.push()
 
     current_date: datetime = datetime.now()
-    new_date: datetime = current_date - timedelta(days=3)
+    new_date: datetime = current_date - timedelta(days=7)
     formatted_date: str = new_date.strftime("%Y-%m-%d")
 
     with db.connection_pool.get_connection() as connection:
@@ -290,16 +295,18 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
         logging.info("retrying: " + row["url"])
         try:
             html: str = get_html(row["url"], cookies)
-            article_download: ArticleDownload = process_article(row["url"], html, cookies)
+            article_download: ArticleDownload = process_article(
+                row["url"], html, cookies
+            )
             save_article(
                 article_download,
                 row["newspaper_id"],
                 row["source"],
                 row["id"],
             )
-            sleep(3)
         except Exception:
             logging.error(traceback.format_exc())
+        sleep(3)
 
 
 class DownloadProcessor(Processor):
@@ -308,20 +315,20 @@ class DownloadProcessor(Processor):
         self.cookies: dict[str, str] = {}
 
     def load_model(self):
-        cookies_24: dict[str, str] = {}
-        cookies_444: dict[str, str] = {}
-        try:
-            cookies_24 = login_24(os.environ["USER_24"], os.environ["PASS_24"])
-        except Exception:
-            logging.error(traceback.format_exc())
-            logging.error("Failed to login to 24.hu")
-        try:
-            cookies_444 = login_444(os.environ["USER_444"], os.environ["PASS_444"])
-        except Exception:
-            logging.error(traceback.format_exc())
-            logging.error("Failed to login to 444.hu")
-        self.cookies: dict[str, str] = {**cookies_24, **cookies_444}
-        self.done = True
+        # cookies_24: dict[str, str] = {}
+        # cookies_444: dict[str, str] = {}
+        # try:
+        #     cookies_24 = login_24(os.environ["USER_24"], os.environ["PASS_24"])
+        # except Exception:
+        #     logging.error(traceback.format_exc())
+        #     logging.error("Failed to login to 24.hu")
+        # try:
+        #     cookies_444 = login_444(os.environ["USER_444"], os.environ["PASS_444"])
+        # except Exception:
+        #     logging.error(traceback.format_exc())
+        #     logging.error("Failed to login to 444.hu")
+        # self.cookies: dict[str, str] = {**cookies_24, **cookies_444}
+        # self.done = True
         logging.info("initialized download processor")
 
     def process_next(self) -> None:
@@ -333,7 +340,9 @@ class DownloadProcessor(Processor):
         logging.info("download processor is processing: " + next_row["url"])
         try:
             html: str = get_html(next_row["url"], self.cookies)
-            article_download: ArticleDownload = process_article(next_row["url"], html, self.cookies)
+            article_download: ArticleDownload = process_article(
+                next_row["url"], html, self.cookies
+            )
             save_article(
                 article_download,
                 next_row["newspaper_id"],
@@ -344,3 +353,4 @@ class DownloadProcessor(Processor):
             logging.error(e)
             with db.connection_pool.get_connection() as connection:
                 db.skip_download_error(connection, next_row["id"])
+            sleep(2)

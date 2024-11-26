@@ -2,6 +2,19 @@
 
 A [k-monitor sajtóadatbázisának](https://adatbazis.k-monitor.hu/) bővítését automatizáló rendszer.
 
+## Futtatás
+
+```bash
+git clone https://github.com/k-monitor/sajtoadatbazis-automat
+cd sajtoadatbazis-automat/webapp
+docker-compose up
+```
+
+```bash
+cd webapp
+wget 'https://huggingface.co/K-Monitor/kmdb_classification_category_v2/resolve/main/svm_classifier_category.joblib?download=true' -O data/svm_classifier_category.joblib
+```
+
 További info: [wiki](https://github.com/k-monitor/sajtoadatbazis-automat/wiki)
 
 ### Backend
