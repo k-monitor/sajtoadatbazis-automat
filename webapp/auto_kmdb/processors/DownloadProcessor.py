@@ -62,7 +62,12 @@ def get_html(url: str, cookies: dict[str, str]) -> str:
     headers: dict[str, str] = {"User-Agent": "autokmdb"}
     response: requests.Response = requests.get(url, headers=headers, cookies=cookies)
     if response.status_code >= 400:
-        raise Exception("Got error while downloading article.", response.status_code, url, response.headers)
+        raise Exception(
+            "Got error while downloading article.",
+            response.status_code,
+            url,
+            response.headers,
+        )
     return str(response.text)
 
 
@@ -290,7 +295,9 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
         logging.info("retrying: " + row["url"])
         try:
             html: str = get_html(row["url"], cookies)
-            article_download: ArticleDownload = process_article(row["url"], html, cookies)
+            article_download: ArticleDownload = process_article(
+                row["url"], html, cookies
+            )
             save_article(
                 article_download,
                 row["newspaper_id"],
@@ -333,7 +340,9 @@ class DownloadProcessor(Processor):
         logging.info("download processor is processing: " + next_row["url"])
         try:
             html: str = get_html(next_row["url"], self.cookies)
-            article_download: ArticleDownload = process_article(next_row["url"], html, self.cookies)
+            article_download: ArticleDownload = process_article(
+                next_row["url"], html, self.cookies
+            )
             save_article(
                 article_download,
                 next_row["newspaper_id"],
