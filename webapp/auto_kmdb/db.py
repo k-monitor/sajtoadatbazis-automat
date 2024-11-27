@@ -395,6 +395,7 @@ def save_download_step(
                 title = %s, 
                 description = %s, 
                 processing_step = 1, 
+                skip_reason = NULL, 
                 author = %s, 
                 article_date = COALESCE(%s, article_date),
                 is_paywalled = %s
