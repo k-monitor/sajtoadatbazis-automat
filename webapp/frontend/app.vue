@@ -77,6 +77,11 @@ function updateURL() {
   });
 }
 
+function filterNewspaper(newspaper) {
+  selectedDomains.value = [newspaper];
+  updateURL();
+}
+
 function sendLoginError() {
   loginError.value = true;
   isOpenError.value = true;
