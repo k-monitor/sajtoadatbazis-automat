@@ -24,7 +24,6 @@
 
 <script setup>
 import { ref, watch } from 'vue';
-import { useSlots } from "vue";
 
 const props = defineProps({
     allDomains: Array,
@@ -32,8 +31,20 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:selectedDomains', 'refresh']);
-const selectedDomainsInternal = ref(props.selectedDomains);
+const selectedDomainsInternal = ref([{ name: "mind", id: -1 }]);
 
+// Sync internal state with prop when `selectedDomains` changes
+watch(
+    () => props.selectedDomains,
+    (newVal) => {
+        if (newVal !== selectedDomainsInternal.value) {
+            selectedDomainsInternal.value = newVal || [];
+        }
+    },
+    { immediate: true }
+);
+
+// Validate and update `selectedDomainsInternal` when it changes
 watch(
     selectedDomainsInternal,
     (newVal) => {
@@ -50,11 +61,9 @@ watch(
         if (!hasOtherSelections && mindIndex === -1) {
             selectedDomainsInternal.value = [{ name: "mind", id: -1 }];
         }
-    },
-    { immediate: true }
-);
 
-watch(selectedDomainsInternal, (newVal) => {
-    emit('update:selectedDomains', newVal);
-});
+        // Emit the updated value
+        emit('update:selectedDomains', newVal);
+    }
+);
 </script>

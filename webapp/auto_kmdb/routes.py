@@ -37,7 +37,7 @@ def api_article_counts():
     end: str = content.get("to", "2050-01-01")
     q: str = content.get("q", "")
     domains: dict = content["domain"]
-    domain_ids: list[int] = [domain["id"] for domain in domains]
+    domain_ids: list[int] = [domain["id"] for domain in domains] if domains else [-1]
 
     with db.connection_pool.get_connection() as connection:
         article_counts = db.get_article_counts(
@@ -79,7 +79,7 @@ def api_articles():
     end: str = content.get("to", "2050-01-01")
     q: str = content.get("q", "")
     domains: dict = content["domain"]
-    domain_ids: list[int] = [domain["id"] for domain in domains]
+    domain_ids: list[int] = [domain["id"] for domain in domains] if domains else [-1]
     reverse: bool = content.get("reverse", False)
 
     with db.connection_pool.get_connection() as connection:
