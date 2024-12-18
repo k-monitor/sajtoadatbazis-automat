@@ -21,6 +21,7 @@ const ranges = [
   { label: "Elmúlt 1 év", duration: { years: 1 } },
   { label: "Elmúlt 3 év", duration: { years: 3 } },
 ];
+const query = route.query;
 
 const selected = ref({ start: sub(new Date(), { days: 14 }), end: new Date() });
 let isOpen = ref(false);
@@ -41,6 +42,7 @@ let allLabels = ref(null);
 // let allLabels = (await useAuthFetch(baseUrl + "/api/domains")).data;
 useAuthFetch(baseUrl + "/api/all_labels").then((response) => {
   allLabels.value = response.data.value;
+  updateFromURL();
 });
 let keywordSynonyms = null;
 useAuthFetch(baseUrl + "/api/keyword_synonyms").then((response) => {
@@ -55,7 +57,7 @@ let allDomains = computed(() =>
     ? []
     : [{ name: "mind", id: -1 }].concat(allLabels.value?.domains)
 );
-const selectedDomains = ref([{ name: "mind", id: -1 }]);
+const selectedDomains = ref(null);
 
 const status = computed(() => statusItems.value[statusId.value].key);
 const from = computed(() => format(selected.value.start, "yyyy-MM-dd"));
@@ -83,25 +85,28 @@ function sendLoginError() {
 }
 
 function updateFromURL() {
-  if (route.query.statusId) {
-    statusId.value = parseInt(route.query.statusId);
+  console.debug(query);
+  if (query.statusId) {
+    statusId.value = parseInt(query.statusId);
   }
-  if (route.query.selectedDomains) {
-    const selectedDomainIds = route.query.selectedDomains
+  if (query.selectedDomains) {
+    const selectedDomainIds = query.selectedDomains
       .split(",")
       .map((domain: string) => parseInt(domain));
+    console.debug(selectedDomainIds);
     selectedDomains.value = allDomains.value.filter(
       (domain) => selectedDomainIds.indexOf(domain.id) != -1
     );
+    console.debug(selectedDomains.value);
   }
-  if (route.query.page) {
-    page.value = parseInt(route.query.page);
+  if (query.page) {
+    page.value = parseInt(query.page);
   }
-  if (route.query.reverseSort) {
-    reverseSort.value = route.query.reverseSort == "true" ? true : false;
+  if (query.reverseSort) {
+    reverseSort.value = query.reverseSort == "true" ? true : false;
   }
-  if (route.query.q) {
-    q.value = route.query.q;
+  if (query.q) {
+    q.value = query.q;
   }
 }
 
