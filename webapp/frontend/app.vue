@@ -57,7 +57,7 @@ let allDomains = computed(() =>
     ? []
     : [{ name: "mind", id: -1 }].concat(allLabels.value?.domains)
 );
-const selectedDomains = ref(null);
+const selectedDomains = ref([{ name: "mind", id: -1 }]);
 
 const status = computed(() => statusItems.value[statusId.value].key);
 const from = computed(() => format(selected.value.start, "yyyy-MM-dd"));

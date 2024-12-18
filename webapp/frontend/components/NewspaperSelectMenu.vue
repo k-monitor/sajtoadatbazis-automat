@@ -31,7 +31,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['update:selectedDomains', 'refresh']);
-const selectedDomainsInternal = ref([]);
+const selectedDomainsInternal = ref([{ name: "mind", id: -1 }]);
 
 // Sync internal state with prop when `selectedDomains` changes
 watch(
