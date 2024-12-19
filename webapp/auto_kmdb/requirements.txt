@@ -18,3 +18,4 @@ pandas
 playwright
 requests[socks]
 cachetools
+cloudscraper

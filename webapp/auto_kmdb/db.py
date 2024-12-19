@@ -7,6 +7,7 @@ import logging
 from datetime import datetime, timedelta
 from collections import defaultdict
 from cachetools import cached, LRUCache, TTLCache
+from auto_kmdb.utils.logging_cursor import LoggingCursor
 
 connection_pool: MySQLConnectionPool = MySQLConnectionPool(
     pool_name="cnx_pool",
@@ -508,7 +509,7 @@ def paginate_query(query: str, page_size: int, page_number: int) -> str:
 def get_article_counts(
     connection: PooledMySQLConnection,
     domains: list[int],
-    q="",
+    search_query="",
     start="2000-01-01",
     end="2050-01-01",
 ) -> dict[str, int]:
@@ -520,11 +521,12 @@ def get_article_counts(
     if domains and domains[0] != -1 and isinstance(domains, list):
         domain_list: str = ",".join([str(domain) for domain in domains])
         domain_condition = f" AND n.newspaper_id IN ({domain_list})"
-    
+
     search_condition = """
-        AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s OR n.newspaper_id LIKE %s)
-        AND n.cre_time BETWEEN %s AND %s
+        AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)
     """
+
+    date_condition = " AND n.cre_time BETWEEN %s AND %s"
 
     query = f"""
         SELECT 
@@ -538,13 +540,16 @@ def get_article_counts(
         FROM autokmdb_news n
         WHERE 1=1
         {domain_condition}
-        {search_condition}
+        {search_condition if search_query != "%%" else ""}
+        {date_condition}
     """
+
+    search_tuple = (search_query, search_query, search_query) if search_query != "%%" else ()
 
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(
             query,
-            (q, q, q, q, start, end),
+            search_tuple + (start, end),
         )
         result = cursor.fetchone()
         if result:
@@ -801,19 +806,24 @@ def get_articles(
         domain_list: str = ",".join([str(domain) for domain in domains])
         query += f" AND n.newspaper_id IN ({domain_list})"
 
-    query += " AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)"
+    if search_query != "%%":
+        query += (
+            " AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)"
+        )
 
     query += " AND n.cre_time BETWEEN %s AND %s"
 
-    with connection.cursor(dictionary=True) as cursor:
+    search_tuple = (search_query, search_query, search_query) if search_query != "%%" else ()
+
+    with connection.cursor(dictionary=True, cursor_class=LoggingCursor) as cursor:
         cursor.execute(
             "SELECT COUNT(id) FROM autokmdb_news n " + query,
-            (search_query, search_query, search_query, start, end),
+            search_tuple + (start, end),
         )
         count: int = cursor.fetchone()["COUNT(id)"]
         cursor.execute(
             paginate_query(selection + query + group, 10, page),
-            (search_query, search_query, search_query, start, end),
+            search_tuple + (start, end),
         )
         return count, cursor.fetchall()
 
