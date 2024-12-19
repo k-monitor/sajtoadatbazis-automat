@@ -9,6 +9,10 @@ from datetime import date
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import json
+import cloudscraper
+
+
+scraper = cloudscraper.create_scraper(browser='chrome')
 
 
 def load_json_from_file(filename: str) -> dict:
@@ -47,7 +51,7 @@ def skip_url(url) -> bool:
 
 def get_atv():
     logging.info("checking atv")
-    response: requests.Response = requests.get(
+    response: requests.Response = scraper.get(
         f"https://api.atv.hu/cms/layout-version/published"
     )
     if (
@@ -70,7 +74,7 @@ def get_atv():
 def get_hvg360():
     logging.info("checking hvg360")
     now: str = date.today().strftime("%Y-%m-%d")
-    response = requests.get(f"https://hvg.hu/cms-control/latest/{now}?skip=0&limit=20")
+    response = scraper.get(f"https://hvg.hu/cms-control/latest/{now}?skip=0&limit=20")
     urls_dates = [
         ("https://hvg.hu" + article["url"], article["releaseDateIso"])
         for article in response.json()

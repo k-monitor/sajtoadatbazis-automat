@@ -26,6 +26,10 @@ from auto_kmdb.newspapers.Mediaworks import Mediaworks
 from datetime import timezone
 import traceback
 from auto_kmdb.newspapers.Newspaper import Newspaper
+import cloudscraper
+
+
+scraper = cloudscraper.create_scraper(browser='chrome')
 
 
 class ArticleDownload(NamedTuple):
@@ -60,7 +64,7 @@ def get_custom_description(url: str, html: str) -> Optional[str]:
 
 def get_html(url: str, cookies: dict[str, str]) -> str:
     headers: dict[str, str] = {"User-Agent": "autokmdb"}
-    response: requests.Response = requests.get(url, headers=headers, cookies=cookies)
+    response: requests.Response = scraper.get(url, headers=headers, cookies=cookies)
     if response.status_code >= 400:
         raise Exception(
             "Got error while downloading article.",
@@ -253,7 +257,7 @@ def get_444(url: str, cookies: dict[str, str]) -> str:
     if url.count("/") == 7:
         bucket: str = url.split("/")[3]
 
-    response: requests.Response = requests.get(
+    response: requests.Response = scraper.get(
         f"https://gateway.ipa.444.hu/api/graphql?crunch=2&operationName=fetchContent&variables=%7B%22onlyReports%22%3Afalse%2C%22order%22%3A%22DESC%22%2C%22slug%22%3A%22{article_name}%22%2C%22date%22%3A%22{date}%22%2C%22buckets%22%3A%5B%22{bucket}%22%5D%2C%22cursorInclusive%22%3Afalse%7D&extensions=%7B%22persistedQuery%22%3A%7B%22version%22%3A1%2C%22sha256Hash%22%3A%22376c5324c94249caa29a66aeb02f8ed7c593ce2d9036098f1ba63a545405c96a%22%7D%7D",
         cookies=cookies,
     )
@@ -269,7 +273,7 @@ def get_444(url: str, cookies: dict[str, str]) -> str:
 
 def get_hvg(webid: str) -> str:
     token: str = os.environ["TOKEN_HVG"]
-    response: requests.Response = requests.get(
+    response: requests.Response = scraper.get(
         f"https://api.hvg.hu/web//articles/premiumcontent/?webid={webid}&apiKey=4f67ed9596ac4b11a4b2ac413e7511af",
         headers={"Authorization": "Bearer " + token},
     )
