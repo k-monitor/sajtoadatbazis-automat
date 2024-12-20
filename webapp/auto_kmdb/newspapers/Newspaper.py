@@ -11,6 +11,9 @@ class Newspaper:
     def get_text(self, url: str, html: str) -> Optional[str]:
         pass
 
+    def get_title(self, url: str, html: str) -> Optional[str]:
+        pass
+
     def get_description(self, url: str, html: str) -> Optional[str]:
         pass
 

@@ -23,13 +23,14 @@ from playwright.sync_api import sync_playwright
 from auto_kmdb.newspapers.Telex import Telex
 from auto_kmdb.newspapers.Atv import Atv
 from auto_kmdb.newspapers.Mediaworks import Mediaworks
+from auto_kmdb.newspapers.Hvg import Hvg
 from datetime import timezone
 import traceback
 from auto_kmdb.newspapers.Newspaper import Newspaper
 import cloudscraper
 
 
-scraper = cloudscraper.create_scraper(browser='chrome')
+scraper = cloudscraper.create_scraper(browser="chrome")
 
 
 class ArticleDownload(NamedTuple):
@@ -42,7 +43,7 @@ class ArticleDownload(NamedTuple):
     same_news_id: Optional[int]
 
 
-newspapers: list[Newspaper] = [Telex(), Atv(), Mediaworks()]
+newspapers: list[Newspaper] = [Telex(), Atv(), Mediaworks(), Hvg()]
 proxy_host: str = os.environ["MYSQL_HOST"]
 request_proxies: dict[str, str] = {
     "http": "socks5h://" + proxy_host + ":1080",
@@ -60,6 +61,12 @@ def get_custom_description(url: str, html: str) -> Optional[str]:
     for paper in newspapers:
         if paper.is_url_this(url, html):
             return paper.get_description(url, html)
+
+
+def get_custom_title(url: str, html: str) -> Optional[str]:
+    for paper in newspapers:
+        if paper.is_url_this(url, html):
+            return paper.get_title(url, html)
 
 
 def get_html(url: str, cookies: dict[str, str]) -> str:
@@ -95,6 +102,13 @@ def process_article(url: str, html: str, cookies: dict[str, str]) -> ArticleDown
         custom_text: Optional[str] = get_custom_text(url, article.html)
         if custom_text:
             text = custom_text
+    except Exception as e:
+        logging.error(e)
+
+    try:
+        custom_title = get_custom_title(url, article.html)
+        if custom_title:
+            title = custom_title
     except Exception as e:
         logging.error(e)
 
