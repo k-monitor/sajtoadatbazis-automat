@@ -42,7 +42,6 @@ def rss_watcher(app_context):
                 except Exception as e:
                     logging.error("Error for " + newspaper["name"] + ": " + str(e))
         logging.info("done checking feeds")
-        time.sleep(5 * 60)
 
 
 def skip_url(url) -> bool:
