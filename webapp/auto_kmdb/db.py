@@ -512,6 +512,7 @@ def get_article_counts(
     search_query="",
     start="2000-01-01",
     end="2050-01-01",
+    skip_reason: int = -1,
 ) -> dict[str, int]:
     article_counts: dict[str, int] = {}
     start = start + " 00:00:00"
@@ -528,6 +529,10 @@ def get_article_counts(
 
     date_condition = " AND n.cre_time BETWEEN %s AND %s"
 
+    skip_condition = ""
+    if skip_reason != -1:
+        skip_condition = " AND n.skip_reason = " + str(int(skip_reason))
+
     query = f"""
         SELECT 
             COUNT(CASE WHEN n.classification_label = 1 AND processing_step = 4 
@@ -536,7 +541,7 @@ def get_article_counts(
             COUNT(CASE WHEN processing_step = 5 AND n.annotation_label = 1 THEN id END) AS positive,
             COUNT(CASE WHEN processing_step = 5 AND n.annotation_label = 0 THEN id END) AS negative,
             COUNT(CASE WHEN processing_step < 4 THEN id END) AS processing,
-            COUNT(CASE WHEN processing_step >= 0 THEN id END) AS all_status
+            COUNT(CASE WHEN processing_step >= 0 {skip_condition} THEN id END) AS all_status
         FROM autokmdb_news n
         WHERE 1=1
         {domain_condition}
@@ -772,6 +777,7 @@ def get_articles(
     start="2000-01-01",
     end="2050-01-01",
     reverse=False,
+    skip_reason: int = -1,
 ) -> Optional[tuple[int, list[dict[str, Any]]]]:
     query: str = ""
     start = start + " 00:00:00"
@@ -806,6 +812,7 @@ def get_articles(
         domain_list: str = ",".join([str(domain) for domain in domains])
         query += f" AND n.newspaper_id IN ({domain_list})"
 
+    search_tuple = (search_query, search_query, search_query) if search_query != "%%" else ()
     if search_query != "%%":
         query += (
             " AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)"
@@ -813,17 +820,20 @@ def get_articles(
 
     query += " AND n.cre_time BETWEEN %s AND %s"
 
-    search_tuple = (search_query, search_query, search_query) if search_query != "%%" else ()
+    skip_tuple = ()
+    if skip_reason != -1:
+        query += " AND n.skip_reason = %s"
+        skip_tuple = (skip_reason,)
 
     with connection.cursor(dictionary=True, cursor_class=LoggingCursor) as cursor:
         cursor.execute(
             "SELECT COUNT(id) FROM autokmdb_news n " + query,
-            search_tuple + (start, end),
+            search_tuple + (start, end) + skip_tuple,
         )
         count: int = cursor.fetchone()["COUNT(id)"]
         cursor.execute(
             paginate_query(selection + query + group, 10, page),
-            search_tuple + (start, end),
+            search_tuple + (start, end) + skip_tuple,
         )
         return count, cursor.fetchall()
 
