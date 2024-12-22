@@ -30,6 +30,13 @@ let errorText = ref("");
 let errorTitle = ref("");
 let reverseSort = ref(false);
 let loginError = ref(false);
+let selectedReasonId = ref(-1);
+const reasons = [
+  { name: "Bármilyen ok", id: -1 },
+  { name: "Átvett", id: 2 },
+  { name: "Letöltési hiba", id: 3 },
+  { name: "Feldolgozási hiba", id: 4 },
+];
 
 const page = ref(1);
 const statusId = ref(0);
@@ -75,6 +82,11 @@ function updateURL() {
       q: q.value,
     },
   });
+}
+
+function updateSelectedReason(newReason) {
+  selectedReasonId.value = newReason.id;
+  refresh();
 }
 
 function filterNewspaper(newspaper) {
@@ -124,6 +136,7 @@ const { data: articleCounts, refresh: refreshArticleCounts } = useAuthLazyFetch(
       from: from,
       to: to,
       q: q,
+      skip_reason: selectedReasonId,
     },
     onResponse({ request, response, options }) {
       if (response.status == 401) {
@@ -187,6 +200,7 @@ const {
     to: to,
     reverse: reverseSort,
     q: q,
+    skip_reason: selectedReasonId,
   },
   onResponse({ request, response, options }) {
     if (response.status == 401) {
@@ -340,6 +354,9 @@ async function handleAddUrl(newUrl, selectedDomain) {
 
         <DateRangeSelector :selected="selected" :ranges="ranges" @update:selected="updateSelectedDateRange"
           @refresh="refresh" />
+
+        <SkipReasonSelectMenu v-if="statusId==4" :reasons="reasons"
+          @update:selectedReason="updateSelectedReason" @refresh="refresh" />
 
         <UInput class="px-1 my-1" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
         <AnnoteMultiple :articles="articles" :items="items" :loadingDelete="loadingDelete" />

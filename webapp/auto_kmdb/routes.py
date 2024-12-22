@@ -38,10 +38,11 @@ def api_article_counts():
     q: str = content.get("q", "")
     domains: dict = content["domain"]
     domain_ids: list[int] = [domain["id"] for domain in domains] if domains else [-1]
+    skip_reasin: int = content.get("skip_reason", -1)
 
     with db.connection_pool.get_connection() as connection:
         article_counts = db.get_article_counts(
-            connection, domain_ids, "%" + q + "%", start, end
+            connection, domain_ids, "%" + q + "%", start, end, skip_reasin
         )
 
     return jsonify(article_counts), 200
@@ -81,10 +82,11 @@ def api_articles():
     domains: dict = content["domain"]
     domain_ids: list[int] = [domain["id"] for domain in domains] if domains else [-1]
     reverse: bool = content.get("reverse", False)
+    skip_reasin: int = content.get("skip_reason", -1)
 
     with db.connection_pool.get_connection() as connection:
         article_response = db.get_articles(
-            connection, page, status, domain_ids, "%" + q + "%", start, end, reverse
+            connection, page, status, domain_ids, "%" + q + "%", start, end, reverse, skip_reasin
         )
         if article_response is None:
             return jsonify({"error": "Hiba a lekérés során!"}), 500
