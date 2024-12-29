@@ -55,7 +55,7 @@ function handleClick() {
 
             const img = document.createElement("img");
             const randomCat = cats[Math.floor(Math.random() * cats.length)];
-            img.src = "/cats/" + randomCat;
+            img.src = "/autokmdb/cats/" + randomCat;
             img.className = "kitty";
 
             const fromLeft = Math.random() < 0.5;
