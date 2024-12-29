@@ -342,7 +342,8 @@ async function handleAddUrl(newUrl, selectedDomain) {
 
 <template>
   <div>
-    <UContainer class="my-1 justify-between flex lg:px-0 px-4 sm:px-0 ml-1 max-w-full">
+    <UContainer class="my-1 justify-between flex lg:px-0 px-4 sm:px-0 ml-1 max-w-full items-center">
+      <PageTitle />
       <UContainer class="my-1 flex lg:px-0 px-2 sm:px-0 ml-auto mr-1 flex-wrap">
         <UButton class="mr-1 h-fit my-1" @click="openNewUrl">Új cikk</UButton>
         <div class="flex my-auto px-1 my-1">
@@ -355,8 +356,8 @@ async function handleAddUrl(newUrl, selectedDomain) {
         <DateRangeSelector :selected="selected" :ranges="ranges" @update:selected="updateSelectedDateRange"
           @refresh="refresh" />
 
-        <SkipReasonSelectMenu v-if="statusId==4" :reasons="reasons"
-          @update:selectedReason="updateSelectedReason" @refresh="refresh" />
+        <SkipReasonSelectMenu v-if="statusId == 4" :reasons="reasons" @update:selectedReason="updateSelectedReason"
+          @refresh="refresh" />
 
         <UInput class="px-1 my-1" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
         <AnnoteMultiple :articles="articles" :items="items" :loadingDelete="loadingDelete" />
@@ -390,3 +391,11 @@ async function handleAddUrl(newUrl, selectedDomain) {
     </UTabs>
   </div>
 </template>
+
+<style scoped>
+#panHeader {
+    top: 0;
+    width: 100%;
+    pointer-events: none;
+}
+</style>
