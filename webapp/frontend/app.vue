@@ -342,8 +342,8 @@ async function handleAddUrl(newUrl, selectedDomain) {
 
 <template>
   <div>
-    <UContainer class="my-1 justify-between flex lg:px-0 px-4 sm:px-0 ml-1 max-w-full items-center">
-      <PageTitle />
+    <UContainer class="my-1 justify-between flex flex-wrap lg:px-0 px-4 sm:px-0 ml-1 max-w-full items-center">
+      <PageTitle :baseUrl="baseUrl" />
       <UContainer class="my-1 flex lg:px-0 px-2 sm:px-0 ml-auto mr-1 flex-wrap">
         <UButton class="mr-1 h-fit my-1" @click="openNewUrl">Új cikk</UButton>
         <div class="flex my-auto px-1 my-1">
