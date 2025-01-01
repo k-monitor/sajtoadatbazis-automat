@@ -41,7 +41,7 @@
             article.newspaper_name }} </UButton>
         <a :href="article.url" target="_blank" class="font-bold text-xl mb-2 ml-1">{{
           article.title
-          }}</a>
+        }}</a>
 
       </p>
       <UBadge v-if="article.source == 1" class="m-1" color="orange">
@@ -76,7 +76,7 @@
           "Szerkesztésre küld" }}</UButton>
       </div>
     </div>
-    <UModal v-model="isOpen" :ui="{ width: 'sm:max-w-7xl' }">
+    <UModal v-model="isOpen" :ui="{ padding: 'p-0 sm:p-4', width: 'sm:max-w-7xl' }">
       <div class="p-4 w-full">
         <div class="my-2 flex justify-center px-0 sm:px-0 lg:px-0 flex-wrap">
           <div class="max-w-2xl mx-4 flex-grow">
