@@ -391,11 +391,3 @@ async function handleAddUrl(newUrl, selectedDomain) {
     </UTabs>
   </div>
 </template>
-
-<style scoped>
-#panHeader {
-    top: 0;
-    width: 100%;
-    pointer-events: none;
-}
-</style>
