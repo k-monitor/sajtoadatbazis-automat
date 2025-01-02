@@ -41,7 +41,7 @@
             article.newspaper_name }} </UButton>
         <a :href="article.url" target="_blank" class="font-bold text-xl mb-2 ml-1">{{
           article.title
-        }}</a>
+          }}</a>
 
       </p>
       <UBadge v-if="article.source == 1" class="m-1" color="orange">
@@ -62,7 +62,11 @@
         </UDropdown>
         <UCheckbox v-if="article.annotation_label != 0" @change="selected" class="items-center p-2 scale-125"
           color="red" v-model="selection" name="selection" label="" />
-        <UButton v-if="true" @click="openModal" :loading="isOpening" class="ml-auto">{{
+        <p class="items-center p-2 ml-auto"
+          title="Teszt: ez a szám azt mutatja, algoritmusaink szerint mennyire illik a cikk a módszertanba (100% - nagyon, 0% - kevésbé)">
+          {{ Math.round(article.classification_score * 100) }}%
+        </p>
+        <UButton v-if="true" @click="openModal" :loading="isOpening" class="">{{
           article.annotation_label == null
             ? "Szerkesztés"
             : article.annotation_label == 0
@@ -76,7 +80,7 @@
           "Szerkesztésre küld" }}</UButton>
       </div>
     </div>
-    <UModal v-model="isOpen" :ui="{ width: 'sm:max-w-7xl' }">
+    <UModal v-model="isOpen" :ui="{ padding: 'p-0 sm:p-4', width: 'sm:max-w-7xl' }">
       <div class="p-4 w-full">
         <div class="my-2 flex justify-center px-0 sm:px-0 lg:px-0 flex-wrap">
           <div class="max-w-2xl mx-4 flex-grow">
@@ -165,6 +169,31 @@ import { $authFetch } from "~/auth_fetch";
 
 const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
+
+function formatDate(apiDateString: string): string {
+  const date = new Date(apiDateString);
+
+  // Define an options object for the Hungarian format and Budapest time zone
+  const options = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    timeZone: 'Europe/Budapest',
+  };
+
+  // Format the date using Intl.DateTimeFormat
+  const formatter = new Intl.DateTimeFormat('hu-HU', options);
+  const parts = formatter.formatToParts(date);
+
+  // Rebuild the string in "YYYY. MM. DD. HH:mm:ss" format
+  const formattedDate = `${parts.find(p => p.type === 'year').value}. ${parts.find(p => p.type === 'month').value}. ${parts.find(p => p.type === 'day').value}. ${parts.find(p => p.type === 'hour').value}:${parts.find(p => p.type === 'minute').value}:${parts.find(p => p.type === 'second').value}`;
+
+  console.log(formattedDate);
+  return formattedDate;
+}
 
 function getRandomThanks() {
   const defaultThanks = "Köszi, hogy ezzel a cikkel is bővítetted a K-Monitor sajtóadatbázisát!";
@@ -342,12 +371,8 @@ function openModal() {
         allOthers.value = mapEntities(keywords);
         article.value.original_date = article.value.article_date;
 
-        article.value.date = new Date(
-          Date.parse(article.value.date)
-        ).toLocaleString();
-        article.value.article_date = new Date(
-          Date.parse(article.value.article_date)
-        ).toLocaleString();
+        article.value.date = formatDate(article.value.date);
+        article.value.article_date = formatDate(article.value.article_date);
 
         if (article.value.annotation_label == 1) {
           positivePersons.value = allPersons.value.filter(
@@ -526,8 +551,7 @@ async function submitArticle() {
 const isOpen = ref(false);
 const isOpening = ref(false);
 
-article.value.date = new Date(Date.parse(article.value.date)).toLocaleString();
-// article.value.article_date = new Date(Date.parse(article.value.article_date)).toLocaleString()
+article.value.date = formatDate(article.value.date);
 
 function getRichText() {
   let texthtml = article.value.text ?? '';
