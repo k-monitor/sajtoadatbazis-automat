@@ -41,7 +41,7 @@
             article.newspaper_name }} </UButton>
         <a :href="article.url" target="_blank" class="font-bold text-xl mb-2 ml-1">{{
           article.title
-        }}</a>
+          }}</a>
 
       </p>
       <UBadge v-if="article.source == 1" class="m-1" color="orange">
@@ -62,7 +62,11 @@
         </UDropdown>
         <UCheckbox v-if="article.annotation_label != 0" @change="selected" class="items-center p-2 scale-125"
           color="red" v-model="selection" name="selection" label="" />
-        <UButton v-if="true" @click="openModal" :loading="isOpening" class="ml-auto">{{
+        <p class="items-center p-2 ml-auto"
+          title="Teszt: ez a szám azt mutatja, algoritmusaink szerint mennyire illik a cikk a módszertanba (100% - nagyon, 0% - kevésbé)">
+          {{ Math.round(article.classification_score * 100) }}%
+        </p>
+        <UButton v-if="true" @click="openModal" :loading="isOpening" class="">{{
           article.annotation_label == null
             ? "Szerkesztés"
             : article.annotation_label == 0
