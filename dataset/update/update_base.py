@@ -7,12 +7,15 @@ import jsonlines
 from datasets import Dataset
 
 
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
+
 def export_kmdb(connection, limit=-1):
     try:
         if connection.is_connected():
             cursor = connection.cursor(dictionary=True)
 
-            limit_part = f'LIMIT {limit}' if limit >= 0 else ''
+            limit_part = f"LIMIT {limit}" if limit >= 0 else ""
 
             query_news = f"""
                 SELECT
@@ -47,16 +50,15 @@ def export_kmdb(connection, limit=-1):
 
             def transform_article(article):
                 # article['files'] = article['files'].split(
-                    # ';;;') if article['files'] else []
+                # ';;;') if article['files'] else []
                 try:
-                    soup = BeautifulSoup(article['text'], features="lxml")
-                    article['text'] = '\n'.join(
-                        [t.text for t in soup.find_all('p')])
+                    soup = BeautifulSoup(article["text"], features="lxml")
+                    article["text"] = "\n".join([t.text for t in soup.find_all("p")])
                 except Exception:
-                    article['text'] = ''
+                    article["text"] = ""
                 return article
-            news_data = [transform_article(article)
-                         for article in cursor.fetchall()]
+
+            news_data = [transform_article(article) for article in cursor.fetchall()]
 
             query_persons = """
                 SELECT
@@ -116,9 +118,9 @@ def export_kmdb(connection, limit=-1):
             def create_related_data_dict(related_data):
                 related_dict = {}
                 for item in related_data:
-                    if item['news_id'] not in related_dict:
-                        related_dict[item['news_id']] = []
-                    related_dict[item['news_id']].append(item['name'])
+                    if item["news_id"] not in related_dict:
+                        related_dict[item["news_id"]] = []
+                    related_dict[item["news_id"]].append(item["name"])
                 return related_dict
 
             persons_dict = create_related_data_dict(persons_data)
@@ -128,14 +130,17 @@ def export_kmdb(connection, limit=-1):
             files_dict = create_related_data_dict(files_data)
 
             for news in news_data:
-                news['pub_time'] = news['pub_time'].strftime(
-                    '%Y-%m-%d %H:%M:%S') if news['pub_time'] else ''
-                news_id = news['news_id']
-                news['persons'] = persons_dict.get(news_id, [])
-                news['institutions'] = institutions_dict.get(news_id, [])
-                news['places'] = places_dict.get(news_id, [])
-                news['others'] = others_dict.get(news_id, [])
-                news['files'] = files_dict.get(news_id, [])
+                news["pub_time"] = (
+                    news["pub_time"].strftime("%Y-%m-%d %H:%M:%S")
+                    if news["pub_time"]
+                    else ""
+                )
+                news_id = news["news_id"]
+                news["persons"] = persons_dict.get(news_id, [])
+                news["institutions"] = institutions_dict.get(news_id, [])
+                news["places"] = places_dict.get(news_id, [])
+                news["others"] = others_dict.get(news_id, [])
+                news["files"] = files_dict.get(news_id, [])
 
             return news_data
 
@@ -146,7 +151,7 @@ def export_kmdb(connection, limit=-1):
             cursor.close()
 
 
-load_dotenv('../../webapp/.env.prod')
+load_dotenv(base_dir + "../../webapp/.env.prod")
 
 with mysql.connector.connect(
     host=os.environ["MYSQL_HOST"],
@@ -157,14 +162,14 @@ with mysql.connector.connect(
 ) as connection:
     data = export_kmdb(connection)
 
-with jsonlines.open('export.prod.jsonl', mode='w') as writer:
+with jsonlines.open(base_dir + "export.prod.jsonl", mode="w") as writer:
     writer.write_all(data)
 
 dataset = Dataset.from_list(data)
-dataset.push_to_hub('K-Monitor/kmdb_base')
+dataset.push_to_hub("K-Monitor/kmdb_base")
 
 files_list = []
-for f in dataset['files']:
+for f in dataset["files"]:
     if f:
         files_list += f
 
