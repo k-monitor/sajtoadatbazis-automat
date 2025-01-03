@@ -4,7 +4,7 @@ from datasets import load_dataset, Dataset, concatenate_datasets
 from dotenv import load_dotenv
 import random
 
-base_dir = os.path.dirname(os.path.abspath(__file__))
+base_dir = os.path.dirname(os.path.abspath(__file__)) + "/"
 load_dotenv(base_dir + "../../webapp/.env.prod")
 random.seed = 42
 
