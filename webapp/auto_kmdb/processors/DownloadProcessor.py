@@ -49,6 +49,8 @@ request_proxies: dict[str, str] = {
     "http": "socks5h://" + proxy_host + ":1080",
     "https": "socks5h://" + proxy_host + ":1080",
 }
+newspaper_config = newspaper.configuration.Configuration()
+newspaper_config.update(fetch_images=False)
 
 
 def get_custom_text(url: str, html: str) -> Optional[str]:
@@ -82,21 +84,26 @@ def get_html(url: str, cookies: dict[str, str]) -> str:
     return str(response.text)
 
 
-def process_article(url: str, html: str, cookies: dict[str, str]) -> ArticleDownload:
-    article = newspaper.Article(url=url)
-    article.download(input_html=html.replace("<br>", "\n"))
+def process_article(
+    url: str, html: str, cookies: dict[str, str], skip_paywalled=False
+) -> ArticleDownload:
+    article = newspaper.Article(url=url, config=newspaper_config)
+    article.download(
+        input_html=html.replace("<br>", "\n"),
+    )
     article.parse()
 
     text: str = article.text
     title: str = article.title
     is_paywalled: int = 0
 
-    if "Csatlakozz a Körhöz, és olvass tovább!" in article.html:
-        text = get_444(url.split("?")[0], cookies)
-        is_paywalled = 1
-    elif "hvg.hu/360/" in url:
-        text += "\n" + get_hvg(url.split("/360/")[1].split("?")[0])
-        is_paywalled = 1
+    if not skip_paywalled:
+        if "Csatlakozz a Körhöz, és olvass tovább!" in article.html:
+            text = get_444(url.split("?")[0], cookies)
+            is_paywalled = 1
+        elif "hvg.hu/360/" in url:
+            text += "\n" + get_hvg(url.split("/360/")[1].split("?")[0])
+            is_paywalled = 1
 
     try:
         custom_text: Optional[str] = get_custom_text(url, article.html)

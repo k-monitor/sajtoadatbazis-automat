@@ -6,10 +6,11 @@ import requests
 from tqdm import tqdm
 from auto_kmdb.processors.DownloadProcessor import process_article
 import jsonlines
+import traceback
 
 
 def update_dataset():
-    download_html()
+    # download_html()
     update_classification()
 
 
@@ -23,11 +24,11 @@ def download_html():
 
     # Load already downloaded URLs if the file exists
     if os.path.exists(output_file):
-        with gzip.open(output_file, 'rt', encoding='utf-8') as f:
+        with gzip.open(output_file, "rt", encoding="utf-8") as f:
             for line in f:
                 downloaded_urls.add(json.loads(line)["url"])
 
-    with gzip.open(output_file, 'at', encoding='utf-8') as f:
+    with gzip.open(output_file, "at", encoding="utf-8") as f:
         for url in tqdm(urls):
             if url in downloaded_urls:
                 continue
@@ -59,28 +60,34 @@ def update_classification():
 
     # Load already downloaded URLs if the file exists
     if os.path.exists(input_file):
-        with gzip.open(input_file, 'rt', encoding='utf-8') as f:
+        with gzip.open(input_file, "rt", encoding="utf-8") as f:
             for line in f:
-                downloaded_urls.add(json.loads(line)["url"])
+                data = json.loads(line)
+                if data["html"]:
+                    downloaded_urls.add(data["url"])
 
     ds = ds.filter(lambda row: row["url"] in downloaded_urls)
 
     print(ds)
 
     new_list = []
-    with gzip.open(input_file, 'rt', encoding='utf-8') as f:
+    with gzip.open(input_file, "rt", encoding="utf-8") as f:
         for line in tqdm(f):
             try:
                 data = json.loads(line)
-                if not data["html"]:
+                if not data["html"] or data["url"] not in ds_dict:
                     continue
-                article = process_article(data["url"], data["html"], {})
+                article = process_article(
+                    data["url"], data["html"], {}, skip_paywalled=True
+                )
                 original_data = ds_dict[data["url"]]
                 original_data["title"] = article.title
                 original_data["description"] = article.description
                 new_list.append(original_data)
             except Exception as e:
                 print(e)
+                # traceback.print_exc()
+
     new_dataset = Dataset.from_list(new_list)
     print(new_dataset)
     new_dataset.to_json("data/kmdb_classification_v2.jsonl")
