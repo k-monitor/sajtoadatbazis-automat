@@ -78,7 +78,7 @@ negative_ds_prod = Dataset.from_list(rows).map(
     }
 )  # row['date'].strftime('%Y-%m-%d %H:%M:%S')
 
-load_dotenv(base_dir + "../../webapp/.env")
+load_dotenv(base_dir + "../../webapp/.env.dev")
 
 
 mysql_db = mysql.connector.connect(
