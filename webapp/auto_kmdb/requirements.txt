@@ -1,21 +1,22 @@
-Flask==3.0.0
+Flask==3.1.0
 git+https://github.com/boapps/newspaper4k.git
 waitress
 jsonlines
 mysql-connector-python
-transformers==4.34.0
+transformers==4.46.3
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.2.0
+torch==2.5.1
 python-slugify[unidecode]
 joblib
 scikit-learn
 beautifulsoup4
 typing-extensions
 python-dotenv
-https://huggingface.co/huspacy/hu_core_news_lg/resolve/e31b9bec2d558a24bbcbd12cd059fa34ada54a8d/hu_core_news_lg-any-py3-none-any.whl
+hu_core_news_lg@https://huggingface.co/huspacy/hu_core_news_lg/resolve/e31b9bec2d558a24bbcbd12cd059fa34ada54a8d/hu_core_news_lg-any-py3-none-any.whl
 typing
 pandas
 playwright
 requests[socks]
 cachetools
 cloudscraper
+datasets==3.1.0

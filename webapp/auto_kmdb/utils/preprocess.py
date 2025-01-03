@@ -82,6 +82,7 @@ title_papers = [
     " - Direkt36",
     " | hvg.hu",
     "Index - ",
+    " - NOL.hu",
 ]
 
 replacements = [
