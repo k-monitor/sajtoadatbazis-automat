@@ -1,0 +1,7 @@
+mysql-connector-python
+beautifulsoup4
+typing
+datasets==3.1.0
+requests[socks]
+python-dotenv
+jsonlines
