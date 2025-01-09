@@ -82,7 +82,7 @@
     </div>
     <UModal v-model="isOpen" :ui="{ padding: 'p-0 sm:p-4', width: 'sm:max-w-7xl' }">
       <div class="p-4 w-full">
-        <div class="my-2 flex justify-center px-0 sm:px-0 lg:px-0 flex-wrap">
+        <div class="my-2 flex justify-center px-0 sm:px-0 lg:px-0 flex-col md:flex-row">
           <div class="max-w-2xl mx-4 flex-grow">
             <p class="font-bold">Cím:</p>
             <UTextarea class="my-2 min-h-0" rows="1" autoresize v-model="article.title" />
@@ -103,7 +103,7 @@
             </div>
           </div>
 
-          <div class="max-w-lg mx-4 flex-grow">
+          <div class="max-w-lg mx-4 flex-grow min-w-80">
             <SelectMenu :list="allPersons" type="személy" :creatable="true" :positive-list="positivePersons"
               @update:positiveList="updatePositivePersons" :labels="allLabels['person']" />
             <SelectMenu :list="allInstitutions" type="intézmény" :creatable="true" :positive-list="positiveInstitutions"
