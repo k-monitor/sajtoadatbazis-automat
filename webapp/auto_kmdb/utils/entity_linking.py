@@ -128,7 +128,7 @@ def get_entities_freq(
 def get_identical_keywords(entity: str, keyword_list: Sequence[str]) -> list[str]:
     """
     Returns a list containing the keyword from keyword_list that is identical with the given
-    entity.
+    entity. The comparison is case-insensitive.
 
     Args:
         entity: the entity to be linked
@@ -137,8 +137,10 @@ def get_identical_keywords(entity: str, keyword_list: Sequence[str]) -> list[str
     Returns:
         List of the identical keyword, or empty list if there is none.
     """
-    keywords = [entity] if entity in keyword_list else []
-    return keywords
+    for k in keyword_list:
+        if entity.lower() == k.lower():
+            return [k]
+    return []
 
 
 def get_containing_keywords(entity: str, keyword_list: Sequence[str]) -> list[str]:
