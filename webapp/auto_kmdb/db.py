@@ -7,7 +7,6 @@ import logging
 from datetime import datetime, timedelta
 from collections import defaultdict
 from cachetools import cached, LRUCache, TTLCache
-from auto_kmdb.utils.logging_cursor import LoggingCursor
 
 connection_pool: MySQLConnectionPool = MySQLConnectionPool(
     pool_name="cnx_pool",
@@ -18,6 +17,7 @@ connection_pool: MySQLConnectionPool = MySQLConnectionPool(
     user=os.environ["MYSQL_USER"],
     password=os.environ["MYSQL_PASS"],
     database=os.environ["MYSQL_DB"],
+    use_pure=True,
 )
 
 VERSION_NUMBER: int = 0
@@ -825,7 +825,7 @@ def get_articles(
         query += " AND n.skip_reason = %s"
         skip_tuple = (skip_reason,)
 
-    with connection.cursor(dictionary=True, cursor_class=LoggingCursor) as cursor:
+    with connection.cursor(dictionary=True) as cursor:
         cursor.execute(
             "SELECT COUNT(id) FROM autokmdb_news n " + query,
             search_tuple + (start, end) + skip_tuple,
