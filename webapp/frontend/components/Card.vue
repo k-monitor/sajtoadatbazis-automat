@@ -101,6 +101,7 @@
             <div v-if="!edit" style="overflow-y: scroll; height: 400px">
               <span class="my-2" v-html="richText"></span>
             </div>
+            <p v-if="article.is_paywalled" class="font-bold"><span style="color: #f59e0b">$</span> Valószínűsíthetően a cikk teljes szövege paywall/bejelentkezés mögött található!</p>
           </div>
 
           <div class="max-w-lg mx-4 flex-grow min-w-80">
