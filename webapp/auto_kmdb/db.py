@@ -745,7 +745,7 @@ def map_entities(entities: list[dict]):
 
 def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
     query = """SELECT n.id AS id, news_id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason,
-            n.text AS text, CONVERT_TZ(article_date, @@session.time_zone, '+00:00') as date, category, CONVERT_TZ(article_date, @@session.time_zone, '+00:00') as article_date, u.name AS mod_name FROM autokmdb_news n LEFT JOIN users u ON n.mod_id = u.user_id WHERE id = %s
+            n.text AS text, CONVERT_TZ(article_date, @@session.time_zone, '+00:00') as date, category, CONVERT_TZ(article_date, @@session.time_zone, '+00:00') as article_date, u.name AS mod_name, is_paywalled FROM autokmdb_news n LEFT JOIN users u ON n.mod_id = u.user_id WHERE id = %s
         """
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (id,))

@@ -152,6 +152,17 @@ def process_article(
         logging.warning("Title is empty")
         raise Exception("Title is empty")
 
+    paywall_texts = [
+        "Csatlakozz a Körhöz, és olvass tovább!",
+        "A teljes cikket előfizetőink olvashatják el.",
+        "A keresett cikk a portfolio.hu hírarchívumához tartozik, melynek olvasása előfizetéses regisztrációhoz kötött.",
+        "Ez egy remek cikk a nyomtatott Magyar Narancsból, amely online is elérhető.",
+        "A cikk innentől csak a Qubit+ előfizetőinek elérhető. Csatlakozz, és olvass tovább!",
+    ]
+
+    if "hvg.hu/360/" in url or any([text in article.html for text in paywall_texts]):
+        is_paywalled = 1
+
     return ArticleDownload(
         text, title, description, authors, date, is_paywalled, same_news_id
     )

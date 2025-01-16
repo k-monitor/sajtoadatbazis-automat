@@ -106,7 +106,7 @@ def export_kmdb(connection, limit=-1):
 
             query_others = """
                 SELECT
-                    ol.news_id, o.name
+                    ol.news_id, o.name_hu as name
                 FROM
                     news_others_link ol
                 JOIN
