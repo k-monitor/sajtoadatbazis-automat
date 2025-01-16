@@ -41,7 +41,7 @@
             article.newspaper_name }} </UButton>
         <a :href="article.url" target="_blank" class="font-bold text-xl mb-2 ml-1">{{
           article.title
-          }}</a>
+        }}</a>
 
       </p>
       <UBadge v-if="article.source == 1" class="m-1" color="orange">
@@ -101,7 +101,10 @@
             <div v-if="!edit" style="overflow-y: scroll; height: 400px">
               <span class="my-2" v-html="richText"></span>
             </div>
-            <p v-if="article.is_paywalled" class="font-bold"><span style="color: #f59e0b">$</span> Valószínűsíthetően a cikk teljes szövege paywall/bejelentkezés mögött található!</p>
+            <a v-if="article.is_paywalled" :href="article.url" target="_blank">
+              <Icon title="Valószínűsíthetően a cikk teljes szövege paywall/bejelentkezés mögött található!"
+                name="mdi:dollar" size="26" style="color: #f59e0b;"></Icon>
+            </a>
           </div>
 
           <div class="max-w-lg mx-4 flex-grow min-w-80">
