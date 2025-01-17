@@ -156,7 +156,7 @@ def get_containing_keywords(entity: str, keyword_list: Sequence[str]) -> list[st
     """
     keywords = []
     for keyword in keyword_list:
-        if entity in keyword:
+        if entity.lower() in keyword.lower():
             keywords.append(keyword)
     return keywords
 
@@ -274,7 +274,7 @@ def get_mapping(
         mapping.at[entity, "entity_contains_keyword"] = "; ".join(entity_c_kw)
 
         mapping.at[entity, "synonym_keyword"] = (
-            "; ".join([x for x in get_mapping_by_synonym(entity, synonym_mapping)])
+            "; ".join([x for x in get_mapping_by_synonym(entity.lower(), synonym_mapping)])
             if synonym_mapping is not None
             else None
         )
