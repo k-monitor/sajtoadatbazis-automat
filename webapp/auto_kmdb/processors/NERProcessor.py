@@ -171,16 +171,21 @@ class NERProcessor(Processor):
             'combed_mapping': suggested db keyword mapping
             'keyword_id': the id of the suggested db keyword mapping
         """
-        logging.info(entity_type)
-        logging.info(detected_entities)
+        # logging.info(entity_type)
+        # logging.info(detected_entities)
         synonym_mapping: Optional[pd.DataFrame] = (
             get_synonyms_file(entity_type)
             if (entity_type in ["places", "institutions"])
             else None
         )
+        if synonym_mapping is not None:
+            lowercase_mapping: Optional[pd.DataFrame] = synonym_mapping.copy()
+            lowercase_mapping.index = lowercase_mapping.index.str.lower()
+        else:
+            lowercase_mapping = None
         keywords: pd.DataFrame = get_entities_freq(entity_type)
         mapping: pd.DataFrame = get_mapping(
-            detected_entities, keywords.index, self.nlp, synonym_mapping
+            detected_entities, keywords.index, self.nlp, lowercase_mapping
         )
         combed_mapping: pd.DataFrame = comb_mappings(mapping, keywords)
 
@@ -194,6 +199,7 @@ class NERProcessor(Processor):
         del mapping
         del keywords
         del synonym_mapping
+        del lowercase_mapping
         gc.collect()
 
         return combed_mapping
@@ -214,7 +220,7 @@ class NERProcessor(Processor):
                 mapping: pd.DataFrame = self.get_db_entity_linking(
                     detected_entities, type
                 )
-                logging.info(mapping)
+                # logging.info(mapping)
                 assert mapping.index.is_unique, (
                     "Database " + type + " keywords to be added should be unique"
                 )
@@ -242,7 +248,7 @@ class NERProcessor(Processor):
         with connection_pool.get_connection() as connection:
             next_row: dict = get_ner_queue(connection)
         if next_row is None:
-            sleep(30)
+            sleep(10)
             return
         torch.cuda.empty_cache()
         try:
