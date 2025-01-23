@@ -205,6 +205,17 @@ class NERProcessor(Processor):
         return combed_mapping
 
     def do_process(self, next_row):
+        def add_institution_dot(name, ent_type):
+            if (
+                name.endswith("Kft")
+                or name.endswith("Zrt")
+                or name.endswith("Kht")
+                or name.endswith("Nyrt")
+                or name.endswith("Bt")
+            ) and ent_type == "institutions":
+                return name + "."
+            return name
+
         text: str = next_row["text"]
         people, institutions, places = self.predict(text)
 
@@ -234,7 +245,7 @@ class NERProcessor(Processor):
                             str(entity_infos.loc["keyword_id"]),
                             entity_infos.loc["detected_ent_raw"],
                             str(start_char),
-                            entity_infos.loc["detected_ent"],
+                            add_institution_dot(entity_infos.loc["detected_ent"], type),
                             str(entity_infos.loc["score"]),
                             str(entity_infos.loc["class"]),
                         )
