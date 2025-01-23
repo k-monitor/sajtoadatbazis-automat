@@ -5,3 +5,4 @@ datasets
 requests[socks]
 python-dotenv
 jsonlines
+lxml
