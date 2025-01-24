@@ -4,6 +4,8 @@ from auto_kmdb import db
 from math import ceil
 import logging
 from datetime import datetime
+import csv
+import io
 
 
 with db.connection_pool.get_connection() as connection:
@@ -19,6 +21,27 @@ def get_session_id(request) -> Optional[str]:
 @api.route("/keyword_synonyms", methods=["GET"])
 def get_keyword_synonyms():
     return jsonify(keyword_synonyms), 200
+
+
+@api.route("/articles_by_day.csv", methods=["GET"])
+def get_articles_by_day():
+    content: Optional[dict] = request.args
+    start: str = content.get("from", "2000-01-01")
+    end: str = content.get("to", "2050-01-01")
+    with db.connection_pool.get_connection() as connection:
+        articles_by_day: list[dict] = db.get_articles_by_day(connection, start, end)
+
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=articles_by_day[0].keys())
+
+        writer.writeheader()
+        writer.writerows(articles_by_day)
+
+        output.seek(0)
+        response = Response(output, mimetype="text/csv")
+        response.headers["Content-Disposition"] = "attachment; filename=data.csv"
+
+        return response
 
 
 @api.route("/article_counts", methods=["POST"])
@@ -86,7 +109,15 @@ def api_articles():
 
     with db.connection_pool.get_connection() as connection:
         article_response = db.get_articles(
-            connection, page, status, domain_ids, "%" + q + "%", start, end, reverse, skip_reasin
+            connection,
+            page,
+            status,
+            domain_ids,
+            "%" + q + "%",
+            start,
+            end,
+            reverse,
+            skip_reasin,
         )
         if article_response is None:
             return jsonify({"error": "Hiba a lekérés során!"}), 500
