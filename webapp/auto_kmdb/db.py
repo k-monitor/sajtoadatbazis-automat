@@ -847,7 +847,7 @@ def get_articles(
             " AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)"
         )
 
-    query += " AND n.cre_time BETWEEN %s AND %s"
+    query += " AND n.article_date BETWEEN %s AND %s"
 
     skip_tuple = ()
     if skip_reason != -1:
