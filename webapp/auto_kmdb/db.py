@@ -506,6 +506,31 @@ def paginate_query(query: str, page_size: int, page_number: int) -> str:
     return query + f" LIMIT {page_size} OFFSET {offset}"
 
 
+def get_articles_by_day(
+    connection: PooledMySQLConnection, start: str, end: str
+) -> list[dict]:
+    query = """
+        SELECT 
+            DATE(cre_time) AS date, 
+            COUNT(id) AS total_count, 
+            SUM(CASE WHEN annotation_label = 1 THEN 1 ELSE 0 END) AS count_positive,
+            SUM(CASE WHEN annotation_label = 0 THEN 1 ELSE 0 END) AS count_negative,
+            SUM(CASE WHEN annotation_label IS NULL THEN 1 ELSE 0 END) AS count_todo
+        FROM 
+            autokmdb_news 
+        WHERE 
+            cre_time BETWEEN %s AND %s AND classification_label = 1 
+        GROUP BY 
+            DATE(cre_time) 
+        ORDER BY 
+            date
+    """
+
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query, (start, end))
+        return cursor.fetchall()
+
+
 def get_article_counts(
     connection: PooledMySQLConnection,
     domains: list[int],
@@ -549,7 +574,9 @@ def get_article_counts(
         {date_condition}
     """
 
-    search_tuple = (search_query, search_query, search_query) if search_query != "%%" else ()
+    search_tuple = (
+        (search_query, search_query, search_query) if search_query != "%%" else ()
+    )
 
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(
@@ -812,7 +839,9 @@ def get_articles(
         domain_list: str = ",".join([str(domain) for domain in domains])
         query += f" AND n.newspaper_id IN ({domain_list})"
 
-    search_tuple = (search_query, search_query, search_query) if search_query != "%%" else ()
+    search_tuple = (
+        (search_query, search_query, search_query) if search_query != "%%" else ()
+    )
     if search_query != "%%":
         query += (
             " AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)"
