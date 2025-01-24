@@ -511,7 +511,7 @@ def get_articles_by_day(
 ) -> list[dict]:
     query = """
         SELECT 
-            DATE(cre_time) AS date, 
+            DATE(article_date) AS date, 
             COUNT(id) AS total_count, 
             SUM(CASE WHEN annotation_label = 1 THEN 1 ELSE 0 END) AS count_positive,
             SUM(CASE WHEN annotation_label = 0 THEN 1 ELSE 0 END) AS count_negative,
@@ -519,9 +519,9 @@ def get_articles_by_day(
         FROM 
             autokmdb_news 
         WHERE 
-            cre_time BETWEEN %s AND %s AND classification_label = 1 
+            article_date BETWEEN %s AND %s AND classification_label = 1 
         GROUP BY 
-            DATE(cre_time) 
+            DATE(article_date) 
         ORDER BY 
             date
     """
@@ -552,7 +552,7 @@ def get_article_counts(
         AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)
     """
 
-    date_condition = " AND n.cre_time BETWEEN %s AND %s"
+    date_condition = " AND n.article_date BETWEEN %s AND %s"
 
     skip_condition = ""
     if skip_reason != -1:
