@@ -506,9 +506,8 @@ def paginate_query(query: str, page_size: int, page_number: int) -> str:
     return query + f" LIMIT {page_size} OFFSET {offset}"
 
 
-def get_articles_by_day(
-    connection: PooledMySQLConnection, start: str, end: str
-) -> list[dict]:
+@cached(cache=TTLCache(maxsize=32, ttl=3600))
+def get_articles_by_day(start: str, end: str) -> list[dict]:
     query = """
         SELECT 
             DATE(article_date) AS date, 
@@ -526,9 +525,10 @@ def get_articles_by_day(
             date
     """
 
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (start, end))
-        return cursor.fetchall()
+    with connection_pool.get_connection() as connection:
+        with connection.cursor(dictionary=True) as cursor:
+            cursor.execute(query, (start, end))
+            return cursor.fetchall()
 
 
 def get_article_counts(
