@@ -29,7 +29,7 @@ def get_articles_by_day():
     start: str = content.get("from", "2000-01-01")
     end: str = content.get("to", "2050-01-01")
     with db.connection_pool.get_connection() as connection:
-        articles_by_day: list[dict] = db.get_articles_by_day(connection, start, end)
+        articles_by_day: list[dict] = db.get_articles_by_day(start, end)
 
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=articles_by_day[0].keys())
