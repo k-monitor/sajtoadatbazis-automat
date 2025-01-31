@@ -508,7 +508,7 @@ def paginate_query(query: str, page_size: int, page_number: int) -> str:
 
 @cached(cache=TTLCache(maxsize=32, ttl=3600))
 def get_articles_by_day(
-    start: str, end: str, newspaper_id: Optional[int]=None
+    start: str, end: str, newspaper_id: Optional[int] = None
 ) -> list[dict]:
     query = f"""
         SELECT 
