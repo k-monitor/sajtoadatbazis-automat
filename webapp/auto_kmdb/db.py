@@ -507,8 +507,10 @@ def paginate_query(query: str, page_size: int, page_number: int) -> str:
 
 
 @cached(cache=TTLCache(maxsize=32, ttl=3600))
-def get_articles_by_day(start: str, end: str) -> list[dict]:
-    query = """
+def get_articles_by_day(
+    start: str, end: str, newspaper_id: Optional[int]=None
+) -> list[dict]:
+    query = f"""
         SELECT 
             DATE(article_date) AS date, 
             SUM(CASE WHEN (processing_step = 5 AND annotation_label = 1) OR (processing_step = 5 AND annotation_label = 0) OR (classification_label = 1 AND processing_step = 4 AND annotation_label IS NULL AND (skip_reason = 0 OR skip_reason IS NULL)) THEN 1 ELSE 0 END) AS total_count, 
@@ -518,7 +520,7 @@ def get_articles_by_day(start: str, end: str) -> list[dict]:
         FROM 
             autokmdb_news 
         WHERE 
-            article_date BETWEEN %s AND %s 
+            article_date BETWEEN %s AND %s {"AND newspaper_id = %s" if newspaper_id else ""}
         GROUP BY 
             DATE(article_date) 
         ORDER BY 
@@ -527,7 +529,9 @@ def get_articles_by_day(start: str, end: str) -> list[dict]:
 
     with connection_pool.get_connection() as connection:
         with connection.cursor(dictionary=True) as cursor:
-            cursor.execute(query, (start, end))
+            cursor.execute(
+                query, (start, end, newspaper_id) if newspaper_id else (start, end)
+            )
             return cursor.fetchall()
 
 

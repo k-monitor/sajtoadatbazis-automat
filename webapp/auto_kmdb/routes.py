@@ -28,8 +28,9 @@ def get_articles_by_day():
     content: Optional[dict] = request.args
     start: str = content.get("from", "2000-01-01")
     end: str = content.get("to", "2050-01-01")
+    newspaper_id: Optional[int] = content.get("newspaper_id", None)
     with db.connection_pool.get_connection() as connection:
-        articles_by_day: list[dict] = db.get_articles_by_day(start, end)
+        articles_by_day: list[dict] = db.get_articles_by_day(start, end, newspaper_id)
 
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=articles_by_day[0].keys())
@@ -42,6 +43,19 @@ def get_articles_by_day():
         response.headers["Content-Disposition"] = "attachment; filename=data.csv"
 
         return response
+
+
+@api.route("/articles_by_day", methods=["GET"])
+def get_articles_by_day_json():
+    content: Optional[dict] = request.args
+    start: str = content.get("from", "2000-01-01")
+    end: str = content.get("to", "2050-01-01")
+    newspaper_id: Optional[int] = content.get("newspaper_id", None)
+    with db.connection_pool.get_connection() as connection:
+        articles_by_day: list[dict] = db.get_articles_by_day(start, end, newspaper_id)
+        for article in articles_by_day:
+            article["date"] = article["date"].strftime("%Y-%m-%d")
+        return jsonify(articles_by_day), 200
 
 
 @api.route("/article_counts", methods=["POST"])
