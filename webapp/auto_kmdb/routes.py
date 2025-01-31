@@ -54,7 +54,8 @@ def get_articles_by_day_json():
     with db.connection_pool.get_connection() as connection:
         articles_by_day: list[dict] = db.get_articles_by_day(start, end, newspaper_id)
         for article in articles_by_day:
-            article["date"] = article["date"].strftime("%Y-%m-%d")
+            if "date" in article and type(article["date"]) == datetime:
+                article["date"] = article["date"].strftime("%Y-%m-%d")
         return jsonify(articles_by_day), 200
 
 
@@ -331,9 +332,6 @@ def all_labels():
 @api.route("/domains", methods=["GET"])
 def domains():
     session_id: Optional[str] = get_session_id(request)
-    with db.connection_pool.get_connection() as connection:
-        if not db.validate_session(connection, session_id):
-            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
     return (
         jsonify(
