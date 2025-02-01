@@ -51,6 +51,8 @@ request_proxies: dict[str, str] = {
 }
 newspaper_config = newspaper.configuration.Configuration()
 newspaper_config.update(fetch_images=False)
+scraper.proxies.update(request_proxies)
+playwright_proxy = {"server": "socks5://" + proxy_host + ":1080"}
 
 
 def get_custom_text(url: str, html: str) -> Optional[str]:
@@ -209,14 +211,14 @@ def save_article(
 
 def login_24(username: str, password: str) -> dict[str, str]:
     with sync_playwright() as p:
-        browser: Browser = p.firefox.launch()
+        browser: Browser = p.firefox.launch(proxy=playwright_proxy)
         context: BrowserContext = browser.new_context()
         page: Page = context.new_page()
 
         page.goto("https://24.hu/")
         page.locator(".css-1tfx6ee").press("Escape")
 
-        page.get_by_role("link", name="Belépés Regisztráció").click()
+        page.locator("a.m-login__iconBtn").first.click()
 
         page.locator("#landing-email").fill(username)
         page.locator("#btn-next").click()
@@ -239,7 +241,7 @@ def login_24(username: str, password: str) -> dict[str, str]:
 
 def login_444(username: str, password: str) -> dict[str, str]:
     with sync_playwright() as p:
-        browser: Browser = p.firefox.launch()
+        browser: Browser = p.firefox.launch(proxy=playwright_proxy)
         context: BrowserContext = browser.new_context()
         page: Page = context.new_page()
         page.goto("http://444.hu")
@@ -300,6 +302,9 @@ def get_444(url: str, cookies: dict[str, str]) -> str:
             if isinstance(f, dict) and "content" in f
         ]
     )
+    logging.info("444 url: " + url)
+    logging.info("444 text:\n" + text)
+
     return text
 
 
@@ -315,6 +320,9 @@ def get_hvg(webid: str) -> str:
         "A hvg360 tartalma, így a fenti cikk is, olyan érték, ami nem jöhetett volna létre a te előfizetésed nélkül. Ha tetszett az írásunk, akkor oszd meg a minőségi újságírás élményét szeretteiddel is, és ajándékozz hvg360-előfizetést!",
         "",
     )
+    logging.info("hvg webid: " + webid)
+    logging.info("hvg text:\n" + premium_text)
+
     return premium_text
 
 
@@ -351,20 +359,20 @@ class DownloadProcessor(Processor):
         self.cookies: dict[str, str] = {}
 
     def load_model(self):
-        # cookies_24: dict[str, str] = {}
-        # cookies_444: dict[str, str] = {}
-        # try:
-        #     cookies_24 = login_24(os.environ["USER_24"], os.environ["PASS_24"])
-        # except Exception:
-        #     logging.error(traceback.format_exc())
-        #     logging.error("Failed to login to 24.hu")
-        # try:
-        #     cookies_444 = login_444(os.environ["USER_444"], os.environ["PASS_444"])
-        # except Exception:
-        #     logging.error(traceback.format_exc())
-        #     logging.error("Failed to login to 444.hu")
-        # self.cookies: dict[str, str] = {**cookies_24, **cookies_444}
-        # self.done = True
+        cookies_24: dict[str, str] = {}
+        cookies_444: dict[str, str] = {}
+        try:
+            cookies_24 = login_24(os.environ["USER_24"], os.environ["PASS_24"])
+        except Exception:
+            logging.error(traceback.format_exc())
+            logging.error("Failed to login to 24.hu")
+        try:
+            cookies_444 = login_444(os.environ["USER_444"], os.environ["PASS_444"])
+        except Exception:
+            logging.error(traceback.format_exc())
+            logging.error("Failed to login to 444.hu")
+        self.cookies: dict[str, str] = {**cookies_24, **cookies_444}
+        self.done = True
         logging.info("initialized download processor")
 
     def process_next(self) -> None:
