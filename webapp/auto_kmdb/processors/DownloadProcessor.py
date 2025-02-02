@@ -210,22 +210,36 @@ def save_article(
 
 
 def login_24(username: str, password: str) -> dict[str, str]:
+    logging.warning("Logging in to 24.hu with username: " + username)
     with sync_playwright() as p:
         browser: Browser = p.firefox.launch(proxy=playwright_proxy)
         context: BrowserContext = browser.new_context()
         page: Page = context.new_page()
 
         page.goto("https://24.hu/")
+
+        page.wait_for_timeout(200)
+
         page.locator(".css-1tfx6ee").press("Escape")
+
+        page.wait_for_timeout(200)
 
         page.locator("a.m-login__iconBtn").first.click()
 
+        page.wait_for_timeout(200)
+
         page.locator("#landing-email").fill(username)
+        
+        page.wait_for_timeout(1000)
+
         page.locator("#btn-next").click()
 
         page.wait_for_timeout(1000)
 
         page.locator("#password").fill(password)
+
+        page.wait_for_timeout(1000)
+
         page.locator("#kc-login").click()
 
         cookies: List[Cookie] = context.cookies()
@@ -234,6 +248,7 @@ def login_24(username: str, password: str) -> dict[str, str]:
         }
 
         browser.close()
+        logging.info('successfully logged in to 24.hu')
 
     logging.info(cookies_24)
     return cookies_24
@@ -279,6 +294,8 @@ def login_444(username: str, password: str) -> dict[str, str]:
 
         browser.close()
 
+        logging.info('successfully logged in to 444.hu')
+
         cookies_444: dict[str, str] = cookies_dict
 
         return cookies_444
@@ -314,7 +331,9 @@ def get_hvg(webid: str) -> str:
         f"https://api.hvg.hu/web//articles/premiumcontent/?webid={webid}&apiKey=4f67ed9596ac4b11a4b2ac413e7511af",
         headers={"Authorization": "Bearer " + token},
     )
-    soup = BeautifulSoup(response.content, features="lxml")
+    logging.info("hvg response: " + str(response))
+    logging.info("hvg response.json(): " + str(response.json()))
+    soup = BeautifulSoup(response.json(), features="lxml")
     premium_text: str = "\n".join([t.text for t in soup.find_all("p")])
     premium_text: str = premium_text.replace(
         "A hvg360 tartalma, így a fenti cikk is, olyan érték, ami nem jöhetett volna létre a te előfizetésed nélkül. Ha tetszett az írásunk, akkor oszd meg a minőségi újságírás élményét szeretteiddel is, és ajándékozz hvg360-előfizetést!",

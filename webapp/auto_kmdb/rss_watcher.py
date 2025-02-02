@@ -12,7 +12,7 @@ import json
 import cloudscraper
 
 
-scraper = cloudscraper.create_scraper(browser='chrome')
+scraper = cloudscraper.create_scraper(browser="chrome")
 
 
 def load_json_from_file(filename: str) -> dict:
@@ -73,7 +73,11 @@ def get_atv():
 def get_hvg360():
     logging.info("checking hvg360")
     now: str = date.today().strftime("%Y-%m-%d")
-    response = scraper.get(f"https://hvg.hu/cms-control/latest/{now}?skip=0&limit=20")
+    response = requests.get(f"https://hvg.hu/cms-control/latest/{now}?skip=0&limit=20")
+    logging.info(response)
+    logging.info(response.text)
+    logging.info(response.json())
+
     urls_dates = [
         ("https://hvg.hu" + article["url"], article["releaseDateIso"])
         for article in response.json()
