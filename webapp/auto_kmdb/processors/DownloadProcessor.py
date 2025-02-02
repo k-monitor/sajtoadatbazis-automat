@@ -210,6 +210,8 @@ def save_article(
 
 
 def login_24(username: str, password: str) -> dict[str, str]:
+    username = username.strip('"')
+    password = password.strip('"')
     logging.warning("Logging in to 24.hu with username: " + username)
     with sync_playwright() as p:
         browser: Browser = p.firefox.launch(proxy=playwright_proxy)
