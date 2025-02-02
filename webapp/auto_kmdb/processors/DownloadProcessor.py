@@ -232,6 +232,8 @@ def login_24(username: str, password: str) -> dict[str, str]:
         
         page.wait_for_timeout(1000)
 
+        page.screenshot(path="data/screenshot_login_24.png")
+
         page.locator("#btn-next").click()
 
         page.wait_for_timeout(1000)
