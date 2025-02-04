@@ -214,7 +214,7 @@ def login_24(username: str, password: str) -> dict[str, str]:
     password = password.strip('"')
     logging.warning("Logging in to 24.hu with username: " + username)
     with sync_playwright() as p:
-        browser: Browser = p.firefox.launch(proxy=playwright_proxy, headless=False)
+        browser: Browser = p.firefox.launch(proxy=playwright_proxy)
         context: BrowserContext = browser.new_context()
         page: Page = context.new_page()
 
@@ -274,7 +274,7 @@ def login_24(username: str, password: str) -> dict[str, str]:
 
 def login_444(username: str, password: str) -> dict[str, str]:
     with sync_playwright() as p:
-        browser: Browser = p.firefox.launch(proxy=playwright_proxy, headless=False)
+        browser: Browser = p.firefox.launch(proxy=playwright_proxy)
         context: BrowserContext = browser.new_context()
         page: Page = context.new_page()
         page.goto("http://444.hu")
