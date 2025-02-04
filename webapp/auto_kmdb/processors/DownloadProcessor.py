@@ -214,25 +214,23 @@ def login_24(username: str, password: str) -> dict[str, str]:
     password = password.strip('"')
     logging.warning("Logging in to 24.hu with username: " + username)
     with sync_playwright() as p:
-        browser: Browser = p.firefox.launch(proxy=playwright_proxy)
+        browser: Browser = p.firefox.launch(proxy=playwright_proxy, headless=False)
         context: BrowserContext = browser.new_context()
         page: Page = context.new_page()
 
         page.goto("https://24.hu/")
 
-        page.wait_for_timeout(200)
-
-        # Close banner if it exists
+        page.wait_for_timeout(1000)
         try:
-            page.get_by_title("Close banner").click()
-            logging.info("Closed banner")
+            page.locator(".css-1tfx6ee").press("Escape")
+            logging.info("Closed cookie")
         except Exception:
             pass
 
-        page.wait_for_timeout(200)
-
+        page.wait_for_timeout(1000)
         try:
-            page.locator(".css-1tfx6ee").press("Escape")
+            page.locator("a.html-overlay-rectangle-preview-close").click()
+            logging.info("Closed banner")
         except Exception:
             pass
 
@@ -276,7 +274,7 @@ def login_24(username: str, password: str) -> dict[str, str]:
 
 def login_444(username: str, password: str) -> dict[str, str]:
     with sync_playwright() as p:
-        browser: Browser = p.firefox.launch(proxy=playwright_proxy)
+        browser: Browser = p.firefox.launch(proxy=playwright_proxy, headless=False)
         context: BrowserContext = browser.new_context()
         page: Page = context.new_page()
         page.goto("http://444.hu")
@@ -299,6 +297,11 @@ def login_444(username: str, password: str) -> dict[str, str]:
         page.add_locator_handler(
             page.get_by_role("button", name="ELFOGADOM", exact=True), handler
         )
+
+        try:
+            page.get_by_role("button", name="ELFOGADOM", exact=True).click()
+        except Exception:
+            pass
 
         page.locator("#frm-signInForm-username").fill(username)
         page.locator("#frm-signInForm-password").fill(password)
