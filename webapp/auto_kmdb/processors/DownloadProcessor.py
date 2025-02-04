@@ -224,11 +224,13 @@ def login_24(username: str, password: str) -> dict[str, str]:
 
         page.locator(".css-1tfx6ee").press("Escape")
 
-        page.wait_for_timeout(200)
+        page.wait_for_timeout(1000)
+
+        page.screenshot(path="data/screenshot_login_btn_24.png")
 
         page.locator("a.m-login__iconBtn").first.click()
 
-        page.wait_for_timeout(200)
+        page.wait_for_timeout(1000)
 
         page.locator("#landing-email").fill(username)
         
@@ -245,6 +247,8 @@ def login_24(username: str, password: str) -> dict[str, str]:
         page.wait_for_timeout(1000)
 
         page.locator("#kc-login").click()
+        page.wait_for_timeout(1000)
+        page.screenshot(path="data/screenshot_login_end_24.png")
 
         cookies: List[Cookie] = context.cookies()
         cookies_24: dict[str, str] = {
@@ -287,9 +291,11 @@ def login_444(username: str, password: str) -> dict[str, str]:
         page.locator("#frm-signInForm-username").fill(username)
         page.locator("#frm-signInForm-password").fill(password)
         page.wait_for_timeout(1000)
+        page.screenshot(path="data/screenshot_login_filled_444.png")
 
         page.locator(".md-filled-button-profile").click()
         page.wait_for_timeout(1000)
+        page.screenshot(path="data/screenshot_login_end_444.png")
 
         cookies: List[Cookie] = context.cookies()
         cookies_dict: dict[str, str] = {
