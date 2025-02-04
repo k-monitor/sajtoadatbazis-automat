@@ -222,7 +222,19 @@ def login_24(username: str, password: str) -> dict[str, str]:
 
         page.wait_for_timeout(200)
 
-        page.locator(".css-1tfx6ee").press("Escape")
+        # Close banner if it exists
+        try:
+            page.get_by_title("Close banner").click()
+            logging.info("Closed banner")
+        except Exception:
+            pass
+
+        page.wait_for_timeout(200)
+
+        try:
+            page.locator(".css-1tfx6ee").press("Escape")
+        except Exception:
+            pass
 
         page.wait_for_timeout(1000)
 
