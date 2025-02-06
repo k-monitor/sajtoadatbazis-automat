@@ -1,4 +1,3 @@
-from http import cookies
 from typing import NamedTuple, List, Optional
 
 from flask.ctx import AppContext
@@ -285,7 +284,7 @@ def login_24(username: str, password: str) -> dict[str, str]:
 def login_magyarnarancs(username: str, password: str):
     username = username.strip('"')
     password = password.strip('"')
-    response = requests.post(
+    response = scraper.post(
         "https://magyarnarancs.hu/?block=User_Login&ajax=1",
         data={
             "login_email": username,
@@ -303,7 +302,7 @@ def login_magyarnarancs(username: str, password: str):
 def login_portfolio(username: str, password: str):
     username = username.strip('"')
     password = password.strip('"')
-    response = requests.post(
+    response = scraper.post(
         "https://profil.portfolio.hu/belepes",
         data={
             "username": username,
@@ -328,6 +327,24 @@ def login_jelen(username: str, password: str):
     )
     if response.status_code < 400:
         logging.info("successfully logged in to jelen.media")
+
+    return response.cookies.get_dict()
+
+
+def login_hang(username: str, password: str):
+    username = username.strip('"')
+    password = password.strip('"')
+    response = scraper.post(
+        "https://hang.hu/?block=User_Login&ajax=1",
+        data={
+            "login_email": username,
+            "login_pwd": password,
+            "login_sbmt": "1",
+            "stayLogin": "1",
+        },
+    )
+    if response.status_code < 400:
+        logging.info("successfully logged in to hang.hu")
 
     return response.cookies.get_dict()
 
@@ -470,6 +487,7 @@ class DownloadProcessor(Processor):
         cookies_magyarnarancs: dict[str, str] = {}
         cookies_portfolio: dict[str, str] = {}
         cookies_jelen: dict[str, str] = {}
+        cookies_hang: dict[str, str] = {}
 
         try:
             cookies_24 = login_24(os.environ["USER_24"], os.environ["PASS_24"])
@@ -498,7 +516,7 @@ class DownloadProcessor(Processor):
         except Exception:
             logging.error(traceback.format_exc())
             logging.error("Failed to login to portfolio.hu")
-        
+
         try:
             cookies_jelen = login_jelen(
                 os.environ["USER_JELEN"], os.environ["PASS_JELEN"]
@@ -507,6 +525,12 @@ class DownloadProcessor(Processor):
             logging.error(traceback.format_exc())
             logging.error("Failed to login to jelen.media")
 
+        try:
+            cookies_hang = login_hang(os.environ["USER_HANG"], os.environ["PASS_HANG"])
+        except Exception:
+            logging.error(traceback.format_exc())
+            logging.error("Failed to login to hang.hu")
+
         self.cookies: dict[str, dict[str, str]] = {
             "24.hu": cookies_24,
             "444.hu": cookies_444,
@@ -514,6 +538,7 @@ class DownloadProcessor(Processor):
             "magyarnarancs.hu": cookies_magyarnarancs,
             "portfolio.hu": cookies_portfolio,
             "jelen.media": cookies_jelen,
+            "hang.hu": cookies_hang,
         }
         self.done = True
         logging.info("initialized download processor")
