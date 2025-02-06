@@ -280,6 +280,24 @@ def login_24(username: str, password: str) -> dict[str, str]:
     return cookies_24
 
 
+def login_magyarnarancs(username: str, password: str):
+    username = username.strip('"')
+    password = password.strip('"')
+    response = requests.post(
+        "https://magyarnarancs.hu/?block=User_Login&ajax=1",
+        data={
+            "login_email": username,
+            "login_pwd": password,
+            "login_sbmt": "1",
+            "stayLogin": "1",
+        },
+    )
+    if response.json()["success"]:
+        logging.info("successfully logged in to magyarnarancs.hu")
+
+    return response.cookies.get_dict()
+
+
 def login_444(username: str, password: str) -> dict[str, str]:
     username = username.strip('"')
     password = password.strip('"')
@@ -415,6 +433,7 @@ class DownloadProcessor(Processor):
     def load_model(self):
         cookies_24: dict[str, str] = {}
         cookies_444: dict[str, str] = {}
+        cookies_magyarnarancs: dict[str, str] = {}
         try:
             cookies_24 = login_24(os.environ["USER_24"], os.environ["PASS_24"])
         except Exception:
@@ -425,10 +444,19 @@ class DownloadProcessor(Processor):
         except Exception:
             logging.error(traceback.format_exc())
             logging.error("Failed to login to 444.hu")
+        try:
+            cookies_magyarnarancs = login_magyarnarancs(
+                os.environ["USER_MN"], os.environ["PASS_MN"]
+            )
+        except Exception:
+            logging.error(traceback.format_exc())
+            logging.error("Failed to login to magyarnarancs.hu")
+
         self.cookies: dict[str, dict[str, str]] = {
             "24.hu": cookies_24,
             "444.hu": cookies_444,
             "qubit.hu": cookies_444,
+            "magyarnarancs.hu": cookies_magyarnarancs,
         }
         self.done = True
         logging.info("initialized download processor")
@@ -443,7 +471,7 @@ class DownloadProcessor(Processor):
         try:
             domain: str = next_row["url"].split("/")[2]
             cookies = self.cookies.get(domain, {})
-            html: str = get_html(next_row["url"], cookies if domain != '444.hu' else {})
+            html: str = get_html(next_row["url"], cookies if domain != "444.hu" else {})
             if cookies:
                 logging.info("using cookies for domain: " + domain)
             article_download: ArticleDownload = process_article(
