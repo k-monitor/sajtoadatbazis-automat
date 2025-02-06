@@ -51,6 +51,8 @@ request_proxies: dict[str, str] = {
 }
 newspaper_config = newspaper.configuration.Configuration()
 newspaper_config.update(fetch_images=False)
+scraper.proxies.update(request_proxies)
+playwright_proxy = {"server": "socks5://" + proxy_host + ":1080"}
 
 
 def get_custom_text(url: str, html: str) -> Optional[str]:
@@ -99,9 +101,11 @@ def process_article(
 
     if not skip_paywalled:
         if "Csatlakozz a Körhöz, és olvass tovább!" in article.html:
+            logging.info("found paywalled 444 article")
             text = get_444(url.split("?")[0], cookies)
             is_paywalled = 1
         elif "hvg.hu/360/" in url:
+            logging.info("found paywalled hvg360 article")
             text += "\n" + get_hvg(url.split("/360/")[1].split("?")[0])
             is_paywalled = 1
 
@@ -156,6 +160,7 @@ def process_article(
         "Csatlakozz a Körhöz, és olvass tovább!",
         "A teljes cikket előfizetőink olvashatják el.",
         "A keresett cikk a portfolio.hu hírarchívumához tartozik, melynek olvasása előfizetéses regisztrációhoz kötött.",
+        "Ez a cikk folytatódik, de csak Portfolio Signature előfizetéssel olvasható tovább.",
         "Ez egy remek cikk a nyomtatott Magyar Narancsból, amely online is elérhető.",
         "A cikk innentől csak a Qubit+ előfizetőinek elérhető. Csatlakozz, és olvass tovább!",
     ]
@@ -208,23 +213,61 @@ def save_article(
 
 
 def login_24(username: str, password: str) -> dict[str, str]:
+    username = username.strip('"')
+    password = password.strip('"')
+    logging.warning("Logging in to 24.hu with username: " + username)
     with sync_playwright() as p:
-        browser: Browser = p.firefox.launch()
+        browser: Browser = p.firefox.launch(proxy=playwright_proxy)
         context: BrowserContext = browser.new_context()
         page: Page = context.new_page()
 
         page.goto("https://24.hu/")
-        page.locator(".css-1tfx6ee").press("Escape")
 
-        page.get_by_role("link", name="Belépés Regisztráció").click()
+        page.wait_for_timeout(1000)
+        try:
+            page.locator(".css-1tfx6ee").press("Escape")
+            logging.info("Closed cookie")
+        except Exception:
+            pass
+
+        page.wait_for_timeout(1000)
+        try:
+            page.locator("a.html-overlay-rectangle-preview-close").click()
+            logging.info("Closed banner")
+        except Exception:
+            pass
+
+        page.wait_for_timeout(1000)
+
+        try:
+            page.locator("button#onesignal-slidedown-cancel-button").click()
+            logging.info("Closed notification")
+        except Exception:
+            pass
+
+        page.screenshot(path="data/screenshot_login_btn_24.png")
+
+        page.locator("a.m-login__iconBtn").first.click()
+
+        page.wait_for_timeout(1000)
 
         page.locator("#landing-email").fill(username)
+
+        page.wait_for_timeout(1000)
+
+        page.screenshot(path="data/screenshot_login_24.png")
+
         page.locator("#btn-next").click()
 
         page.wait_for_timeout(1000)
 
         page.locator("#password").fill(password)
+
+        page.wait_for_timeout(1000)
+
         page.locator("#kc-login").click()
+        page.wait_for_timeout(1000)
+        page.screenshot(path="data/screenshot_login_end_24.png")
 
         cookies: List[Cookie] = context.cookies()
         cookies_24: dict[str, str] = {
@@ -232,14 +275,85 @@ def login_24(username: str, password: str) -> dict[str, str]:
         }
 
         browser.close()
+        logging.info("successfully logged in to 24.hu")
 
     logging.info(cookies_24)
     return cookies_24
 
 
+def login_magyarnarancs(username: str, password: str):
+    username = username.strip('"')
+    password = password.strip('"')
+    response = scraper.post(
+        "https://magyarnarancs.hu/?block=User_Login&ajax=1",
+        data={
+            "login_email": username,
+            "login_pwd": password,
+            "login_sbmt": "1",
+            "stayLogin": "1",
+        },
+    )
+    if response.json()["success"]:
+        logging.info("successfully logged in to magyarnarancs.hu")
+
+    return response.cookies.get_dict()
+
+
+def login_portfolio(username: str, password: str):
+    username = username.strip('"')
+    password = password.strip('"')
+    response = scraper.post(
+        "https://profil.portfolio.hu/belepes",
+        data={
+            "username": username,
+            "password": password,
+        },
+    )
+    if response.status_code < 400:
+        logging.info("successfully logged in to protfolio.hu")
+
+    return response.cookies.get_dict()
+
+
+def login_jelen(username: str, password: str):
+    username = username.strip('"')
+    password = password.strip('"')
+    response = scraper.post(
+        "https://elofizetes.jelen.media/bejelentkezes",
+        data={
+            "LoginForm[username]": username,
+            "LoginForm[password]": password,
+        },
+    )
+    if response.status_code < 400:
+        logging.info("successfully logged in to jelen.media")
+
+    return response.cookies.get_dict()
+
+
+def login_hang(username: str, password: str):
+    username = username.strip('"')
+    password = password.strip('"')
+    response = scraper.post(
+        "https://hang.hu/?block=User_Login&ajax=1",
+        data={
+            "login_email": username,
+            "login_pwd": password,
+            "login_sbmt": "1",
+            "stayLogin": "1",
+        },
+    )
+    if response.status_code < 400:
+        logging.info("successfully logged in to hang.hu")
+
+    return response.cookies.get_dict()
+
+
 def login_444(username: str, password: str) -> dict[str, str]:
+    username = username.strip('"')
+    password = password.strip('"')
     with sync_playwright() as p:
-        browser: Browser = p.firefox.launch()
+        browser: Browser = p.firefox.launch(proxy=playwright_proxy)
         context: BrowserContext = browser.new_context()
         page: Page = context.new_page()
         page.goto("http://444.hu")
@@ -263,12 +377,19 @@ def login_444(username: str, password: str) -> dict[str, str]:
             page.get_by_role("button", name="ELFOGADOM", exact=True), handler
         )
 
+        try:
+            page.get_by_role("button", name="ELFOGADOM", exact=True).click()
+        except Exception:
+            pass
+
         page.locator("#frm-signInForm-username").fill(username)
         page.locator("#frm-signInForm-password").fill(password)
         page.wait_for_timeout(1000)
+        page.screenshot(path="data/screenshot_login_filled_444.png")
 
         page.locator(".md-filled-button-profile").click()
         page.wait_for_timeout(1000)
+        page.screenshot(path="data/screenshot_login_end_444.png")
 
         cookies: List[Cookie] = context.cookies()
         cookies_dict: dict[str, str] = {
@@ -276,6 +397,8 @@ def login_444(username: str, password: str) -> dict[str, str]:
         }
 
         browser.close()
+
+        logging.info("successfully logged in to 444.hu")
 
         cookies_444: dict[str, str] = cookies_dict
 
@@ -300,6 +423,9 @@ def get_444(url: str, cookies: dict[str, str]) -> str:
             if isinstance(f, dict) and "content" in f
         ]
     )
+    logging.info("444 url: " + url)
+    logging.info("444 text:\n" + text)
+
     return text
 
 
@@ -309,12 +435,17 @@ def get_hvg(webid: str) -> str:
         f"https://api.hvg.hu/web//articles/premiumcontent/?webid={webid}&apiKey=4f67ed9596ac4b11a4b2ac413e7511af",
         headers={"Authorization": "Bearer " + token},
     )
-    soup = BeautifulSoup(response.content, features="lxml")
+    logging.info("hvg response: " + str(response))
+    logging.info("hvg response.json(): " + str(response.json()))
+    soup = BeautifulSoup(response.json(), features="lxml")
     premium_text: str = "\n".join([t.text for t in soup.find_all("p")])
     premium_text: str = premium_text.replace(
         "A hvg360 tartalma, így a fenti cikk is, olyan érték, ami nem jöhetett volna létre a te előfizetésed nélkül. Ha tetszett az írásunk, akkor oszd meg a minőségi újságírás élményét szeretteiddel is, és ajándékozz hvg360-előfizetést!",
         "",
     )
+    logging.info("hvg webid: " + webid)
+    logging.info("hvg text:\n" + premium_text)
+
     return premium_text
 
 
@@ -348,23 +479,68 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
 class DownloadProcessor(Processor):
     def __init__(self) -> None:
         logging.info("initialized download processor")
-        self.cookies: dict[str, str] = {}
+        self.cookies: dict[str, dict[str, str]] = {}
 
     def load_model(self):
-        # cookies_24: dict[str, str] = {}
-        # cookies_444: dict[str, str] = {}
-        # try:
-        #     cookies_24 = login_24(os.environ["USER_24"], os.environ["PASS_24"])
-        # except Exception:
-        #     logging.error(traceback.format_exc())
-        #     logging.error("Failed to login to 24.hu")
-        # try:
-        #     cookies_444 = login_444(os.environ["USER_444"], os.environ["PASS_444"])
-        # except Exception:
-        #     logging.error(traceback.format_exc())
-        #     logging.error("Failed to login to 444.hu")
-        # self.cookies: dict[str, str] = {**cookies_24, **cookies_444}
-        # self.done = True
+        cookies_24: dict[str, str] = {}
+        cookies_444: dict[str, str] = {}
+        cookies_magyarnarancs: dict[str, str] = {}
+        cookies_portfolio: dict[str, str] = {}
+        cookies_jelen: dict[str, str] = {}
+        cookies_hang: dict[str, str] = {}
+
+        try:
+            cookies_24 = login_24(os.environ["USER_24"], os.environ["PASS_24"])
+        except Exception:
+            logging.error(traceback.format_exc())
+            logging.error("Failed to login to 24.hu")
+
+        try:
+            cookies_444 = login_444(os.environ["USER_444"], os.environ["PASS_444"])
+        except Exception:
+            logging.error(traceback.format_exc())
+            logging.error("Failed to login to 444.hu")
+
+        try:
+            cookies_magyarnarancs = login_magyarnarancs(
+                os.environ["USER_MN"], os.environ["PASS_MN"]
+            )
+        except Exception:
+            logging.error(traceback.format_exc())
+            logging.error("Failed to login to magyarnarancs.hu")
+
+        try:
+            cookies_portfolio = login_portfolio(
+                os.environ["USER_PORTFOLIO"], os.environ["PASS_PORTFOLIO"]
+            )
+        except Exception:
+            logging.error(traceback.format_exc())
+            logging.error("Failed to login to portfolio.hu")
+
+        try:
+            cookies_jelen = login_jelen(
+                os.environ["USER_JELEN"], os.environ["PASS_JELEN"]
+            )
+        except Exception:
+            logging.error(traceback.format_exc())
+            logging.error("Failed to login to jelen.media")
+
+        try:
+            cookies_hang = login_hang(os.environ["USER_HANG"], os.environ["PASS_HANG"])
+        except Exception:
+            logging.error(traceback.format_exc())
+            logging.error("Failed to login to hang.hu")
+
+        self.cookies: dict[str, dict[str, str]] = {
+            "24.hu": cookies_24,
+            "444.hu": cookies_444,
+            "qubit.hu": cookies_444,
+            "magyarnarancs.hu": cookies_magyarnarancs,
+            "portfolio.hu": cookies_portfolio,
+            "jelen.media": cookies_jelen,
+            "hang.hu": cookies_hang,
+        }
+        self.done = True
         logging.info("initialized download processor")
 
     def process_next(self) -> None:
@@ -375,9 +551,13 @@ class DownloadProcessor(Processor):
             return
         logging.info("download processor is processing: " + next_row["url"])
         try:
-            html: str = get_html(next_row["url"], self.cookies)
+            domain: str = next_row["url"].split("/")[2]
+            cookies = self.cookies.get(domain, {})
+            html: str = get_html(next_row["url"], cookies if domain != "444.hu" else {})
+            if cookies:
+                logging.info("using cookies for domain: " + domain)
             article_download: ArticleDownload = process_article(
-                next_row["url"], html, self.cookies
+                next_row["url"], html, cookies
             )
             save_article(
                 article_download,
