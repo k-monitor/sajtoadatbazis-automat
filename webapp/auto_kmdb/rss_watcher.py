@@ -98,22 +98,36 @@ def get_rss(rssurl):
             )
             pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
         except ValueError:
-            if entry.published.endswith("GMT"):
-                parsed_date = datetime.strptime(
-                    entry.published, "%a, %d %b %Y %H:%M:%S GMT"
-                )
-                pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
-            elif entry.published.endswith("Europe/Budapest"):
-                parsed_date = datetime.strptime(
-                    entry.published, "%a, %d %b %Y %H:%M:%S Europe/Budapest"
-                )
-                parsed_date = parsed_date.replace(tzinfo=ZoneInfo("Europe/Budapest"))
-                pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
-            else:
+            try:
+                if entry.published.endswith("GMT"):
+                    parsed_date = datetime.strptime(
+                        entry.published, "%a, %d %b %Y %H:%M:%S GMT"
+                    )
+                    pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
+
+                elif entry.published.endswith("Europe/Budapest"):
+                    parsed_date = datetime.strptime(
+                        entry.published, "%a, %d %b %Y %H:%M:%S Europe/Budapest"
+                    )
+                    parsed_date = parsed_date.replace(
+                        tzinfo=ZoneInfo("Europe/Budapest")
+                    )
+                    pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
+
+                else:
+                    # NEW: Handle ISO 8601 format (e.g., "2025-01-29T13:41:38.414+01:00")
+                    parsed_date = datetime.fromisoformat(entry.published)
+                    pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
+
+            except ValueError:
                 logging.warning("No parsing for: " + str(entry.published))
+                pub_time = None
+
         except Exception:
             pub_time = None
+
         urls_dates.append((clean_url, pub_time))
+
     return urls_dates
 
 
