@@ -299,6 +299,22 @@ def login_magyarnarancs(username: str, password: str):
     return response.cookies.get_dict()
 
 
+def login_portfolio(username: str, password: str):
+    username = username.strip('"')
+    password = password.strip('"')
+    response = requests.post(
+        "https://profil.portfolio.hu/belepes",
+        data={
+            "username": username,
+            "password": password,
+        },
+    )
+    if response.status_code < 400:
+        logging.info("successfully logged in to protfolio.hu")
+
+    return response.cookies.get_dict()
+
+
 def login_444(username: str, password: str) -> dict[str, str]:
     username = username.strip('"')
     password = password.strip('"')
@@ -435,16 +451,20 @@ class DownloadProcessor(Processor):
         cookies_24: dict[str, str] = {}
         cookies_444: dict[str, str] = {}
         cookies_magyarnarancs: dict[str, str] = {}
+        cookies_portfolio: dict[str, str] = {}
+
         try:
             cookies_24 = login_24(os.environ["USER_24"], os.environ["PASS_24"])
         except Exception:
             logging.error(traceback.format_exc())
             logging.error("Failed to login to 24.hu")
+
         try:
             cookies_444 = login_444(os.environ["USER_444"], os.environ["PASS_444"])
         except Exception:
             logging.error(traceback.format_exc())
             logging.error("Failed to login to 444.hu")
+
         try:
             cookies_magyarnarancs = login_magyarnarancs(
                 os.environ["USER_MN"], os.environ["PASS_MN"]
@@ -453,11 +473,20 @@ class DownloadProcessor(Processor):
             logging.error(traceback.format_exc())
             logging.error("Failed to login to magyarnarancs.hu")
 
+        try:
+            cookies_portfolio = login_portfolio(
+                os.environ["USER_PORTFOLIO"], os.environ["PASS_PORTFOLIO"]
+            )
+        except Exception:
+            logging.error(traceback.format_exc())
+            logging.error("Failed to login to portfolio.hu")
+
         self.cookies: dict[str, dict[str, str]] = {
             "24.hu": cookies_24,
             "444.hu": cookies_444,
             "qubit.hu": cookies_444,
             "magyarnarancs.hu": cookies_magyarnarancs,
+            "portfolio.hu": cookies_portfolio,
         }
         self.done = True
         logging.info("initialized download processor")
