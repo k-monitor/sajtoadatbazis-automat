@@ -101,9 +101,11 @@ def process_article(
 
     if not skip_paywalled:
         if "Csatlakozz a Körhöz, és olvass tovább!" in article.html:
+            logging.info("found paywalled 444 article")
             text = get_444(url.split("?")[0], cookies)
             is_paywalled = 1
         elif "hvg.hu/360/" in url:
+            logging.info("found paywalled hvg360 article")
             text += "\n" + get_hvg(url.split("/360/")[1].split("?")[0])
             is_paywalled = 1
 
@@ -236,6 +238,12 @@ def login_24(username: str, password: str) -> dict[str, str]:
 
         page.wait_for_timeout(1000)
 
+        try:
+            page.locator("button#onesignal-slidedown-cancel-button").click()
+            logging.info("Closed notification")
+        except Exception:
+            pass
+
         page.screenshot(path="data/screenshot_login_btn_24.png")
 
         page.locator("a.m-login__iconBtn").first.click()
@@ -243,7 +251,7 @@ def login_24(username: str, password: str) -> dict[str, str]:
         page.wait_for_timeout(1000)
 
         page.locator("#landing-email").fill(username)
-        
+
         page.wait_for_timeout(1000)
 
         page.screenshot(path="data/screenshot_login_24.png")
@@ -266,7 +274,7 @@ def login_24(username: str, password: str) -> dict[str, str]:
         }
 
         browser.close()
-        logging.info('successfully logged in to 24.hu')
+        logging.info("successfully logged in to 24.hu")
 
     logging.info(cookies_24)
     return cookies_24
@@ -321,7 +329,7 @@ def login_444(username: str, password: str) -> dict[str, str]:
 
         browser.close()
 
-        logging.info('successfully logged in to 444.hu')
+        logging.info("successfully logged in to 444.hu")
 
         cookies_444: dict[str, str] = cookies_dict
 
@@ -417,7 +425,11 @@ class DownloadProcessor(Processor):
         except Exception:
             logging.error(traceback.format_exc())
             logging.error("Failed to login to 444.hu")
-        self.cookies: dict[str, dict[str, str]] = {'24.hu': cookies_24, '444.hu': cookies_444}
+        self.cookies: dict[str, dict[str, str]] = {
+            "24.hu": cookies_24,
+            "444.hu": cookies_444,
+            "qubit.hu": cookies_444,
+        }
         self.done = True
         logging.info("initialized download processor")
 
@@ -431,7 +443,9 @@ class DownloadProcessor(Processor):
         try:
             domain: str = next_row["url"].split("/")[2]
             cookies = self.cookies.get(domain, {})
-            html: str = get_html(next_row["url"], cookies)
+            html: str = get_html(next_row["url"], cookies if domain != '444.hu' else {})
+            if cookies:
+                logging.info("using cookies for domain: " + domain)
             article_download: ArticleDownload = process_article(
                 next_row["url"], html, cookies
             )
