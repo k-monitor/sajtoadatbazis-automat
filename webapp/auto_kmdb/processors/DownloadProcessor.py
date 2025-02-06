@@ -160,6 +160,7 @@ def process_article(
         "Csatlakozz a Körhöz, és olvass tovább!",
         "A teljes cikket előfizetőink olvashatják el.",
         "A keresett cikk a portfolio.hu hírarchívumához tartozik, melynek olvasása előfizetéses regisztrációhoz kötött.",
+        "Ez a cikk folytatódik, de csak Portfolio Signature előfizetéssel olvasható tovább.",
         "Ez egy remek cikk a nyomtatott Magyar Narancsból, amely online is elérhető.",
         "A cikk innentől csak a Qubit+ előfizetőinek elérhető. Csatlakozz, és olvass tovább!",
     ]
