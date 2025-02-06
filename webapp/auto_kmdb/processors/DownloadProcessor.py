@@ -1,3 +1,4 @@
+from http import cookies
 from typing import NamedTuple, List, Optional
 
 from flask.ctx import AppContext
@@ -315,6 +316,22 @@ def login_portfolio(username: str, password: str):
     return response.cookies.get_dict()
 
 
+def login_jelen(username: str, password: str):
+    username = username.strip('"')
+    password = password.strip('"')
+    response = scraper.post(
+        "https://elofizetes.jelen.media/bejelentkezes",
+        data={
+            "LoginForm[username]": username,
+            "LoginForm[password]": password,
+        },
+    )
+    if response.status_code < 400:
+        logging.info("successfully logged in to jelen.media")
+
+    return response.cookies.get_dict()
+
+
 def login_444(username: str, password: str) -> dict[str, str]:
     username = username.strip('"')
     password = password.strip('"')
@@ -452,6 +469,7 @@ class DownloadProcessor(Processor):
         cookies_444: dict[str, str] = {}
         cookies_magyarnarancs: dict[str, str] = {}
         cookies_portfolio: dict[str, str] = {}
+        cookies_jelen: dict[str, str] = {}
 
         try:
             cookies_24 = login_24(os.environ["USER_24"], os.environ["PASS_24"])
@@ -480,6 +498,14 @@ class DownloadProcessor(Processor):
         except Exception:
             logging.error(traceback.format_exc())
             logging.error("Failed to login to portfolio.hu")
+        
+        try:
+            cookies_jelen = login_jelen(
+                os.environ["USER_JELEN"], os.environ["PASS_JELEN"]
+            )
+        except Exception:
+            logging.error(traceback.format_exc())
+            logging.error("Failed to login to jelen.media")
 
         self.cookies: dict[str, dict[str, str]] = {
             "24.hu": cookies_24,
@@ -487,6 +513,7 @@ class DownloadProcessor(Processor):
             "qubit.hu": cookies_444,
             "magyarnarancs.hu": cookies_magyarnarancs,
             "portfolio.hu": cookies_portfolio,
+            "jelen.media": cookies_jelen,
         }
         self.done = True
         logging.info("initialized download processor")
