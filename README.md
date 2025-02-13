@@ -4,10 +4,21 @@ A [k-monitor sajtóadatbázisának](https://adatbazis.k-monitor.hu/) bővítés�
 
 ## Futtatás
 
+### Élesben
+
 ```bash
 git clone https://github.com/k-monitor/sajtoadatbazis-automat
 cd sajtoadatbazis-automat/webapp
 podman-compose up
+```
+
+### Fejlesztéshez
+
+SSH tunnelek (db és proxy miatt):
+
+```bash
+ssh -N -L 9999:127.0.0.1:3306 -p 2267 kmdb
+ssh -D 1080 -C -N -p 2267 -o PubkeyAcceptedKeyTypes=ssh-rsa -o StrictHostKeyChecking=no -o GatewayPorts=true kmdb
 ```
 
 Backend elindítása fejlesztéshez:
