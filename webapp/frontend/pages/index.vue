@@ -345,6 +345,7 @@ async function handleAddUrl(newUrl, selectedDomain) {
   <div>
     <UContainer class="my-1 justify-between flex flex-wrap lg:px-0 px-4 sm:px-0 ml-1 max-w-full items-center">
       <PageTitle :baseUrl="baseUrl" />
+      <a href="./stats"><Icon title="Statisztikák" name="mdi:chart-arc" size="30" style="color:rgb(34 197 94 / 1);"></Icon></a>
       <UContainer class="my-1 flex lg:px-0 px-2 sm:px-0 ml-auto mr-1 flex-wrap">
         <NuxtLink to="/new-page">
           <UButton class="mr-1 h-fit my-1">Új cikk</UButton>
