@@ -15,5 +15,5 @@ scripts/*.csv
 auto_kmdb.env
 webapp/data/*.joblib
 webapp/data/log.txt
-**.env*
+**.env
 data/data.jsonl.gz
