@@ -240,7 +240,7 @@ function refreshAll() {
 
 function updateSelectedDomains(newDomains) {
   selectedDomains.value = newDomains;
-  updateURL();
+  resetPageRefresh();
 }
 
 function updateSelectedDateRange(newRange) {
@@ -300,7 +300,7 @@ async function deleteArticles(reason) {
     }
   }
   loadingDelete.value = false;
-  resetPageRefresh();
+  // resetPageRefresh();
 }
 
 async function handleAddUrl(newUrl, selectedDomain) {
