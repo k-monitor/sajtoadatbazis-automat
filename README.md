@@ -9,6 +9,7 @@ A [k-monitor sajtóadatbázisának](https://adatbazis.k-monitor.hu/) bővítés�
 ```bash
 git clone https://github.com/k-monitor/sajtoadatbazis-automat
 cd sajtoadatbazis-automat/webapp
+cp data/.env.example data/.env
 podman-compose up
 ```
 
