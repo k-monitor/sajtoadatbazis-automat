@@ -1,0 +1,3 @@
+  10 1 * * * /home/autokmdb/sajtoadatbazis-automat/webapp/down.sh
+  10 5 * * * /home/autokmdb/sajtoadatbazis-automat/webapp/up.sh
+  0  8 * * 6 /home/autokmdb/sajtoadatbazis-automat/dataset/update/update_datasets.sh
