@@ -301,6 +301,7 @@ async function deleteArticles(reason) {
   }
   loadingDelete.value = false;
   // resetPageRefresh();
+  refreshAll();
 }
 
 async function handleAddUrl(newUrl, selectedDomain) {
