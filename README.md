@@ -4,15 +4,49 @@ A [k-monitor sajtóadatbázisának](https://adatbazis.k-monitor.hu/) bővítés�
 
 ## Futtatás
 
+### Élesben
+
 ```bash
 git clone https://github.com/k-monitor/sajtoadatbazis-automat
 cd sajtoadatbazis-automat/webapp
-docker-compose up
+cp data/.env.example data/.env
+podman-compose up
 ```
 
+### Fejlesztéshez
+
+SSH tunnelek (db és proxy miatt):
+
 ```bash
+ssh -N -L 9999:127.0.0.1:3306 -p 2267 kmdb
+ssh -D 1080 -C -N -p 2267 -o PubkeyAcceptedKeyTypes=ssh-rsa -o StrictHostKeyChecking=no -o GatewayPorts=true kmdb
+```
+
+Backend elindítása fejlesztéshez:
+
+```bash
+apt install wget git gcc g++
+
 cd webapp
-wget 'https://huggingface.co/K-Monitor/kmdb_classification_category_v2/resolve/main/svm_classifier_category.joblib?download=true' -O data/svm_classifier_category.joblib
+
+wget 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTJLsof1CkRQ4hkw_bPSxtbpk5mo1ucUN0iUvZHHEd2SySJLrGOEsGPSbdsQ1JPJOy2ksgvJVPVxuTw/pub?gid=1567624346&single=true&output=csv' -O data/places_synonym.csv
+wget 'https://docs.google.com/spreadsheets/d/e/2PACX-1vTJLsof1CkRQ4hkw_bPSxtbpk5mo1ucUN0iUvZHHEd2SySJLrGOEsGPSbdsQ1JPJOy2ksgvJVPVxuTw/pub?gid=1205893612&single=true&output=csv' -O data/institutions_synonym.csv
+
+pip install pip==23.3.2
+pip install -r requirements.txt
+
+playwright install-deps
+playwright install firefox
+
+python -m auto_kmdb
+```
+
+Frontend elindítása fejlesztéshez:
+
+```bash
+cd webapp/frontend
+npm install
+npm run dev
 ```
 
 További info: [wiki](https://github.com/k-monitor/sajtoadatbazis-automat/wiki)

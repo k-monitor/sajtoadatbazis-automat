@@ -1,4 +1,4 @@
-import time
+import re
 from typing import Any, Optional
 import feedparser
 from auto_kmdb import db
@@ -148,7 +148,7 @@ def get_new_from_rss(newspaper):
         with db.connection_pool.get_connection() as connection:
             if not db.check_url_exists(connection, clean_url) and not skip_url(
                 clean_url
-            ):
+            ) and not re.fullmatch(r'.*\/\d{4}\/\d{2}', clean_url):
                 db.init_news(
                     connection,
                     "rss",

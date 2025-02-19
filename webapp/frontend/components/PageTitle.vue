@@ -1,7 +1,7 @@
 <template>
     <div>
         <div id="panHeader"></div>
-        <h1 id="page-title" class="text-2xl font-bold mx-5 select-none" @click="handleClick">autokmdb</h1>
+        <h1 id="page-title" class="text-2xl font-bold ml-5 mr-3 select-none" @click="handleClick">autokmdb</h1>
     </div>
 </template>
 

@@ -83,6 +83,23 @@ title_papers = [
     " | hvg.hu",
     "Index - ",
     " - NOL.hu",
+    "Szeged.hu - ",
+    "DELMAGYAR - ",
+    " - Világgazdaság",
+    " « Mérce",
+    " - Alfahir.hu",
+    " - G7 - Gazdasági sztorik érthetően",
+    " - Forbes.hu",
+    "hvg360 - ",
+    " - Válasz Online",
+    "HAON - ",
+    "TEOL - ",
+    " | Media1"
+    " | Magyar Narancs",
+    " | Makói Csípős",
+    "SONLINE - ",
+    " | Jelen",
+    "SZON - ",
 ]
 
 replacements = [
