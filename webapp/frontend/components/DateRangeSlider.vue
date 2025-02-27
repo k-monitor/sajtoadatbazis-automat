@@ -1,0 +1,104 @@
+<template>
+  <div class="range-container">
+    <div class="inputs">
+      <input
+        type="range"
+        :value="startIndex"
+        @input="
+          $emit('update:startIndex', ($event.target as HTMLInputElement).value)
+        "
+        :min="0"
+        :max="max"
+        class="range-input start"
+        @change="$emit('update')"
+      />
+      <input
+        type="range"
+        :value="endIndex"
+        @input="
+          $emit('update:endIndex', ($event.target as HTMLInputElement).value)
+        "
+        :min="0"
+        :max="max"
+        class="range-input end"
+        @change="$emit('update')"
+      />
+    </div>
+    <div class="date-labels">
+      <span class="start-date-label">{{ startDate }}</span>
+      <span class="end-date-label">{{ endDate }}</span>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+defineProps<{
+  startIndex: number;
+  endIndex: number;
+  max: number;
+  startDate?: string;
+  endDate?: string;
+}>();
+
+defineEmits<{
+  (e: "update:startIndex", value: string): void;
+  (e: "update:endIndex", value: string): void;
+  (e: "update"): void;
+}>();
+</script>
+
+<style scoped>
+.container {
+  display: flex;
+  flex-direction: row;
+}
+.controls {
+  width: 300px;
+}
+.range-container {
+  position: relative;
+  width: 80%;
+  margin: 20px auto;
+}
+
+.range-input {
+  position: absolute;
+  width: 100%;
+  pointer-events: none;
+  appearance: none;
+  height: 0px;
+  border: none;
+  background: none;
+}
+.range-input::before {
+  content: "";
+  display: block;
+  top: -1px;
+  z-index: -1;
+  position: absolute;
+  height: 0px;
+  width: 100%;
+  border-bottom: solid #000 !important;
+}
+
+.range-input::-webkit-slider-thumb {
+  pointer-events: auto;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: #a2a2a2 1px solid;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.inputs {
+  display: flex;
+}
+.date-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 20px;
+}
+</style>
