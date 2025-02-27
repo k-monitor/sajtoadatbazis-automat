@@ -9,8 +9,8 @@ export function useDateRange(data: Ref<DataRow[]>) {
 
 watch(data, (newData) => {
     if (newData.length > 0) {
-        endDate.value = newData[newData.length - 2].date
-        endDateIndex.value = newData.length - 2
+        endDate.value = newData[newData.length - 1].date
+        endDateIndex.value = newData.length - 1
     }
 }, { immediate: true })
   

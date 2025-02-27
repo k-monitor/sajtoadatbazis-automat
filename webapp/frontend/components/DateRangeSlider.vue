@@ -32,14 +32,19 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
-  startIndex: number;
-  endIndex: number;
-  max: number;
-  startDate?: string;
-  endDate?: string;
-}>();
-
+withDefaults(
+  defineProps<{
+    startIndex: number;
+    endIndex: number;
+    max: number;
+    startDate?: string;
+    endDate?: string;
+  }>(),
+  {
+    startIndex: 0,
+    endIndex: 100, // This will be overridden by the v-model binding in stats.vue
+  }
+);
 defineEmits<{
   (e: "update:startIndex", value: string): void;
   (e: "update:endIndex", value: string): void;
@@ -48,13 +53,6 @@ defineEmits<{
 </script>
 
 <style scoped>
-.container {
-  display: flex;
-  flex-direction: row;
-}
-.controls {
-  width: 300px;
-}
 .range-container {
   position: relative;
   width: 80%;
