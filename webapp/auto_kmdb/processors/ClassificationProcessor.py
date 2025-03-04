@@ -90,28 +90,29 @@ class ClassificationProcessor(Processor):
 
     def process_next(self):
         with db.connection_pool.get_connection() as connection:
-            next_row = db.get_classification_queue(connection)
+            next_rows = db.get_classification_queue(connection)
 
-        if next_row is None:
-            sleep(30)
-            return
+        for next_row in next_rows:
+            if next_row is None:
+                sleep(30)
+                return
 
-        logging.info("Processing next classification")
-        text: str = format_article(
-            next_row["title"], next_row["description"], next_row["clean_url"]
-        )
+            logging.info("Processing next classification")
+            text: str = format_article(
+                next_row["title"], next_row["description"], next_row["clean_url"]
+            )
 
-        try:
-            label, score, category = self.predict(text)
-            with db.connection_pool.get_connection() as connection:
-                self._save_classification(connection, next_row, label, score, category)
-        except Exception as e:
-            with db.connection_pool.get_connection() as connection:
-                db.skip_processing_error(connection, next_row["id"])
+            try:
+                label, score, category = self.predict(text)
+                with db.connection_pool.get_connection() as connection:
+                    self._save_classification(connection, next_row, label, score, category)
+            except Exception as e:
+                with db.connection_pool.get_connection() as connection:
+                    db.skip_processing_error(connection, next_row["id"])
 
-            logging.warning(f"Exception during: {next_row['id']}")
-            logging.error(e)
-            logging.error(traceback.format_exc())
+                logging.warning(f"Exception during: {next_row['id']}")
+                logging.error(e)
+                logging.error(traceback.format_exc())
 
         torch.cuda.empty_cache()
         gc.collect()

@@ -257,16 +257,17 @@ class NERProcessor(Processor):
 
     def process_next(self):
         with connection_pool.get_connection() as connection:
-            next_row: dict = get_ner_queue(connection)
-        if next_row is None:
-            sleep(10)
-            return
-        torch.cuda.empty_cache()
-        try:
-            self.do_process(next_row)
-        except Exception as e:
-            skip_processing_error(connection, next_row["id"])
-            logging.warn("exception during: " + str(next_row["id"]))
-            logging.error(e)
-            print(traceback.format_exc())
-            logging.error(traceback.format_exc())
+            next_rows: list = get_ner_queue(connection)
+        for next_row in next_rows:
+            if next_row is None:
+                sleep(10)
+                return
+            torch.cuda.empty_cache()
+            try:
+                self.do_process(next_row)
+            except Exception as e:
+                skip_processing_error(connection, next_row["id"])
+                logging.warn("exception during: " + str(next_row["id"]))
+                logging.error(e)
+                print(traceback.format_exc())
+                logging.error(traceback.format_exc())
