@@ -42,7 +42,7 @@ class ClassificationProcessor(Processor):
         logging.info("Loading classification model")
         self.model = BertForSequenceClassification.from_pretrained(
             "K-Monitor/kmdb_classification_hubert_v2"
-        )
+        ).to(environ.get("DEVICE", "cpu"))
         self.tokenizer = BertTokenizer.from_pretrained(
             "SZTAKI-HLT/hubert-base-cc", max_length=512
         )
@@ -57,7 +57,9 @@ class ClassificationProcessor(Processor):
     def _extract_outputs(self, inputs) -> tuple[ndarray, ndarray]:
         """Extracts logits and CLS embedding from model outputs."""
         output = self.model(**inputs, output_hidden_states=True)
-        cls_embedding: ndarray = output.hidden_states[-1][:, 0, :].squeeze().cpu().numpy()
+        cls_embedding: ndarray = (
+            output.hidden_states[-1][:, 0, :].squeeze().cpu().numpy()
+        )
         return output.logits, cls_embedding
 
     def predict(self, text: str) -> tuple[int, float, int]:
@@ -106,7 +108,9 @@ class ClassificationProcessor(Processor):
             try:
                 label, score, category = self.predict(text)
                 with db.connection_pool.get_connection() as connection:
-                    self._save_classification(connection, next_row, label, score, category)
+                    self._save_classification(
+                        connection, next_row, label, score, category
+                    )
             except Exception as e:
                 with db.connection_pool.get_connection() as connection:
                     db.skip_processing_error(connection, next_row["id"])
