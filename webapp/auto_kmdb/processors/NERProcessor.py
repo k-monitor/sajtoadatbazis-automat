@@ -1,3 +1,4 @@
+from os import environ
 from transformers import pipeline, AutoTokenizer, Pipeline
 from auto_kmdb.db import get_ner_queue, add_auto_person, add_auto_institution
 from auto_kmdb.db import add_auto_place, get_all_persons, get_all_institutions
@@ -92,6 +93,7 @@ class NERProcessor(Processor):
             tokenizer=AutoTokenizer.from_pretrained(
                 "SZTAKI-HLT/hubert-base-cc", model_max_length=512
             ),
+            device=environ.get("DEVICE", "cpu"),
         )
         self.nlp = spacy.load(
             "hu_core_news_lg",

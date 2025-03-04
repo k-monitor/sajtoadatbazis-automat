@@ -1,3 +1,4 @@
+from os import environ
 from typing import Any
 from numpy import ndarray
 from sklearn.svm import SVC
@@ -56,12 +57,12 @@ class ClassificationProcessor(Processor):
     def _extract_outputs(self, inputs) -> tuple[ndarray, ndarray]:
         """Extracts logits and CLS embedding from model outputs."""
         output = self.model(**inputs, output_hidden_states=True)
-        cls_embedding: ndarray = output.hidden_states[-1][:, 0, :].squeeze().numpy()
+        cls_embedding: ndarray = output.hidden_states[-1][:, 0, :].squeeze().cpu().numpy()
         return output.logits, cls_embedding
 
     def predict(self, text: str) -> tuple[int, float, int]:
         logging.info("Running classification prediction")
-        inputs = self._prepare_input(text)
+        inputs = self._prepare_input(text).to(environ.get("DEVICE", "cpu"))
 
         score: float
         label: int
