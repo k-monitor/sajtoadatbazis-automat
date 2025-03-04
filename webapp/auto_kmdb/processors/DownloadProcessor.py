@@ -1,3 +1,4 @@
+from multiprocessing import process
 from typing import NamedTuple, List, Optional
 
 from flask.ctx import AppContext
@@ -545,7 +546,13 @@ class DownloadProcessor(Processor):
 
     def process_next(self) -> None:
         with db.connection_pool.get_connection() as connection:
-            next_row = db.get_download_queue(connection)
+            next_rows: list = db.get_download_queue(connection)
+        if type(next_rows) is not list:
+            next_rows = [next_rows]
+        for next_row in next_rows:
+            self.process_row(next_row)
+
+    def process_row(self, next_row):
         if next_row is None:
             sleep(30)
             return

@@ -23,14 +23,15 @@ class KeywordProcessor(Processor):
 
     def process_next(self):
         with db.connection_pool.get_connection() as connection:
-            next_row = db.get_keyword_queue(connection)
-        if next_row is None:
-            sleep(30)
-            return
-        logging.info("keyword processor next")
-        self.predict()
+            next_rows: list = db.get_keyword_queue(connection)
+        for next_row in next_rows:
+            if next_row is None:
+                sleep(30)
+                return
+            logging.info("keyword processor next")
+            self.predict()
 
-        # TODO
+            # TODO
 
-        with db.connection_pool.get_connection() as connection:
-            db.save_keyword_step(connection, next_row["id"])
+            with db.connection_pool.get_connection() as connection:
+                db.save_keyword_step(connection, next_row["id"])
