@@ -450,11 +450,14 @@ def save_classification_step(
     classification_score: float,
     category: int,
 ) -> None:
+    new_step = 2
+    if classification_label == 0:
+        new_step = 5
     query = """UPDATE autokmdb_news SET classification_label = %s,
-               classification_score = %s, processing_step = 2, category = %s WHERE id = %s"""
+               classification_score = %s, processing_step = %s, category = %s WHERE id = %s"""
     with connection.cursor() as cursor:
         cursor.execute(
-            query, (classification_label, classification_score, category, id)
+            query, (classification_label, classification_score, new_step, category, id)
         )
     connection.commit()
 
@@ -466,7 +469,9 @@ def get_retries_from(connection: PooledMySQLConnection, date: str) -> list[dict]
         return cursor.fetchall()
 
 
-def get_step_queue(connection: PooledMySQLConnection, step: int) -> dict[str, Any]:
+def get_step_queue(
+    connection: PooledMySQLConnection, step: int
+) -> list[dict[str, Any]]:
     fields: dict[int, str] = {
         0: "clean_url AS url, source, newspaper_id",
         1: "title, description, text, source, newspaper_name, clean_url",
@@ -475,29 +480,29 @@ def get_step_queue(connection: PooledMySQLConnection, step: int) -> dict[str, An
         4: "text",
     }
     query: str = f"""SELECT id, {fields[step]} FROM autokmdb_news
-               WHERE processing_step = {step} ORDER BY source DESC, mod_time DESC LIMIT 1"""
+               WHERE processing_step = {step} ORDER BY source DESC, mod_time DESC LIMIT 50"""
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query)
-        return cursor.fetchone()
+        return cursor.fetchall()
 
 
-def get_download_queue(connection: PooledMySQLConnection) -> dict[str, Any]:
+def get_download_queue(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
     return get_step_queue(connection, 0)
 
 
-def get_classification_queue(connection: PooledMySQLConnection) -> dict[str, Any]:
+def get_classification_queue(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
     return get_step_queue(connection, 1)
 
 
-def get_ner_queue(connection: PooledMySQLConnection) -> dict[str, Any]:
+def get_ner_queue(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
     return get_step_queue(connection, 2)
 
 
-def get_keyword_queue(connection: PooledMySQLConnection) -> dict[str, Any]:
+def get_keyword_queue(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
     return get_step_queue(connection, 3)
 
 
-def get_human_queue(connection: PooledMySQLConnection) -> dict[str, Any]:
+def get_human_queue(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
     return get_step_queue(connection, 4)
 
 

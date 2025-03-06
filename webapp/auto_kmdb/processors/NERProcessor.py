@@ -1,3 +1,4 @@
+from os import environ
 from transformers import pipeline, AutoTokenizer, Pipeline
 from auto_kmdb.db import get_ner_queue, add_auto_person, add_auto_institution
 from auto_kmdb.db import add_auto_place, get_all_persons, get_all_institutions
@@ -92,6 +93,7 @@ class NERProcessor(Processor):
             tokenizer=AutoTokenizer.from_pretrained(
                 "SZTAKI-HLT/hubert-base-cc", model_max_length=512
             ),
+            device=environ.get("DEVICE", "cpu"),
         )
         self.nlp = spacy.load(
             "hu_core_news_lg",
@@ -257,16 +259,17 @@ class NERProcessor(Processor):
 
     def process_next(self):
         with connection_pool.get_connection() as connection:
-            next_row: dict = get_ner_queue(connection)
-        if next_row is None:
-            sleep(10)
-            return
-        torch.cuda.empty_cache()
-        try:
-            self.do_process(next_row)
-        except Exception as e:
-            skip_processing_error(connection, next_row["id"])
-            logging.warn("exception during: " + str(next_row["id"]))
-            logging.error(e)
-            print(traceback.format_exc())
-            logging.error(traceback.format_exc())
+            next_rows: list = get_ner_queue(connection)
+        for next_row in next_rows:
+            if next_row is None:
+                sleep(10)
+                return
+            torch.cuda.empty_cache()
+            try:
+                self.do_process(next_row)
+            except Exception as e:
+                skip_processing_error(connection, next_row["id"])
+                logging.warn("exception during: " + str(next_row["id"]))
+                logging.error(e)
+                print(traceback.format_exc())
+                logging.error(traceback.format_exc())
