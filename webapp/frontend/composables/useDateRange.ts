@@ -16,9 +16,6 @@ watch(data, (newData) => {
   
 
   const filteredData = computed(() => {
-    
-    console.log(data.value[data.value.length-2]);
-    
 
     if (!endDate.value) return data.value
 
@@ -30,15 +27,14 @@ watch(data, (newData) => {
   })
 
   const updateDateRange = () => {
-    if (parseInt(startDateIndex.value) > parseInt(endDateIndex.value)) {
+    if (startDateIndex.value > endDateIndex.value) {
       const temp = startDateIndex.value
-      startDateIndex.value = endDateIndex.value
-      endDateIndex.value = temp
+      startDateIndex.value = Number(endDateIndex.value)
+      endDateIndex.value = Number(temp)
     }
 
     startDate.value = data.value[startDateIndex.value]?.date
     endDate.value = data.value[endDateIndex.value]?.date
-    console.log(startDate,endDate);
     
   }
 

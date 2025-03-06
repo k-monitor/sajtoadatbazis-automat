@@ -3,6 +3,7 @@ export interface DataRow {
     count_positive: number;
     count_todo: number;
     count_negative: number;
+    total_count: number;
   }
   
   export interface ChartColors {

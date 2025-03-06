@@ -68,7 +68,7 @@
         v-if="data.length > 0"
         v-model:startIndex="startDateIndex"
         v-model:endIndex="endDateIndex"
-        :max="data.length - 1"
+        :max="data.length"
         :startDate="data[startDateIndex]?.date"
         :endDate="data[endDateIndex]?.date"
         @update="updateDateRange"
@@ -109,23 +109,24 @@ const { startDateIndex, endDateIndex, filteredData, updateDateRange } =
   useDateRange(data);
 
 onMounted(async () => {
-  const response = await fetch("/data.csv");
+  const config = useRuntimeConfig();
+  const response = await fetch(
+    config.public.baseUrl + "/api/articles_by_day.csv"
+  );
   const csv = await response.text();
-  const result = parse<DataRow>(csv, { header: true });
+  const result = parse<DataRow>(csv, { header: true, skipEmptyLines: true });
+  console.log(result.data);
+
   data.value = result.data;
   startDateIndex.value = 0;
-  endDateIndex.value = data.value.length - 1;
+  endDateIndex.value = data.value.length;
   updateDateRange();
 });
 const getCount = (type: "positive" | "todo" | "negative"): number => {
-  const total = filteredData.value.reduce(
-    (sum, row) =>
-      sum +
-      Number(row.count_positive) +
-      Number(row.count_todo) +
-      Number(row.count_negative),
-    0
-  );
+  const total = filteredData.value.reduce((sum, row) => {
+    return sum + Number(row.total_count);
+  }, 0);
+
   const typeCount = filteredData.value.reduce(
     (sum, row) => sum + Number(row[`count_${type}`]),
     0

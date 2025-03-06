@@ -5,7 +5,10 @@
         type="range"
         :value="startIndex"
         @input="
-          $emit('update:startIndex', ($event.target as HTMLInputElement).value)
+          $emit(
+            'update:startIndex',
+            Number(($event.target as HTMLInputElement).value)
+          )
         "
         :min="0"
         :max="max"
@@ -16,7 +19,10 @@
         type="range"
         :value="endIndex"
         @input="
-          $emit('update:endIndex', ($event.target as HTMLInputElement).value)
+          $emit(
+            'update:endIndex',
+            Number(($event.target as HTMLInputElement).value)
+          )
         "
         :min="0"
         :max="max"
@@ -46,8 +52,8 @@ withDefaults(
   }
 );
 defineEmits<{
-  (e: "update:startIndex", value: string): void;
-  (e: "update:endIndex", value: string): void;
+  (e: "update:startIndex", value: number): void;
+  (e: "update:endIndex", value: number): void;
   (e: "update"): void;
 }>();
 </script>
