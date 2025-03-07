@@ -208,7 +208,7 @@ def process_and_accept_article(
     id: int,
     user_id: int,
 ) -> None:
-    query = """UPDATE autokmdb_news SET processing_step = 2, skip_reason = NULL, mod_id = %s, source = 'manual', classification_label = 1 WHERE id = %s;"""
+    query = """UPDATE autokmdb_news SET processing_step = 2, skip_reason = NULL, mod_id = %s, source = 1, classification_label = 1 WHERE id = %s;"""
     with connection.cursor() as cursor:
         cursor.execute(query, (user_id, id))
     connection.commit()

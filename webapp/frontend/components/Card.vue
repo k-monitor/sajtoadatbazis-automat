@@ -66,7 +66,8 @@
           title="Teszt: ez a szám azt mutatja, algoritmusaink szerint mennyire illik a cikk a módszertanba (100% - nagyon, 0% - kevésbé)">
           {{ Math.round(article.classification_score * 100) }}%
         </p>
-        <UButton v-if="article.annotation_label == null" @click="processAndAccept" :loading="accepting" class="">Feldolgoz és átsorol</UButton>
+        <UButton v-if="article.annotation_label == null && article.classification_label == 0" @click="processAndAccept" :loading="accepting" class="">Feldolgoz és átsorol</UButton>
+        <UButton v-if="article.annotation_label == null && article.classification_label == 1" @click="openModal" :loading="isOpening" class="">Szerkesztés</UButton>
         <UButton v-if="article.annotation_label == 1" @click="openModal" :loading="isOpening" class="">Szerkesztés</UButton>
         <UButton v-if="article.annotation_label == 0" @click="openModal" :loading="isOpening" class="">Mégis elfogad</UButton>
       </UContainer>
