@@ -66,13 +66,9 @@
           title="Teszt: ez a szám azt mutatja, algoritmusaink szerint mennyire illik a cikk a módszertanba (100% - nagyon, 0% - kevésbé)">
           {{ Math.round(article.classification_score * 100) }}%
         </p>
-        <UButton v-if="true" @click="openModal" :loading="isOpening" class="">{{
-          article.annotation_label == null
-            ? "Szerkesztés"
-            : article.annotation_label == 0
-              ? "Mégis elfogad"
-              : "Szerkesztés"
-        }}</UButton>
+        <UButton v-if="article.annotation_label == null" @click="processAndAccept" :loading="accepting" class="">Feldolgoz és átsorol</UButton>
+        <UButton v-if="article.annotation_label == 1" @click="openModal" :loading="isOpening" class="">Szerkesztés</UButton>
+        <UButton v-if="article.annotation_label == 0" @click="openModal" :loading="isOpening" class="">Mégis elfogad</UButton>
       </UContainer>
       <div class="flex justify-between">
         <UButton v-if="article.skip_reason >= 1" color="orange" @click="retryArticle">Újra feldolgoz</UButton>
@@ -230,6 +226,16 @@ async function forceAccept() {
   await postUrl(baseUrl + "/api/annote/force_accept", {
     method: "POST",
     body: { id: article.value.id },
+  });
+  refresh();
+  accepting.value = false;
+}
+
+async function processAndAccept() {
+  accepting.value = true;
+  await postUrl(baseUrl + "/api/process_and_accept", {
+    method: "POST",
+    body: { article_id: article.value.id },
   });
   refresh();
   accepting.value = false;

@@ -203,6 +203,17 @@ def get_places_alias(connection: PooledMySQLConnection):
         return list(cursor.fetchall())
 
 
+def process_and_accept_article(
+    connection: PooledMySQLConnection,
+    id: int,
+    user_id: int,
+) -> None:
+    query = """UPDATE autokmdb_news SET processing_step = 2, skip_reason = NULL, mod_id = %s, source = 'manual', classification_label = 1 WHERE id = %s;"""
+    with connection.cursor() as cursor:
+        cursor.execute(query, (user_id, id))
+    connection.commit()
+
+
 def init_news(
     connection: PooledMySQLConnection,
     source: str,

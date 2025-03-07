@@ -180,6 +180,25 @@ def force_accept():
     return jsonify({}), 200
 
 
+@api.route("/process_and_accept", methods=["POST"])
+def process_and_accept():
+    session_id: Optional[str] = get_session_id(request)
+    with db.connection_pool.get_connection() as connection:
+        user_id = db.validate_session(connection, session_id)
+        if not user_id:
+            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    content: Optional[dict] = request.json
+
+    if not content:
+        return jsonify({}), 400
+
+    with db.connection_pool.get_connection() as connection:
+        article_id: int = content["article_id"]
+        db.process_and_accept_article(connection, article_id, user_id)
+        return jsonify({}), 200
+
+
 @api.route("/annote/positive", methods=["POST"])
 @api.route("/change/positive", methods=["POST"])
 @api.route("/edit/positive", methods=["POST"])
