@@ -1,0 +1,1 @@
+CREATE INDEX idx_news_url ON autokmdb_news (clean_url);
