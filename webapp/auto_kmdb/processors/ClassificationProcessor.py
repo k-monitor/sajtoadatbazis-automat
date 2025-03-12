@@ -3,6 +3,7 @@ from typing import Any
 from numpy import ndarray
 from sklearn.svm import SVC
 from transformers.tokenization_utils_base import BatchEncoding
+from huggingface_hub import hf_hub_download
 from auto_kmdb.processors import Processor
 from time import sleep
 from transformers import (
@@ -46,7 +47,12 @@ class ClassificationProcessor(Processor):
         self.tokenizer = BertTokenizer.from_pretrained(
             "SZTAKI-HLT/hubert-base-cc", max_length=512
         )
-        self.svm_classifier = load("data/svm_classifier_category.joblib")
+        self.svm_classifier = load(
+            hf_hub_download(
+                repo_id="K-Monitor/kmdb_classification_category_v2",
+                filename="svm_classifier_category.joblib",
+            )
+        )
         self.done = True
         logging.info("Classification model loaded")
 
