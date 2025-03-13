@@ -424,8 +424,6 @@ def get_444(url: str, cookies: dict[str, str]) -> str:
             if isinstance(f, dict) and "content" in f
         ]
     )
-    logging.info("444 url: " + url)
-    logging.info("444 text:\n" + text)
 
     return text
 
@@ -436,16 +434,12 @@ def get_hvg(webid: str) -> str:
         f"https://api.hvg.hu/web//articles/premiumcontent/?webid={webid}&apiKey=4f67ed9596ac4b11a4b2ac413e7511af",
         headers={"Authorization": "Bearer " + token},
     )
-    logging.info("hvg response: " + str(response))
-    logging.info("hvg response.json(): " + str(response.json()))
     soup = BeautifulSoup(response.json(), features="lxml")
     premium_text: str = "\n".join([t.text for t in soup.find_all("p")])
     premium_text: str = premium_text.replace(
         "A hvg360 tartalma, így a fenti cikk is, olyan érték, ami nem jöhetett volna létre a te előfizetésed nélkül. Ha tetszett az írásunk, akkor oszd meg a minőségi újságírás élményét szeretteiddel is, és ajándékozz hvg360-előfizetést!",
         "",
     )
-    logging.info("hvg webid: " + webid)
-    logging.info("hvg text:\n" + premium_text)
 
     return premium_text
 
@@ -472,8 +466,8 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
                 row["source"],
                 row["id"],
             )
-        except Exception:
-            logging.error(traceback.format_exc())
+        except Exception as e:
+            logging.error(e)
         sleep(3)
 
 
