@@ -16,4 +16,7 @@ auto_kmdb.env
 webapp/data/*.joblib
 webapp/data/log.txt
 **.env
-data/data.jsonl.gz
+webapp/data/data.jsonl.gz
+.env.prod
+webapp/data/screenshot_login*
+.yarn/*

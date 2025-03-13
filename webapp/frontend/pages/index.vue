@@ -221,6 +221,41 @@ let itemsCount = computed(() =>
   articleQuery.value == null ? null : pages.value * 10
 );
 
+const groupedArticles = computed(() => {
+  if (!articles.value) return [];
+  
+  // Group articles by their date
+  const groups = {};
+  articles.value.forEach(article => {
+    // Parse the date from the format "Fri, 07 Mar 2025 10:09:27 GMT"
+    if (!article.date) return;
+    
+    const dateObj = new Date(article.date);
+    // Format as YYYY-MM-DD for grouping
+    const dateKey = dateObj.toISOString().split('T')[0];
+
+    if (!groups[dateKey]) {
+      groups[dateKey] = [];
+    }
+    groups[dateKey].push(article);
+  });
+  
+  // Sort date keys in descending order (newest first)
+  const sortedDates = Object.keys(groups).sort((a, b) => new Date(b) - new Date(a));
+  
+  // Convert to array of objects with date and articles
+  return sortedDates.map(dateKey => ({
+    date: dateKey,
+    articles: groups[dateKey],
+    // Format the date for display
+    displayDate: new Date(dateKey).toLocaleDateString('hu-HU', {
+      year: 'numeric',
+      month: 'long', 
+      day: 'numeric'
+    })
+  }));
+});
+
 function refresh() {
   updateURL();
   refreshArticles();
@@ -383,9 +418,30 @@ async function handleAddUrl(newUrl, selectedDomain) {
     <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh">
       <template #item="{ item }" v-if="!pending">
         <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @change="refresh" />
-        <Card class="flex justify-center" v-for="article in articles" :key="article.id" :article="article"
-          :allLabels="allLabels" :keywordSynonyms="keywordSynonyms" :allFiles="allFiles" :refresh="refreshAll"
-          @update:filter_newspaper="filterNewspaper" />
+
+        <template v-for="(group, index) in groupedArticles" :key="group.date">
+          <!-- Date separator -->
+          <div class="date-separator my-4 flex items-center">
+            <div class="h-px bg-gray-300 flex-grow mr-4"></div>
+            <div class="text-lg font-semibold text-gray-700">{{ group.displayDate }}</div>
+            <div class="h-px bg-gray-300 flex-grow ml-4"></div>
+          </div>
+
+          <div class="flex flex-col items-center">
+            <Card 
+              v-for="article in group.articles" 
+              :key="article.id" 
+              :article="article" 
+              :allLabels="allLabels" 
+              :keywordSynonyms="keywordSynonyms" 
+              :allFiles="allFiles" 
+              :refresh="refreshAll"
+              @update:filter_newspaper="filterNewspaper" 
+              class="w-full max-w-2xl"
+            />
+          </div>
+        </template>
+
         <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @change="refresh" />
       </template>
       <template #item="{ item }" v-else>
@@ -394,3 +450,9 @@ async function handleAddUrl(newUrl, selectedDomain) {
     </UTabs>
   </div>
 </template>
+
+<style scoped>
+.date-separator {
+  width: 100%;
+}
+</style>

@@ -9,10 +9,17 @@ from datetime import date
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import json
+import os
 import cloudscraper
 
 
 scraper = cloudscraper.create_scraper(browser="chrome")
+proxy_host: str = os.environ["MYSQL_HOST"]
+request_proxies: dict[str, str] = {
+    "http": "socks5h://" + proxy_host + ":1080",
+    "https": "socks5h://" + proxy_host + ":1080",
+}
+scraper.proxies.update(request_proxies)
 
 
 def load_json_from_file(filename: str) -> dict:
@@ -74,9 +81,6 @@ def get_hvg360():
     logging.info("checking hvg360")
     now: str = date.today().strftime("%Y-%m-%d")
     response = requests.get(f"https://hvg.hu/cms-control/latest/{now}?skip=0&limit=20")
-    logging.info(response)
-    logging.info(response.text)
-    logging.info(response.json())
 
     urls_dates = [
         ("https://hvg.hu" + article["url"], article["releaseDateIso"])
@@ -87,7 +91,13 @@ def get_hvg360():
 
 
 def get_rss(rssurl):
-    feed = feedparser.parse(rssurl)
+    try:
+        response = scraper.get(rssurl)
+        feed = feedparser.parse(response.content)
+    except Exception as e:
+        logging.error(f"Error fetching RSS feed {rssurl}: {str(e)}")
+        return []
+
     urls_dates = []
     for entry in feed.entries:
         clean_url = clear_url(entry.link)
