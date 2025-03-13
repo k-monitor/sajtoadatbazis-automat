@@ -224,9 +224,13 @@ let itemsCount = computed(() =>
 const groupedArticles = computed(() => {
   if (!articles.value) return [];
   
-  // Group articles by their date
+  // Separate articles with source=1 from other articles
+  const priorityArticles = articles.value.filter(article => article.source === 1);
+  const regularArticles = articles.value.filter(article => article.source !== 1);
+  
+  // Create groups for regular articles by date
   const groups = {};
-  articles.value.forEach(article => {
+  regularArticles.forEach(article => {
     // Parse the date from the format "Fri, 07 Mar 2025 10:09:27 GMT"
     if (!article.date) return;
     
@@ -244,7 +248,7 @@ const groupedArticles = computed(() => {
   const sortedDates = Object.keys(groups).sort((a, b) => new Date(b) - new Date(a));
   
   // Convert to array of objects with date and articles
-  return sortedDates.map(dateKey => ({
+  const result = sortedDates.map(dateKey => ({
     date: dateKey,
     articles: groups[dateKey],
     // Format the date for display
@@ -254,6 +258,17 @@ const groupedArticles = computed(() => {
       day: 'numeric'
     })
   }));
+  
+  // If there are priority articles, add them at the beginning
+  if (priorityArticles.length > 0) {
+    result.unshift({
+      date: 'priority',
+      articles: priorityArticles,
+      displayDate: 'Kiemelt cikkek'
+    });
+  }
+  
+  return result;
 });
 
 function refresh() {
