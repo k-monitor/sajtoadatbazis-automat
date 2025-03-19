@@ -560,7 +560,9 @@ class DownloadProcessor(Processor):
         try:
             domain: str = next_row["url"].split("/")[2]
             cookies = self.cookies.get(domain, {})
-            html: str = get_html(next_row["url"], cookies if domain != "444.hu" else {})
+            html: str = get_html(
+                next_row["url"], cookies if domain not in ["444.hu", "qubit.hu"] else {}
+            )
             if cookies:
                 logging.info("using cookies for domain: " + domain)
             article_download: ArticleDownload = process_article(
