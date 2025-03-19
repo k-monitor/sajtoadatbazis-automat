@@ -94,7 +94,7 @@ title_papers = [
     " - Válasz Online",
     "HAON - ",
     "TEOL - ",
-    " | Media1"
+    " | Media1",
     " | Magyar Narancs",
     " | Makói Csípős",
     "SONLINE - ",
