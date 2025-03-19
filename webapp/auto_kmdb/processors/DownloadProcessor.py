@@ -25,6 +25,7 @@ from auto_kmdb.newspapers.Telex import Telex
 from auto_kmdb.newspapers.Atv import Atv
 from auto_kmdb.newspapers.Mediaworks import Mediaworks
 from auto_kmdb.newspapers.Hvg import Hvg
+from auto_kmdb.newspapers.Propeller import Propeller
 from datetime import timezone
 import traceback
 from auto_kmdb.newspapers.Newspaper import Newspaper
@@ -44,7 +45,7 @@ class ArticleDownload(NamedTuple):
     same_news_id: Optional[int]
 
 
-newspapers: list[Newspaper] = [Telex(), Atv(), Mediaworks(), Hvg()]
+newspapers: list[Newspaper] = [Telex(), Atv(), Mediaworks(), Hvg(), Propeller()]
 proxy_host: str = os.environ["MYSQL_HOST"]
 request_proxies: dict[str, str] = {
     "http": "socks5h://" + proxy_host + ":1080",

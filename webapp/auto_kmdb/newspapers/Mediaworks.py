@@ -1,3 +1,4 @@
+from typing import Optional
 from auto_kmdb.newspapers.Newspaper import Newspaper
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
@@ -34,6 +35,13 @@ class Mediaworks(Newspaper):
             "metropol.hu",
         ]
 
+    def get_description(self, url: str, html: str) -> Optional[str]:
+        soup = BeautifulSoup(html, "html.parser")
+        lead_p = soup.select_one("p.lead")
+        if lead_p:
+            return lead_p.text
+        return None
+
     def get_text(self, url: str, html: str) -> str:
         soup = BeautifulSoup(html, "html.parser")
         paragraphs = soup.select(
@@ -44,7 +52,7 @@ class Mediaworks(Newspaper):
         for p in paragraphs:
             text_parts = []
             for element in p.contents:
-                if element.name == 'a':
+                if element.name == "a":
                     link_text = element.get_text(strip=True)
                     if link_text:
                         text_parts.append(link_text)
@@ -53,7 +61,7 @@ class Mediaworks(Newspaper):
                     if clean_text:
                         text_parts.append(clean_text)
 
-            combined_text = ' '.join(text_parts)
+            combined_text = " ".join(text_parts)
             if combined_text:
                 parsed_text.append(combined_text)
 
