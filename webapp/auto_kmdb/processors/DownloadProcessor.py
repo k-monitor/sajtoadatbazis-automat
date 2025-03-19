@@ -546,6 +546,12 @@ class DownloadProcessor(Processor):
         for next_row in next_rows:
             self.process_row(next_row)
 
+    def check_short(self, article: ArticleDownload) -> bool:
+        return (
+            not (article.title or article.text or article.description)
+            or len(article.title + article.text + article.description) < 100
+        )
+
     def process_row(self, next_row):
         if next_row is None:
             sleep(30)
@@ -560,6 +566,10 @@ class DownloadProcessor(Processor):
             article_download: ArticleDownload = process_article(
                 next_row["url"], html, cookies
             )
+
+            if self.check_short(article_download):
+                logging.warning("Article downloaded is too short: " + next_row["url"])
+
             save_article(
                 article_download,
                 next_row["newspaper_id"],
