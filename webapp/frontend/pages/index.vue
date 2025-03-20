@@ -244,11 +244,27 @@ const groupedArticles = computed(() => {
     groups[dateKey].push(article);
   });
   
-  // Sort date keys in descending order (newest first)
-  const sortedDates = Object.keys(groups).sort((a, b) => new Date(b) - new Date(a));
+  // Sort date keys based on reverseSort flag
+  const sortedDates = Object.keys(groups).sort((a, b) => {
+    // If reverseSort is true, oldest first; if false, newest first
+    return reverseSort.value 
+      ? new Date(a) - new Date(b) 
+      : new Date(b) - new Date(a);
+  });
+  
+  // Sort articles within each date group based on reverseSort flag
+  sortedDates.forEach(dateKey => {
+    groups[dateKey].sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return reverseSort.value 
+        ? dateA - dateB 
+        : dateB - dateA;
+    });
+  });
   
   // Convert to array of objects with date and articles
-  const result = sortedDates.map(dateKey => ({
+  let result = sortedDates.map(dateKey => ({
     date: dateKey,
     articles: groups[dateKey],
     // Format the date for display
@@ -259,8 +275,16 @@ const groupedArticles = computed(() => {
     })
   }));
   
-  // If there are priority articles, add them at the beginning
+  // Always add priority articles at the beginning
   if (priorityArticles.length > 0) {
+    priorityArticles.sort((a, b) => {
+      const dateA = new Date(a.date);
+      const dateB = new Date(b.date);
+      return reverseSort.value 
+        ? dateA - dateB 
+        : dateB - dateA;
+    });
+    
     result.unshift({
       date: 'priority',
       articles: priorityArticles,
