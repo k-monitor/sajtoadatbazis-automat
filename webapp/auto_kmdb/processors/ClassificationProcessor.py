@@ -19,6 +19,45 @@ import torch
 import logging
 import gc
 import traceback
+from chromadb import (
+    Documents,
+    EmbeddingFunction,
+    Embeddings,
+    PersistentClient,
+    Collection,
+    QueryResult,
+)
+import numpy as np
+
+
+class MyEmbeddingFunction(EmbeddingFunction):
+    def __call__(self, input: Documents) -> Embeddings:
+        return [parse_embedding(text) for text in input]
+
+
+def parse_embedding(embedding: str) -> ndarray:
+    return np.array([float(x) for x in embedding.split(",")])
+
+
+def encode_embedding(embedding: ndarray) -> str:
+    return ",".join(str(x) for x in embedding)
+
+
+def find_similar(embedding: ndarray, collection: Collection):
+    result: QueryResult = collection.query([embedding], n_results=10)
+    if not result or not result["distances"]:
+        return None
+    return list(zip(result["ids"][0], result["distances"][0]))
+
+
+chroma_client = PersistentClient(path="data/chroma.db")
+
+chroma_collection = chroma_client.get_or_create_collection(
+    name="my_collection",
+    embedding_function=MyEmbeddingFunction(),
+)
+
+logging.info("ChromaDB collection created")
 
 CATEGORY_MAP: dict[str, int] = {"hungarian-news": 0, "eu-news": 1, "world-news": 2}
 
@@ -68,25 +107,28 @@ class ClassificationProcessor(Processor):
         )
         return output.logits, cls_embedding
 
-    def predict(self, text: str) -> tuple[int, float, int]:
+    def predict(self, text: str) -> tuple[int, float, int, str]:
         logging.info("Running classification prediction")
         inputs = self._prepare_input(text).to(environ.get("DEVICE", "cpu"))
 
         score: float
         label: int
         category: int
+        str_embedding: Optional[str] = None
         with torch.no_grad():
             logits, cls_embedding = self._extract_outputs(inputs)
 
             probabilities = F.softmax(logits[0], dim=-1)
             score = float(probabilities[1])
             label = 1 if score > 0.42 else 0
+            if label == 1:
+                str_embedding = encode_embedding(cls_embedding)
             category = CATEGORY_MAP.get(
                 self.svm_classifier.predict([cls_embedding])[0], 0
             )
 
         del inputs, logits, probabilities
-        return label, score, category
+        return label, score, category, str_embedding
 
     def _save_classification(self, connection, next_row, label, score, category):
         """Saves the classification result to the database."""
@@ -105,6 +147,7 @@ class ClassificationProcessor(Processor):
             if next_row is None:
                 sleep(30)
                 return
+            autokmdb_id = next_row["id"]
 
             logging.info("Processing next classification")
             text: str = format_article(
@@ -112,16 +155,56 @@ class ClassificationProcessor(Processor):
             )
 
             try:
-                label, score, category = self.predict(text)
+                label, score, category, str_embedding = self.predict(text)
+                if label == 1:
+                    cls_embedding = parse_embedding(str_embedding)
+                    similar_result = find_similar(cls_embedding, chroma_collection)
+                    good_results = (
+                        [
+                            (article_id, distance)
+                            for article_id, distance in similar_result
+                            if distance < 100
+                        ]
+                        if similar_result
+                        else []
+                    )
+                    good_results = sorted(
+                        good_results, key=lambda x: x[1], reverse=False
+                    )
+                    # autokmdb_id: new article
+                    # article_id: similar article
+                    for article_id, distance in good_results:
+                        with db.connection_pool.get_connection() as connection:
+                            group_id = db.find_group_by_autokmdb_id(
+                                connection, article_id
+                            )
+                            if group_id:
+                                db.add_article_to_group(
+                                    connection, autokmdb_id, group_id
+                                )
+                            else:
+                                db.add_article_group(connection, article_id)
+                                group_id = db.find_group_by_autokmdb_id(
+                                    connection, article_id
+                                )
+                                db.add_article_to_group(
+                                    connection, autokmdb_id, group_id
+                                )
+                        break  # temporary solution
+                    chroma_collection.add(
+                        documents=[str_embedding],
+                        ids=[str(autokmdb_id)],
+                    )
+
                 with db.connection_pool.get_connection() as connection:
                     self._save_classification(
                         connection, next_row, label, score, category
                     )
             except Exception as e:
                 with db.connection_pool.get_connection() as connection:
-                    db.skip_processing_error(connection, next_row["id"])
+                    db.skip_processing_error(connection, autokmdb_id)
 
-                logging.warning(f"Exception during: {next_row['id']}")
+                logging.warning(f"Exception during: {autokmdb_id}")
                 logging.error(e)
                 logging.error(traceback.format_exc())
 

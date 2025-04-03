@@ -616,6 +616,47 @@ def get_article_counts(
     return article_counts
 
 
+def find_group_by_autokmdb_id(connection, autokmdb_id):
+    query = """
+SELECT group_id
+FROM autokmdb_news_groups
+WHERE autokmdb_news_id = %s;
+"""
+    with connection.cursor() as cursor:
+        cursor.execute(query, (autokmdb_id,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+    return None
+
+
+def add_article_group(connection, autokmdb_id) -> int:
+    query = """
+INSERT INTO autokmdb_news_groups (group_id, autokmdb_news_id, is_main)
+VALUES (
+    (SELECT new_group_id FROM (SELECT COALESCE(MAX(group_id) + 1, 1) AS new_group_id FROM autokmdb_news_groups) AS temp), -- Generate a new group_id using a derived table
+    %s,
+    TRUE
+);
+"""
+    rowid = None
+    with connection.cursor() as cursor:
+        cursor.execute(query, (autokmdb_id,))
+        rowid = cursor.lastrowid
+    connection.commit()
+    return rowid
+
+
+def add_article_to_group(connection, autokmdb_id, group_id):
+    query = """
+INSERT INTO autokmdb_news_groups (group_id, autokmdb_news_id, is_main)
+VALUES (%s, %s, FALSE);
+"""
+    with connection.cursor() as cursor:
+        cursor.execute(query, (group_id, autokmdb_id))
+    connection.commit()
+
+
 def get_article_persons_kmdb(cursor, id) -> list[dict[str, Any]]:
     query = (
         """SELECT news_id, person_id AS id FROM news_persons_link WHERE news_id = %s"""
