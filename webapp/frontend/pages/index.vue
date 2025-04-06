@@ -475,6 +475,7 @@ async function handleAddUrl(newUrl, selectedDomain) {
               :keywordSynonyms="keywordSynonyms" 
               :allFiles="allFiles" 
               :refresh="refreshAll"
+              :is_small="false"
               @update:filter_newspaper="filterNewspaper" 
               class="w-full max-w-2xl"
             />
