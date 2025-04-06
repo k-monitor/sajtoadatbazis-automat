@@ -137,6 +137,9 @@ def api_articles():
         if article_response is None:
             return jsonify({"error": "Hiba a lekérés során!"}), 500
         length, articles = article_response
+        print(articles)
+        articles = db.group_articles(articles)
+        logging.info(f"articles: {articles}")
 
     return jsonify({"pages": ceil(length / 10), "articles": articles}), 200
 

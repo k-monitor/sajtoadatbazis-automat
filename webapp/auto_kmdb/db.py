@@ -519,7 +519,29 @@ def get_human_queue(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
 
 def paginate_query(query: str, page_size: int, page_number: int) -> str:
     offset: int = (page_number - 1) * page_size
-    return query + f" LIMIT {page_size} OFFSET {offset}"
+    inner_query = f"({query} LIMIT {page_size} OFFSET {offset})"
+    return f"""
+    SELECT 
+        articles.id, articles.clean_url AS url, articles.description, articles.title, 
+        articles.source, articles.newspaper_name, articles.newspaper_id, 
+        articles.classification_score, articles.classification_label, 
+        articles.annotation_label, articles.processing_step, articles.skip_reason, 
+        articles.negative_reason, articles.article_date as date, articles.category, 
+        u.name AS mod_name, articles.group_id,
+        ang.autokmdb_news_id, ang.is_main
+    FROM 
+        {inner_query} AS n2
+    LEFT JOIN 
+        autokmdb_news_groups g2 ON n2.id = g2.autokmdb_news_id
+    LEFT JOIN 
+        autokmdb_news_groups ang ON (n2.group_id IS NOT NULL AND n2.group_id = ang.group_id)
+    LEFT JOIN 
+        autokmdb_news articles ON ang.autokmdb_news_id = articles.id
+    LEFT JOIN
+        users u ON articles.mod_id = u.user_id
+    WHERE 
+        articles.id IS NOT NULL
+    """
 
 
 @cached(cache=TTLCache(maxsize=32, ttl=3600))
@@ -644,6 +666,16 @@ VALUES (
         cursor.execute(query, (autokmdb_id,))
         rowid = cursor.lastrowid
     connection.commit()
+
+    group_id = find_group_by_autokmdb_id(connection, autokmdb_id)
+
+    query_set_group_id = """
+UPDATE autokmdb_news SET group_id = %s WHERE id = %s;
+"""
+    with connection.cursor() as cursor:
+        cursor.execute(query_set_group_id, (group_id, autokmdb_id))
+    connection.commit()
+
     return rowid
 
 
@@ -654,6 +686,12 @@ VALUES (%s, %s, FALSE);
 """
     with connection.cursor() as cursor:
         cursor.execute(query, (group_id, autokmdb_id))
+
+    query_set_group_id = """
+UPDATE autokmdb_news SET group_id = %s WHERE id = %s;
+"""
+    with connection.cursor() as cursor:
+        cursor.execute(query_set_group_id, (group_id, autokmdb_id))
     connection.commit()
 
 
@@ -856,6 +894,32 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
         return article
 
 
+def group_articles(articles):
+    """
+    Uses group_id to group articles together.
+    Where group_id is None the article is not in a group.
+    Grouped articles are in a main article's groupedArticles field as a list.
+    Main is determined from is_main field.
+    """
+    grouped_articles: dict[int, list[dict]] = defaultdict(list)
+    for article in articles:
+        group_id = article["group_id"]
+        if group_id is not None:
+            grouped_articles[group_id].append(article)
+
+    for group_id, group in grouped_articles.items():
+        main_article = next((article for article in group if article["is_main"]), None)
+        if main_article:
+            main_article["groupedArticles"] = [
+                article for article in group if article != main_article
+            ]
+    result = [
+        article for article in articles
+        if "groupedArticles" in article or article["group_id"] is None
+    ]
+    return result
+
+
 def get_articles(
     connection: PooledMySQLConnection,
     page: int,
@@ -872,9 +936,10 @@ def get_articles(
     end = end + " 23:59:59"
 
     selection: str = """SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, n.classification_score AS classification_score, n.classification_label AS classification_label, annotation_label, processing_step, skip_reason, negative_reason,
-            CONVERT_TZ(article_date, @@session.time_zone, '+00:00') AS date, category, u.name AS mod_name
+            CONVERT_TZ(article_date, @@session.time_zone, '+00:00') AS date, category, u.name AS mod_name, n.group_id
         FROM autokmdb_news n
         LEFT JOIN users u ON n.mod_id = u.user_id
+        LEFT JOIN autokmdb_news_groups g ON n.id = g.autokmdb_news_id
         """
     group: str = (
         " GROUP BY id ORDER BY source DESC, n.article_date "
@@ -900,6 +965,8 @@ def get_articles(
         domain_list: str = ",".join([str(domain) for domain in domains])
         query += f" AND n.newspaper_id IN ({domain_list})"
 
+    query += " AND (g.is_main = 1 OR g.is_main IS NULL)"
+
     search_tuple = (
         (search_query, search_query, search_query) if search_query != "%%" else ()
     )
@@ -917,7 +984,7 @@ def get_articles(
 
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(
-            "SELECT COUNT(id) FROM autokmdb_news n " + query,
+            "SELECT COUNT(id) FROM autokmdb_news n LEFT JOIN autokmdb_news_groups g ON n.id = g.autokmdb_news_id " + query,
             search_tuple + (start, end) + skip_tuple,
         )
         count: int = cursor.fetchone()["COUNT(id)"]
