@@ -203,6 +203,7 @@ const {
     q: q,
     skip_reason: selectedReasonId,
   },
+  watch: [reverseSort], // Add this line to ensure it re-fetches when reverseSort changes
   onResponse({ request, response, options }) {
     if (response.status == 401) {
       sendLoginError();
@@ -224,6 +225,8 @@ let itemsCount = computed(() =>
 const groupedArticles = computed(() => {
   if (!articles.value) return [];
   
+  console.log("Grouping articles with reverseSort:", reverseSort.value);
+  
   // Separate articles with source=1 from other articles
   const priorityArticles = articles.value.filter(article => article.source === 1);
   const regularArticles = articles.value.filter(article => article.source !== 1);
@@ -231,11 +234,9 @@ const groupedArticles = computed(() => {
   // Create groups for regular articles by date
   const groups = {};
   regularArticles.forEach(article => {
-    // Parse the date from the format "Fri, 07 Mar 2025 10:09:27 GMT"
     if (!article.date) return;
     
     const dateObj = new Date(article.date);
-    // Format as YYYY-MM-DD for grouping
     const dateKey = dateObj.toISOString().split('T')[0];
 
     if (!groups[dateKey]) {
@@ -244,22 +245,26 @@ const groupedArticles = computed(() => {
     groups[dateKey].push(article);
   });
   
-  // Sort date keys based on reverseSort flag
+  // Get the dates and sort them
   const sortedDates = Object.keys(groups).sort((a, b) => {
-    // If reverseSort is true, oldest first; if false, newest first
-    return reverseSort.value 
-      ? new Date(a) - new Date(b) 
-      : new Date(b) - new Date(a);
+    // If reverseSort is true: oldest first (ascending)
+    // If reverseSort is false: newest first (descending)
+    if (reverseSort.value) {
+      return new Date(a).getTime() - new Date(b).getTime(); // Ascending (oldest first)
+    } else {
+      return new Date(b).getTime() - new Date(a).getTime(); // Descending (newest first)
+    }
   });
   
-  // Sort articles within each date group based on reverseSort flag
+  // Sort articles within each date group
   sortedDates.forEach(dateKey => {
     groups[dateKey].sort((a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      // For article ordering within a day, use the same logic
       return reverseSort.value 
-        ? dateA - dateB 
-        : dateB - dateA;
+        ? dateA - dateB  // Oldest first when reverseSort is true
+        : dateB - dateA; // Newest first when reverseSort is false
     });
   });
   
@@ -267,7 +272,6 @@ const groupedArticles = computed(() => {
   let result = sortedDates.map(dateKey => ({
     date: dateKey,
     articles: groups[dateKey],
-    // Format the date for display
     displayDate: new Date(dateKey).toLocaleDateString('hu-HU', {
       year: 'numeric',
       month: 'long', 
@@ -275,11 +279,11 @@ const groupedArticles = computed(() => {
     })
   }));
   
-  // Always add priority articles at the beginning
+  // Add priority articles
   if (priorityArticles.length > 0) {
     priorityArticles.sort((a, b) => {
-      const dateA = new Date(a.date);
-      const dateB = new Date(b.date);
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
       return reverseSort.value 
         ? dateA - dateB 
         : dateB - dateA;
@@ -324,7 +328,7 @@ function updateSelectedDateRange(newRange) {
 
 function updateReverseSort(newValue) {
   reverseSort.value = newValue;
-  updateURL();
+  refresh(); // Call refresh directly to ensure a new fetch happens
 }
 
 function openNewUrl() {
