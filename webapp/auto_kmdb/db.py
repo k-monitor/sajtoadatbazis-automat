@@ -536,7 +536,7 @@ def paginate_query(query: str, page_size: int, page_number: int) -> str:
     LEFT JOIN 
         autokmdb_news_groups ang ON (n2.group_id IS NOT NULL AND n2.group_id = ang.group_id)
     LEFT JOIN 
-        autokmdb_news articles ON ang.autokmdb_news_id = articles.id
+        autokmdb_news articles ON ang.autokmdb_news_id = articles.id OR n2.id = articles.id
     LEFT JOIN
         users u ON articles.mod_id = u.user_id
     WHERE 
@@ -911,10 +911,11 @@ def group_articles(articles):
         main_article = next((article for article in group if article["is_main"]), None)
         if main_article:
             main_article["groupedArticles"] = [
-                article for article in group if article != main_article
+                article for article in group if article["id"] != main_article["id"]
             ]
     result = [
-        article for article in articles
+        article
+        for article in articles
         if "groupedArticles" in article or article["group_id"] is None
     ]
     return result
@@ -984,7 +985,8 @@ def get_articles(
 
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(
-            "SELECT COUNT(id) FROM autokmdb_news n LEFT JOIN autokmdb_news_groups g ON n.id = g.autokmdb_news_id " + query,
+            "SELECT COUNT(id) FROM autokmdb_news n LEFT JOIN autokmdb_news_groups g ON n.id = g.autokmdb_news_id "
+            + query,
             search_tuple + (start, end) + skip_tuple,
         )
         count: int = cursor.fetchone()["COUNT(id)"]
