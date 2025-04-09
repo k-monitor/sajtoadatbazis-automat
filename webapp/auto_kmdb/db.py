@@ -695,6 +695,19 @@ UPDATE autokmdb_news SET group_id = %s WHERE id = %s;
     connection.commit()
 
 
+def pick_out_article(connetion, autokmdb_id, user_id):
+    query = """
+UPDATE autokmdb_news SET source = 1, group_id = NULL, mod_id = %s WHERE id = %s;
+"""
+    query_remove_from_group = """
+DELETE FROM autokmdb_news_groups WHERE autokmdb_news_id = %s;
+    """
+    with connetion.cursor() as cursor:
+        cursor.execute(query, (user_id, autokmdb_id))
+        cursor.execute(query_remove_from_group, (autokmdb_id,))
+    connetion.commit()
+
+
 def get_article_persons_kmdb(cursor, id) -> list[dict[str, Any]]:
     query = (
         """SELECT news_id, person_id AS id FROM news_persons_link WHERE news_id = %s"""

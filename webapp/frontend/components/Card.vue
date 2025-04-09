@@ -47,7 +47,7 @@
       <UBadge v-if="article.source == 1" class="m-1" color="orange">
         manuálisan hozzáadott
       </UBadge>
-      <p class="text-base text-pretty">{{ article.description }}</p>
+      <p v-if="!is_small" class="text-base text-pretty">{{ article.description }}</p>
       <p class="text-base text-right py-1">{{ article.date }}</p>
 
       <div v-if="!is_small">
@@ -87,6 +87,10 @@
         <UButton v-if="article.skip_reason >= 1" color="orange" @click="retryArticle">Újra feldolgoz</UButton>
         <UButton v-if="(article.skip_reason >= 1)" @click="forceAccept" class="ml-auto r-0" color="purple">{{
           "Szerkesztésre küld" }}</UButton>
+      </div>
+      <div class="flex justify-between" v-else>
+        <UButton color="orange" @click="toPool">Poolba</UButton>
+        <UButton @click="pickOut" class="ml-auto r-0" color="purple">Kiszed</UButton>
       </div>
     </div>
 
@@ -184,6 +188,22 @@ import { $authFetch } from "~/auth_fetch";
 
 const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
+
+function toPool() {
+  $authFetch(baseUrl + "/api/annote/to_pool", {
+    method: "POST",
+    body: { id: article.value.id },
+  });
+  refresh();
+}
+
+function pickOut() {
+  $authFetch(baseUrl + "/api/annote/pick_out", {
+    method: "POST",
+    body: { id: article.value.id },
+  });
+  refresh();
+}
 
 function formatDate(apiDateString: string): string {
   const date = new Date(apiDateString);
