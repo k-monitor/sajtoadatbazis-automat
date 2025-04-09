@@ -58,6 +58,7 @@
           :allLabels="allLabels" 
           :keywordSynonyms="keywordSynonyms" 
           :allFiles="allFiles" 
+          :refresh="refresh"
           class="w-full max-w-2xl" />
       </div>
 
@@ -189,22 +190,6 @@ import { $authFetch } from "~/auth_fetch";
 const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
 
-function toPool() {
-  $authFetch(baseUrl + "/api/annote/to_pool", {
-    method: "POST",
-    body: { id: article.value.id },
-  });
-  refresh();
-}
-
-function pickOut() {
-  $authFetch(baseUrl + "/api/annote/pick_out", {
-    method: "POST",
-    body: { id: article.value.id },
-  });
-  refresh();
-}
-
 function formatDate(apiDateString: string): string {
   const date = new Date(apiDateString);
 
@@ -274,6 +259,22 @@ async function processAndAccept() {
   });
   refresh();
   accepting.value = false;
+}
+
+async function toPool() {
+  $authFetch(baseUrl + "/api/annote/to_pool", {
+    method: "POST",
+    body: { id: article.value.id },
+  });
+  refresh();
+}
+
+async function pickOut() {
+  $authFetch(baseUrl + "/api/annote/pick_out", {
+    method: "POST",
+    body: { id: article.value.id },
+  });
+  refresh();
 }
 
 function selected() {
