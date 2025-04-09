@@ -395,6 +395,7 @@ function openModal() {
         const keywords = getKeywords(article.value.text);
         allOthers.value = mapEntities(keywords);
         article.value.original_date = article.value.article_date;
+        article.value.groupedArticles = article.value.original.groupedArticles;
 
         article.value.date = formatDate(article.value.date);
         article.value.article_date = formatDate(article.value.article_date);
