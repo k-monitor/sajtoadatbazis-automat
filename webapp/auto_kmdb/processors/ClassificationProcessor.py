@@ -29,6 +29,8 @@ from chromadb import (
 )
 import numpy as np
 
+SIMILARITY_THRESHOLD = 0.8
+
 
 class MyEmbeddingFunction(EmbeddingFunction):
     def __call__(self, input: Documents) -> Embeddings:
@@ -163,7 +165,7 @@ class ClassificationProcessor(Processor):
                         [
                             (article_id, distance)
                             for article_id, distance in similar_result
-                            if distance < 100
+                            if distance < SIMILARITY_THRESHOLD * 100
                         ]
                         if similar_result
                         else []
