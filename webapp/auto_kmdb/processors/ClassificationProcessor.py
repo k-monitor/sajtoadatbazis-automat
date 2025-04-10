@@ -173,6 +173,7 @@ class ClassificationProcessor(Processor):
                     good_results = sorted(
                         good_results, key=lambda x: x[1], reverse=False
                     )
+                    console.info(f"Found similar articles: {good_results} to {autokmdb_id}")
                     # autokmdb_id: new article
                     # article_id: similar article
                     for article_id, distance in good_results:
