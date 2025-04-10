@@ -41,7 +41,7 @@
             article.newspaper_name }} </UButton>
         <a :href="article.url" target="_blank" class="font-bold text-xl mb-2 ml-1">{{
           article.title
-        }}</a>
+          }}</a>
 
       </p>
       <UBadge v-if="article.source == 1" class="m-1" color="orange">
@@ -49,12 +49,6 @@
       </UBadge>
       <p v-if="!is_small" class="text-base text-pretty">{{ article.description }}</p>
       <p class="text-base text-right py-1">{{ article.date }}</p>
-
-      <div v-if="!is_small">
-        <Card v-for="gArticle in article.groupedArticles" :is_small="true" :article="gArticle" :key="gArticle.id"
-          :allLabels="allLabels" :keywordSynonyms="keywordSynonyms" :allFiles="allFiles" :refresh="refresh"
-          class="w-full max-w-2xl" />
-      </div>
 
       <UContainer v-if="
         article.processing_step >= 4 && article.skip_reason == null && !is_small
@@ -88,10 +82,15 @@
           "Szerkesztésre küld" }}</UButton>
       </div>
       <div class="flex justify-between" v-else>
-        <UButton v-if="!(article.negative_reason == 1 && article.annotation_label == 0)" color="orange" @click="toPool">
+        <UButton v-if="!(article.negative_reason == 1 && article.annotation_label == 0)" color="red" @click="toPool">
           Poolba
         </UButton>
-        <UButton @click="pickOut" class="ml-auto r-0" color="purple">Kiszed</UButton>
+        <UButton @click="pickOut" class="ml-auto r-0" color="green">Kiszed</UButton>
+      </div>
+      <div v-if="!is_small">
+        <Card v-for="gArticle in article.groupedArticles" :is_small="true" :article="gArticle" :key="gArticle.id"
+          :allLabels="allLabels" :keywordSynonyms="keywordSynonyms" :allFiles="allFiles" :refresh="refresh"
+          class="w-full max-w-2xl" />
       </div>
     </div>
 
