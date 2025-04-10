@@ -28,6 +28,7 @@ from chromadb import (
     QueryResult,
 )
 import numpy as np
+from datetime import datetime
 
 SIMILARITY_THRESHOLD = 0.8
 
@@ -46,7 +47,11 @@ def encode_embedding(embedding: ndarray) -> str:
 
 
 def find_similar(embedding: ndarray, collection: Collection):
-    result: QueryResult = collection.query([embedding], n_results=10)
+    now = datetime.now()
+    date = now.strftime("%Y-%m-%d")
+    result: QueryResult = collection.query(
+        [embedding], n_results=10, where={"date": {"$eq": date}}
+    )
     if not result or not result["distances"]:
         return None
     return list(zip(result["ids"][0], result["distances"][0]))
@@ -173,7 +178,10 @@ class ClassificationProcessor(Processor):
                     good_results = sorted(
                         good_results, key=lambda x: x[1], reverse=False
                     )
-                    console.info(f"Found similar articles: {good_results} to {autokmdb_id}")
+                    logging.info(
+                        f"Found similar articles: {good_results} to {autokmdb_id}"
+                    )
+                    print(f"Found similar articles: {good_results} to {autokmdb_id}")
                     # autokmdb_id: new article
                     # article_id: similar article
                     for article_id, distance in good_results:
@@ -194,9 +202,20 @@ class ClassificationProcessor(Processor):
                                     connection, autokmdb_id, group_id
                                 )
                         break  # temporary solution
+                    now = datetime.now()
+                    date = now.strftime("%Y-%m-%d")
+                    domain = ".".join(
+                        next_row["clean_url"].split("/")[2].split(".")[-2:]
+                    )
                     chroma_collection.add(
                         documents=[str_embedding],
                         ids=[str(autokmdb_id)],
+                        metadatas=[
+                            {
+                                "date": date,
+                                "domain": domain,
+                            }
+                        ],
                     )
 
                 with db.connection_pool.get_connection() as connection:
