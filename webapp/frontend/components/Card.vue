@@ -51,14 +51,8 @@
       <p class="text-base text-right py-1">{{ article.date }}</p>
 
       <div v-if="!is_small">
-        <Card v-for="gArticle in article.groupedArticles"
-          :is_small="true"
-          :article="gArticle"
-          :key="gArticle.id"
-          :allLabels="allLabels" 
-          :keywordSynonyms="keywordSynonyms" 
-          :allFiles="allFiles" 
-          :refresh="refresh"
+        <Card v-for="gArticle in article.groupedArticles" :is_small="true" :article="gArticle" :key="gArticle.id"
+          :allLabels="allLabels" :keywordSynonyms="keywordSynonyms" :allFiles="allFiles" :refresh="refresh"
           class="w-full max-w-2xl" />
       </div>
 
@@ -79,10 +73,14 @@
           title="Teszt: ez a szám azt mutatja, algoritmusaink szerint mennyire illik a cikk a módszertanba (100% - nagyon, 0% - kevésbé)">
           {{ Math.round(article.classification_score * 100) }}%
         </p>
-        <UButton v-if="article.annotation_label == null && article.classification_label == 0" @click="processAndAccept" :loading="accepting" class="">Feldolgoz és átsorol</UButton>
-        <UButton v-if="article.annotation_label == null && article.classification_label == 1" @click="openModal" :loading="isOpening" class="">Szerkesztés</UButton>
-        <UButton v-if="article.annotation_label == 1" @click="openModal" :loading="isOpening" class="">Szerkesztés</UButton>
-        <UButton v-if="article.annotation_label == 0" @click="openModal" :loading="isOpening" class="">Mégis elfogad</UButton>
+        <UButton v-if="article.annotation_label == null && article.classification_label == 0" @click="processAndAccept"
+          :loading="accepting" class="">Feldolgoz és átsorol</UButton>
+        <UButton v-if="article.annotation_label == null && article.classification_label == 1" @click="openModal"
+          :loading="isOpening" class="">Szerkesztés</UButton>
+        <UButton v-if="article.annotation_label == 1" @click="openModal" :loading="isOpening" class="">Szerkesztés
+        </UButton>
+        <UButton v-if="article.annotation_label == 0" @click="openModal" :loading="isOpening" class="">Mégis elfogad
+        </UButton>
       </UContainer>
       <div class="flex justify-between" v-if="!is_small">
         <UButton v-if="article.skip_reason >= 1" color="orange" @click="retryArticle">Újra feldolgoz</UButton>
@@ -90,12 +88,14 @@
           "Szerkesztésre küld" }}</UButton>
       </div>
       <div class="flex justify-between" v-else>
-        <UButton color="orange" @click="toPool">Poolba</UButton>
+        <UButton v-if="!(article.negative_reason == 1 && article.annotation_label == 0)" color="orange" @click="toPool">
+          Poolba
+        </UButton>
         <UButton @click="pickOut" class="ml-auto r-0" color="purple">Kiszed</UButton>
       </div>
     </div>
 
-  
+
     <UModal v-model="isOpen" :ui="{ padding: 'p-0 sm:p-4', width: 'sm:max-w-7xl' }">
       <div class="p-4 w-full">
         <div class="my-2 flex justify-center px-0 sm:px-0 lg:px-0 flex-col md:flex-row">
@@ -262,9 +262,9 @@ async function processAndAccept() {
 }
 
 async function toPool() {
-  $authFetch(baseUrl + "/api/annote/to_pool", {
+  await postUrl(baseUrl + "/api/annote/negative", {
     method: "POST",
-    body: { id: article.value.id },
+    body: { id: article.value.id, reason: 1 }, // átvett
   });
   refresh();
 }
