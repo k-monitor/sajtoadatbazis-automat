@@ -30,7 +30,7 @@ from chromadb import (
 import numpy as np
 from datetime import datetime
 
-SIMILARITY_THRESHOLD = 0.8
+SIMILARITY_THRESHOLD = 0.7
 
 
 class MyEmbeddingFunction(EmbeddingFunction):
