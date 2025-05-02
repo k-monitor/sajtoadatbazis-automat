@@ -1,5 +1,5 @@
 <template>
-  <div class="p-4">
+  <div class="p-4" color="gray">
     <div class="max-w-2xl w-full rounded overflow-hidden shadow-lg mb-4 p-4">
       <p class="inline">
         <UBadge class="m-1 inline p-2" color="gray">
@@ -39,8 +39,9 @@
           @click="() => $emit('update:filter_newspaper', { name: article.newspaper_name, id: article.newspaper_id })">
           {{
             article.newspaper_name }} </UButton>
-        <a :href="article.url" target="_blank" class="font-bold text-xl mb-2 ml-1">{{
-          article.title
+        <a :href="article.url" target="_blank" class="font-bold text-xl mb-2 ml-1"
+          :style="article.group_id && article.annotation_label != null ? 'color: #888' : ''">{{
+            article.title
           }}</a>
 
       </p>
@@ -83,7 +84,7 @@
       </div>
       <div class="flex justify-between" v-else>
         <UButton v-if="!(article.negative_reason == 1 && article.annotation_label == 0)" color="red" @click="toPool">
-          Poolba
+          Átvett
         </UButton>
         <UButton @click="pickOut" class="ml-auto r-0" color="green">Kiszed</UButton>
       </div>
