@@ -29,8 +29,100 @@ from chromadb import (
 )
 import numpy as np
 from datetime import datetime
+from google import genai
+from google.genai import types
+from google.genai.types import GenerateContentResponse
 
+USE_GEMINI = environ.get("USE_GEMINI", "false").lower() == "true"
 SIMILARITY_THRESHOLD = 0.7
+GEMINI_MODEL = environ.get("GEMINI_MODEL", "gemini-2.5-flash-preview-04-17")
+
+
+def genai_label(title, description, text):
+    client = genai.Client(
+        api_key=environ.get("GEMINI_API_KEY"),
+    )
+    model = GEMINI_MODEL
+    contents = [
+        types.Content(
+            role="user",
+            parts=[
+                types.Part.from_text(
+                    text=f"""A köetkező a K-Monitor sajtóadatbázisának módszertana, ami alapján majd egy cikkről el kell döntened, hogy illik-e az adatbázisba:
+
+# **Sajtóadatbázis módszertan**
+
+Adatbázisunk ([adatbazis.k-monitor.hu](https://adatbazis.k-monitor.hu/)) könyvtárszerűen gyűjti össze a magyar online-sajtó **korrupcióról**, **közbeszerzésekről**, **közpénzfelhasználásról**, illetve általában a **közélet tisztaságáról**, **átláthatóságáról** szóló, és a konkrét ügyeket, eseteket leíró cikkekre vonatkozó adatokat, melyeket állandó, szigorú módszertan szerint válogatunk és címkézünk.  
+A Sajtóadatbázist 2023-ban közel 450.000 felhasználó látogatta.
+
+# **A címkézés alapelve**
+
+A címkézés célja, hogy az adott cikk a K-Monitor saját, illetve a világháló keresőmotorjai által könnyen megtalálható legyen. Cél: aki felmegy az adatbázisra és adott személyről, intézményről, témakörben keres, az találja meg a korábbi történeteket.
+
+# **Felhasználói fiók**
+
+- Regisztrációdat egy K-Monitor munkatársunk tudja létrehozni és beállítani a hozzá kapcsolódó szükséges hozzáféréseket.  
+- Ha ez megtörtént, itt tudsz belépni: [https://adatbazis.k-monitor.hu/admin.php](https://adatbazis.k-monitor.hu/admin.php)
+
+# **A cikkek kiválasztásának szempontjai**
+
+1. **Konkrét** korrupciós esetet ír le (*Tibi bácsi megvesztegette a záhonyi vámosokat*).  
+2. A **cikk** **szerzője állítja, vagy sugallja**, hogy valaki a ráruházott hatalmat saját maga, vagy egy harmadik fél hasznára fordította (*polgármester a józan ésszel beláthatónál jóval drágábban vásárolt traktort a falunak*).  
+3. A cikk korrupciós ügyben történő **jogi eljárásról** tájékoztat (*vádat emeltek xy képviselővel szemben hűtlen kezelés ügyében*).  
+4. Egy korrupciós **vádat cáfolnak** vagy védekeznek (*én, Tóbiás Szilamér, nem is vagyok korrupt*).  
+5. A következő **témák esetében szabálytalanságok** merülnek fel: közbeszerzés, pártfinanszírozás, pályázatok, kormányzati szerv vagy állami vállalat gazdálkodása, vagyonosodás, juttatások, privatizáció, whistleblowing.   
+6. A következő **kifejezések** közül valamelyik előfordul a cikkben: korrupció, sikkasztás (közszolga által), hűtlen kezelés, vesztegetés, hivatali visszaélés, hatalommal való visszaélés, befolyással üzérkedés, hanyagság, adócsalás, számviteli fegyelem megsértése, protekció, nepotizmus, jogosulatlan gazdasági előny, versenykorlátozás, kartell, whistleblowing/közérdekű bejelentés, közérdekű adatok, átláthatóság.
+
+**Nem kell felvinni**:
+
+* pártközlemény  
+* publicisztika  
+* random mocskolódás (*Matolcsy egy korrupt őrült*)  
+* ha nem saját anyag, hanem más lapra hivatkozik (*... írja az Index*) **és** nincs hozzáadott információ
+
+
+Ez volt a módszertan, most következik a cikk, amiről döntened kell:
+
+{title}
+
+{description}
+
+{text}
+
+Ez volt a cikk, most dönts, hogy illik-e az adatbázisba, a választ sima json formátumban add meg! Ha illik, akkor a label értéke legyen true, ha pedig nem, akkor false."""
+                ),
+            ],
+        ),
+    ]
+    generate_content_config = types.GenerateContentConfig(
+        temperature=0,
+        thinking_config=types.ThinkingConfig(
+            thinking_budget=100,
+        ),
+        response_mime_type="application/json",
+        response_schema=genai.types.Schema(
+            type=genai.types.Type.OBJECT,
+            required=["label"],
+            properties={
+                "label": genai.types.Schema(
+                    type=genai.types.Type.BOOLEAN,
+                ),
+            },
+        ),
+    )
+    response: GenerateContentResponse = client.models.generate_content(
+        model=model,
+        contents=contents,
+        config=generate_content_config,
+    )
+
+    token_counts = {
+        "prompt": response.usage_metadata.prompt_token_count,
+        "response": response.usage_metadata.candidates_token_count,
+        "thinking": response.usage_metadata.thoughts_token_count,
+    }
+
+    return response.parsed["label"], token_counts
 
 
 class MyEmbeddingFunction(EmbeddingFunction):
@@ -114,9 +206,12 @@ class ClassificationProcessor(Processor):
         )
         return output.logits, cls_embedding
 
-    def predict(self, text: str) -> tuple[int, float, int, str]:
+    def predict(
+        self, title: str, description: str, text: str, url: str
+    ) -> tuple[int, float, int, str]:
         logging.info("Running classification prediction")
-        inputs = self._prepare_input(text).to(environ.get("DEVICE", "cpu"))
+        prediction_text: str = format_article(title, description, url)
+        inputs = self._prepare_input(prediction_text).to(environ.get("DEVICE", "cpu"))
 
         score: float
         label: int
@@ -128,6 +223,12 @@ class ClassificationProcessor(Processor):
             probabilities = F.softmax(logits[0], dim=-1)
             score = float(probabilities[1])
             label = 1 if score > 0.42 else 0
+            if label == 1 and USE_GEMINI:
+                google_label, token_counts = genai_label(title, description, text)
+                if google_label:
+                    label = 1
+                else:
+                    label = 0
             if label == 1:
                 str_embedding = encode_embedding(cls_embedding)
             category = CATEGORY_MAP.get(
@@ -157,12 +258,14 @@ class ClassificationProcessor(Processor):
             autokmdb_id = next_row["id"]
 
             logging.info("Processing next classification")
-            text: str = format_article(
-                next_row["title"], next_row["description"], next_row["clean_url"]
-            )
 
             try:
-                label, score, category, str_embedding = self.predict(text)
+                label, score, category, str_embedding = self.predict(
+                    next_row["title"],
+                    next_row["description"],
+                    next_row["text"],
+                    next_row["clean_url"],
+                )
                 if label == 1:
                     cls_embedding = parse_embedding(str_embedding)
                     similar_result = find_similar(cls_embedding, chroma_collection)
