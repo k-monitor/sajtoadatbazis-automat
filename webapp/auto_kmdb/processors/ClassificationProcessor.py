@@ -138,12 +138,15 @@ def encode_embedding(embedding: ndarray) -> str:
     return ",".join(str(x) for x in embedding)
 
 
-def find_similar(embedding: ndarray, collection: Collection):
+def find_similar(embedding: ndarray, collection: Collection, domain: str):
     now = datetime.now()
     date = now.strftime("%Y-%m-%d")
-    result: QueryResult = collection.query(
-        [embedding], n_results=10, where={"date": {"$eq": date}}
+    qfilter = (
+        {"date": {"$eq": date}, "domain": {"$ne": domain}}
+        if domain
+        else {"date": {"$eq": date}}
     )
+    result: QueryResult = collection.query([embedding], n_results=10, where=qfilter)
     if not result or not result["distances"]:
         return None
     return list(zip(result["ids"][0], result["distances"][0]))
@@ -266,9 +269,12 @@ class ClassificationProcessor(Processor):
                     next_row["text"],
                     next_row["clean_url"],
                 )
+                domain = ".".join(next_row["clean_url"].split("/")[2].split(".")[-2:])
                 if label == 1:
                     cls_embedding = parse_embedding(str_embedding)
-                    similar_result = find_similar(cls_embedding, chroma_collection)
+                    similar_result = find_similar(
+                        cls_embedding, chroma_collection, domain
+                    )
                     good_results = (
                         [
                             (article_id, distance)
@@ -307,9 +313,6 @@ class ClassificationProcessor(Processor):
                         break  # temporary solution
                     now = datetime.now()
                     date = now.strftime("%Y-%m-%d")
-                    domain = ".".join(
-                        next_row["clean_url"].split("/")[2].split(".")[-2:]
-                    )
                     chroma_collection.add(
                         documents=[str_embedding],
                         ids=[str(autokmdb_id)],
