@@ -21,4 +21,4 @@ cachetools
 cloudscraper
 chromadb
 datasets==3.1.0
-google-generativeai
+google-genai
