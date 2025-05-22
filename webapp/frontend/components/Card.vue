@@ -84,14 +84,14 @@
       </div>
       <div class="flex justify-between" v-else>
         <UButton v-if="!(article.negative_reason == 1 && article.annotation_label == 0)" color="red" @click="toPool">
-          Átvett
+          Hasonló tartalom
         </UButton>
         <UButton @click="pickOut" class="ml-auto r-0" color="green">Kiszed</UButton>
       </div>
       <div v-if="!is_small">
         <Card v-for="gArticle in article.groupedArticles" :is_small="true" :article="gArticle" :key="gArticle.id"
           :allLabels="allLabels" :keywordSynonyms="keywordSynonyms" :allFiles="allFiles" :refresh="refresh"
-          class="w-full max-w-2xl" />
+          class="w-full max-w-2xl pr-0 pl-8" />
       </div>
     </div>
 
