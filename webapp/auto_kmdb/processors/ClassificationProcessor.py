@@ -142,7 +142,7 @@ def find_similar(embedding: ndarray, collection: Collection, domain: str):
     now = datetime.now()
     date = now.strftime("%Y-%m-%d")
     qfilter = (
-        {"date": {"$eq": date}, "domain": {"$ne": domain}}
+        {"$and": [{"date": {"$eq": date}}, {"domain": {"$ne": domain}}]}
         if domain
         else {"date": {"$eq": date}}
     )
