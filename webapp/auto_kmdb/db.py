@@ -1468,7 +1468,7 @@ def update_session(
 ):
     query = """UPDATE users_sessions SET session_expires = %s WHERE session_id = %s"""
     dt: datetime = datetime.fromtimestamp(unix_timestamp)
-    new_dt: datetime = dt + timedelta(minutes(30))
+    new_dt: datetime = dt + timedelta(minutes=30)
     new_unix_timestamp = int(new_dt.timestamp())
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (new_unix_timestamp, session_id))
