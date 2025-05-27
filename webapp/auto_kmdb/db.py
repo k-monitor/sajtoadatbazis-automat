@@ -517,33 +517,6 @@ def get_human_queue(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
     return get_step_queue(connection, 4)
 
 
-def paginate_query(query: str, page_size: int, page_number: int) -> str:
-    offset: int = (page_number - 1) * page_size
-    inner_query = f"({query} LIMIT {page_size} OFFSET {offset})"
-    return f"""
-    SELECT 
-        articles.id, articles.clean_url AS url, articles.description, articles.title, 
-        articles.source, articles.newspaper_name, articles.newspaper_id, 
-        articles.classification_score, articles.classification_label, 
-        articles.annotation_label, articles.processing_step, articles.skip_reason, 
-        articles.negative_reason, articles.article_date as date, articles.category, 
-        u.name AS mod_name, articles.group_id,
-        ang.autokmdb_news_id, ang.is_main
-    FROM 
-        {inner_query} AS n2
-    LEFT JOIN 
-        autokmdb_news_groups g2 ON n2.id = g2.autokmdb_news_id
-    LEFT JOIN 
-        autokmdb_news_groups ang ON (n2.group_id IS NOT NULL AND n2.group_id = ang.group_id)
-    LEFT JOIN 
-        autokmdb_news articles ON ang.autokmdb_news_id = articles.id OR n2.id = articles.id
-    LEFT JOIN
-        users u ON articles.mod_id = u.user_id
-    WHERE 
-        articles.id IS NOT NULL
-    """
-
-
 @cached(cache=TTLCache(maxsize=32, ttl=3600))
 def get_articles_by_day(
     start: str, end: str, newspaper_id: Optional[int] = None
@@ -909,32 +882,10 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
 
 def group_articles(articles):
     """
-    Uses group_id to group articles together.
-    Where group_id is None the article is not in a group.
-    Grouped articles are in a main article's groupedArticles field as a list.
-    Main is determined from is_main field.
+    This function is no longer needed as the get_articles function now handles grouping internally.
+    Kept for backward compatibility but just returns articles as-is.
     """
-    grouped_articles: dict[int, list[dict]] = defaultdict(list)
-
-    for article in articles:
-        group_id = article["group_id"]
-        if group_id is not None:
-            group_article_ids = [a["id"] for a in grouped_articles[group_id]]
-            if article["id"] not in group_article_ids:
-                grouped_articles[group_id].append(article)
-
-    for group_id, group in grouped_articles.items():
-        main_article = next((article for article in group if article["is_main"]), None)
-        if main_article:
-            main_article["groupedArticles"] = [
-                article for article in group if article["id"] != main_article["id"]
-            ]
-    result = [
-        article
-        for article in articles
-        if "groupedArticles" in article or article["group_id"] is None
-    ]
-    return result
+    return articles
 
 
 def get_articles(
@@ -948,143 +899,111 @@ def get_articles(
     reverse=False,
     skip_reason: int = -1,
 ) -> Optional[tuple[int, list[dict[str, Any]]]]:
-    query: str = ""
     start = start + " 00:00:00"
     end = end + " 23:59:59"
 
-    # Base selection query
-    base_selection: str = """
-        SELECT n.id AS id, clean_url AS url, description, title, source, newspaper_name, newspaper_id, 
-            n.classification_score AS classification_score, n.classification_label AS classification_label, 
-            annotation_label, processing_step, skip_reason, negative_reason,
-            CONVERT_TZ(article_date, @@session.time_zone, '+00:00') AS date, category, 
-            u.name AS mod_name, n.group_id
-        FROM autokmdb_news n
-        LEFT JOIN users u ON n.mod_id = u.user_id
-        LEFT JOIN autokmdb_news_groups g ON n.id = g.autokmdb_news_id
-    """
+    # Build conditions once
+    conditions = []
+    params = []
 
+    # Status condition
     if status == "mixed":
-        query = """WHERE n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND COALESCE(n.skip_reason, 0) = 0"""
+        conditions.append("n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND COALESCE(n.skip_reason, 0) = 0")
     elif status == "positive":
-        query = """WHERE processing_step = 5 AND n.annotation_label = 1"""
+        conditions.append("processing_step = 5 AND n.annotation_label = 1")
     elif status == "negative":
-        query = """WHERE processing_step = 5 AND n.annotation_label = 0"""
+        conditions.append("processing_step = 5 AND n.annotation_label = 0")
     elif status == "processing":
-        query = """WHERE processing_step < 4"""
+        conditions.append("processing_step < 4")
     elif status == "all":
-        query = """WHERE processing_step >= 0"""
+        conditions.append("processing_step >= 0")
     else:
         print("Invalid status provided!")
         return
 
+    # Domain condition
     if domains and domains[0] != -1 and isinstance(domains, list):
-        domain_list: str = ",".join([str(domain) for domain in domains])
-        query += f" AND n.newspaper_id IN ({domain_list})"
+        domain_list = ",".join([str(domain) for domain in domains])
+        conditions.append(f"n.newspaper_id IN ({domain_list})")
 
-    search_tuple = (
-        (search_query, search_query, search_query) if search_query != "%%" else ()
-    )
+    # Search condition
     if search_query != "%%":
-        query += (
-            " AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)"
-        )
+        conditions.append("(n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)")
+        params.extend([search_query, search_query, search_query])
 
-    query += " AND n.article_date BETWEEN %s AND %s"
+    # Date condition
+    conditions.append("n.article_date BETWEEN %s AND %s")
+    params.extend([start, end])
 
-    skip_tuple = ()
+    # Skip reason condition
     if skip_reason != -1:
-        query += " AND n.skip_reason = %s"
-        skip_tuple = (skip_reason,)
+        conditions.append("n.skip_reason = %s")
+        params.append(skip_reason)
 
-    # Create the full base query
-    full_base_query = f"{base_selection} {query}"
-
-    # Create the sort order
+    where_clause = " AND ".join(conditions)
+    
+    # Sort configuration
     sort_order = "ASC" if reverse else "DESC"
-    sort_field = "source DESC, date" if status != "positive" else "date"
-
-    # Create the deduplication query with proper aliases for all derived tables
-    deduplication_query = f"""
-    (
-        SELECT * FROM ({full_base_query}) AS base_query_null
-        WHERE base_query_null.group_id IS NULL
-        
-        UNION
-        
-        SELECT base_query_not_null.* FROM ({full_base_query}) AS base_query_not_null
-        INNER JOIN (
-            SELECT MIN(id) as min_id
-            FROM ({full_base_query}) AS min_id_query
-            WHERE min_id_query.group_id IS NOT NULL
-            GROUP BY min_id_query.group_id
-        ) b ON base_query_not_null.id = b.min_id
-    ) AS deduplicated_results
-    ORDER BY {sort_field} {sort_order}
-    """
+    sort_field = "n.source DESC, n.article_date" if status != "positive" else "n.article_date"
 
     with connection.cursor(dictionary=True) as cursor:
-        # For count query with proper aliases
-        count_query = f"""
-            SELECT COUNT(*) as total_count FROM (
-                SELECT base_query_count1.id FROM ({full_base_query}) AS base_query_count1
-                WHERE base_query_count1.group_id IS NULL
-                
-                UNION
-                
-                SELECT base_query_count2.id FROM ({full_base_query}) AS base_query_count2
-                INNER JOIN (
-                    SELECT MIN(id) as min_id
-                    FROM ({full_base_query}) AS min_id_count_query
-                    WHERE min_id_count_query.group_id IS NOT NULL
-                    GROUP BY min_id_count_query.group_id
-                ) b ON base_query_count2.id = b.min_id
-            ) as deduplicated_articles
+        # Simplified approach: get all matching articles first, then deduplicate in Python
+        base_query = f"""
+            SELECT 
+                n.id, n.clean_url AS url, n.description, n.title, n.source, 
+                n.newspaper_name, n.newspaper_id, n.classification_score, 
+                n.classification_label, n.annotation_label, n.processing_step, 
+                n.skip_reason, n.negative_reason,
+                CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date, 
+                n.category, u.name AS mod_name, n.group_id
+            FROM autokmdb_news n
+            LEFT JOIN users u ON n.mod_id = u.user_id
+            WHERE {where_clause}
+            ORDER BY {sort_field} {sort_order}
         """
 
-        # Calculate how many times we need to repeat the parameters
-        # 3 times for count query and 3 times for the main query
-        param_repeat = 6
-        full_params = search_tuple + (start, end) + skip_tuple
-        all_params = full_params * param_repeat
+        cursor.execute(base_query, params)
+        all_articles = cursor.fetchall()
 
-        cursor.execute(count_query, all_params[: len(full_params) * 3])
-        count: int = cursor.fetchone()["total_count"]
+        # Deduplicate in Python - keep only the first article from each group
+        seen_groups = set()
+        deduplicated_articles = []
+        
+        for article in all_articles:
+            group_key = article['group_id'] if article['group_id'] else f"single_{article['id']}"
+            if group_key not in seen_groups:
+                seen_groups.add(group_key)
+                deduplicated_articles.append(article)
 
-        # Apply pagination directly
-        paginated_query = f"""
-        SELECT * FROM {deduplication_query}
-        LIMIT 10 OFFSET {(page - 1) * 10}
-        """
+        # Count and paginate
+        count = len(deduplicated_articles)
+        start_idx = (page - 1) * 10
+        end_idx = start_idx + 10
+        paginated_articles = deduplicated_articles[start_idx:end_idx]
 
-        # Final query with joins to get all necessary data
-        final_query = f"""
-        SELECT 
-            articles.id, articles.clean_url AS url, articles.description, articles.title, 
-            articles.source, articles.newspaper_name, articles.newspaper_id, 
-            articles.classification_score, articles.classification_label, 
-            articles.annotation_label, articles.processing_step, articles.skip_reason, 
-            articles.negative_reason, articles.article_date as date, articles.category, 
-            u.name AS mod_name, articles.group_id,
-            ang.autokmdb_news_id, ang.is_main
-        FROM 
-            ({paginated_query}) AS n2
-        LEFT JOIN 
-            autokmdb_news_groups g2 ON n2.id = g2.autokmdb_news_id
-        LEFT JOIN 
-            autokmdb_news_groups ang ON (n2.group_id IS NOT NULL AND n2.group_id = ang.group_id)
-        LEFT JOIN 
-            autokmdb_news articles ON ang.autokmdb_news_id = articles.id OR n2.id = articles.id
-        LEFT JOIN
-            users u ON articles.mod_id = u.user_id
-        WHERE 
-            articles.id IS NOT NULL
-        """
+        # Now get grouped articles for each main article that has a group_id
+        articles_with_groups = []
+        for article in paginated_articles:
+            article['groupedArticles'] = []
+            
+            if article['group_id']:
+                # Get other articles in the same group
+                group_query = """
+                    SELECT 
+                        n.id, n.clean_url AS url, n.title, n.description,
+                        CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date, 
+                        n.newspaper_name, annotation_label, classification_label, negative_reason
+                    FROM autokmdb_news n
+                    WHERE n.group_id = %s AND n.id != %s
+                    ORDER BY n.id
+                """
+                cursor.execute(group_query, (article['group_id'], article['id']))
+                grouped_articles = cursor.fetchall()
+                article['groupedArticles'] = grouped_articles
+            
+            articles_with_groups.append(article)
 
-        # Execute the final query with parameters
-        cursor.execute(final_query, all_params[len(full_params) * 3 :])
-
-        return count, cursor.fetchall()
+        return count, articles_with_groups
 
 
 def force_accept_article(
