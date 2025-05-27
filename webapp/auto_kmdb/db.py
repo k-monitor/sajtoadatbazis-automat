@@ -546,71 +546,6 @@ def get_articles_by_day(
             return cursor.fetchall()
 
 
-def get_article_counts(
-    connection: PooledMySQLConnection,
-    domains: list[int],
-    search_query="",
-    start="2000-01-01",
-    end="2050-01-01",
-    skip_reason: int = -1,
-) -> dict[str, int]:
-    article_counts: dict[str, int] = {}
-    start = start + " 00:00:00"
-    end = end + " 23:59:59"
-
-    domain_condition = ""
-    if domains and domains[0] != -1 and isinstance(domains, list):
-        domain_list: str = ",".join([str(domain) for domain in domains])
-        domain_condition = f" AND n.newspaper_id IN ({domain_list})"
-
-    search_condition = """
-        AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)
-    """
-
-    date_condition = " AND n.article_date BETWEEN %s AND %s"
-
-    skip_condition = ""
-    if skip_reason != -1:
-        skip_condition = " AND n.skip_reason = " + str(int(skip_reason))
-
-    query = f"""
-        SELECT 
-            COUNT(CASE WHEN n.classification_label = 1 AND processing_step = 4 
-                            AND n.annotation_label IS NULL 
-                            AND (n.skip_reason = 0 OR n.skip_reason IS NULL) THEN id END) AS mixed,
-            COUNT(CASE WHEN processing_step = 5 AND n.annotation_label = 1 THEN id END) AS positive,
-            COUNT(CASE WHEN processing_step = 5 AND n.annotation_label = 0 THEN id END) AS negative,
-            COUNT(CASE WHEN processing_step < 4 THEN id END) AS processing,
-            COUNT(CASE WHEN processing_step >= 0 {skip_condition} THEN id END) AS all_status
-        FROM autokmdb_news n
-        WHERE 1=1
-        {domain_condition}
-        {search_condition if search_query != "%%" else ""}
-        {date_condition}
-    """
-
-    search_tuple = (
-        (search_query, search_query, search_query) if search_query != "%%" else ()
-    )
-
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(
-            query,
-            search_tuple + (start, end),
-        )
-        result = cursor.fetchone()
-        if result:
-            article_counts = {
-                "mixed": result["mixed"],
-                "positive": result["positive"],
-                "negative": result["negative"],
-                "processing": result["processing"],
-                "all": result["all_status"],
-            }
-
-    return article_counts
-
-
 def find_group_by_autokmdb_id(connection, autokmdb_id):
     query = """
 SELECT group_id
@@ -888,6 +823,71 @@ def group_articles(articles):
     return articles
 
 
+def get_article_counts(
+    connection: PooledMySQLConnection,
+    domains: list[int],
+    search_query="",
+    start="2000-01-01",
+    end="2050-01-01",
+    skip_reason: int = -1,
+) -> dict[str, int]:
+    article_counts: dict[str, int] = {}
+    start = start + " 00:00:00"
+    end = end + " 23:59:59"
+
+    domain_condition = ""
+    if domains and domains[0] != -1 and isinstance(domains, list):
+        domain_list: str = ",".join([str(domain) for domain in domains])
+        domain_condition = f" AND n.newspaper_id IN ({domain_list})"
+
+    search_condition = """
+        AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)
+    """
+
+    date_condition = " AND n.article_date BETWEEN %s AND %s"
+
+    skip_condition = ""
+    if skip_reason != -1:
+        skip_condition = " AND n.skip_reason = " + str(int(skip_reason))
+
+    query = f"""
+        SELECT 
+            COUNT(CASE WHEN n.classification_label = 1 AND processing_step = 4 
+                            AND n.annotation_label IS NULL 
+                            AND (n.skip_reason = 0 OR n.skip_reason IS NULL) THEN id END) AS mixed,
+            COUNT(CASE WHEN processing_step = 5 AND n.annotation_label = 1 THEN id END) AS positive,
+            COUNT(CASE WHEN processing_step = 5 AND n.annotation_label = 0 THEN id END) AS negative,
+            COUNT(CASE WHEN processing_step < 4 THEN id END) AS processing,
+            COUNT(CASE WHEN processing_step >= 0 {skip_condition} THEN id END) AS all_status
+        FROM autokmdb_news n
+        WHERE 1=1
+        {domain_condition}
+        {search_condition if search_query != "%%" else ""}
+        {date_condition}
+    """
+
+    search_tuple = (
+        (search_query, search_query, search_query) if search_query != "%%" else ()
+    )
+
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(
+            query,
+            search_tuple + (start, end),
+        )
+        result = cursor.fetchone()
+        if result:
+            article_counts = {
+                "mixed": result["mixed"],
+                "positive": result["positive"],
+                "negative": result["negative"],
+                "processing": result["processing"],
+                "all": result["all_status"],
+            }
+
+    return article_counts
+
+
 def get_articles(
     connection: PooledMySQLConnection,
     page: int,
@@ -908,15 +908,15 @@ def get_articles(
 
     # Status condition
     if status == "mixed":
-        conditions.append("n.classification_label = 1 AND processing_step = 4 AND n.annotation_label IS NULL AND COALESCE(n.skip_reason, 0) = 0")
+        conditions.append("n.classification_label = 1 AND n.processing_step = 4 AND n.annotation_label IS NULL AND COALESCE(n.skip_reason, 0) = 0")
     elif status == "positive":
-        conditions.append("processing_step = 5 AND n.annotation_label = 1")
+        conditions.append("n.processing_step = 5 AND n.annotation_label = 1")
     elif status == "negative":
-        conditions.append("processing_step = 5 AND n.annotation_label = 0")
+        conditions.append("n.processing_step = 5 AND n.annotation_label = 0")
     elif status == "processing":
-        conditions.append("processing_step < 4")
+        conditions.append("n.processing_step < 4")
     elif status == "all":
-        conditions.append("processing_step >= 0")
+        conditions.append("n.processing_step >= 0")
     else:
         print("Invalid status provided!")
         return
@@ -944,39 +944,67 @@ def get_articles(
     
     # Sort configuration
     sort_order = "ASC" if reverse else "DESC"
-    sort_field = "n.source DESC, n.article_date" if status != "positive" else "n.article_date"
+    sort_field = "main.source DESC, main.article_date" if status != "positive" else "main.article_date"
 
     with connection.cursor(dictionary=True) as cursor:
-        # Use database-side deduplication with EXISTS subquery for better performance
+        # Step 1: Find all group_ids that have at least one matching article
+        # This is much faster than using EXISTS in the main query
+        qualifying_groups_query = f"""
+            SELECT DISTINCT n.group_id
+            FROM autokmdb_news n
+            WHERE n.group_id IS NOT NULL AND {where_clause}
+        """
+        
+        cursor.execute(qualifying_groups_query, params)
+        qualifying_groups = [row['group_id'] for row in cursor.fetchall()]
+        
+        # Step 2: Build the main query with optimized logic
+        if qualifying_groups:
+            # Convert to comma-separated string for IN clause
+            groups_list = ",".join(map(str, qualifying_groups))
+            group_condition = f"main.group_id IN ({groups_list})"
+        else:
+            group_condition = "FALSE"  # No qualifying groups
+        
+        # Main query: get articles that either match directly OR are main articles of qualifying groups
         base_query = f"""
             SELECT 
-                n.id, n.clean_url AS url, n.description, n.title, n.source, 
-                n.newspaper_name, n.newspaper_id, n.classification_score, 
-                n.classification_label, n.annotation_label, n.processing_step, 
-                n.skip_reason, n.negative_reason,
-                CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date, 
-                n.category, u.name AS mod_name, n.group_id
-            FROM autokmdb_news n
-            LEFT JOIN users u ON n.mod_id = u.user_id
-            WHERE {where_clause}
-              AND (n.group_id IS NULL 
-                   OR n.id = (SELECT MIN(n2.id) 
-                             FROM autokmdb_news n2 
-                             WHERE n2.group_id = n.group_id))
+                main.id, main.clean_url AS url, main.description, main.title, main.source, 
+                main.newspaper_name, main.newspaper_id, main.classification_score, 
+                main.classification_label, main.annotation_label, main.processing_step, 
+                main.skip_reason, main.negative_reason,
+                CONVERT_TZ(main.article_date, @@session.time_zone, '+00:00') AS date, 
+                main.category, u.name AS mod_name, main.group_id
+            FROM autokmdb_news main
+            LEFT JOIN users u ON main.mod_id = u.user_id
+            WHERE (main.group_id IS NULL 
+                   OR main.id = (SELECT MIN(n3.id) FROM autokmdb_news n3 WHERE n3.group_id = main.group_id))
+              AND (
+                  -- Direct match for ungrouped articles or main articles
+                  (main.group_id IS NULL AND ({where_clause.replace('n.', 'main.')}))
+                  OR
+                  -- Main article of a qualifying group
+                  (main.group_id IS NOT NULL AND {group_condition})
+              )
             ORDER BY {sort_field} {sort_order}
         """
 
-        # Count query - more efficient with the same deduplication logic
+        # Count query with the same logic
         count_query = f"""
             SELECT COUNT(*) as total_count 
-            FROM autokmdb_news n
-            WHERE {where_clause}
-              AND (n.group_id IS NULL 
-                   OR n.id = (SELECT MIN(n2.id) 
-                             FROM autokmdb_news n2 
-                             WHERE n2.group_id = n.group_id))
+            FROM autokmdb_news main
+            WHERE (main.group_id IS NULL 
+                   OR main.id = (SELECT MIN(n3.id) FROM autokmdb_news n3 WHERE n3.group_id = main.group_id))
+              AND (
+                  -- Direct match for ungrouped articles or main articles
+                  (main.group_id IS NULL AND ({where_clause.replace('n.', 'main.')}))
+                  OR
+                  -- Main article of a qualifying group
+                  (main.group_id IS NOT NULL AND {group_condition})
+              )
         """
         
+        # Execute count query
         cursor.execute(count_query, params)
         count = cursor.fetchone()["total_count"]
 
@@ -996,7 +1024,7 @@ def get_articles(
             article['groupedArticles'] = []
             
             if article['group_id']:
-                # Optimized grouped articles query
+                # Get other articles in the same group
                 group_query = """
                     SELECT 
                         n.id, n.clean_url AS url, n.title, n.description,
@@ -1440,7 +1468,7 @@ def update_session(
 ):
     query = """UPDATE users_sessions SET session_expires = %s WHERE session_id = %s"""
     dt: datetime = datetime.fromtimestamp(unix_timestamp)
-    new_dt: datetime = dt + timedelta(minutes=30)
+    new_dt: datetime = dt + timedelta(minutes(30))
     new_unix_timestamp = int(new_dt.timestamp())
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query, (new_unix_timestamp, session_id))
