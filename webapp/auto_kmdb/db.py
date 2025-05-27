@@ -947,7 +947,7 @@ def get_articles(
     sort_field = "n.source DESC, n.article_date" if status != "positive" else "n.article_date"
 
     with connection.cursor(dictionary=True) as cursor:
-        # Simplified approach: get all matching articles first, then deduplicate in Python
+        # Use database-side deduplication with EXISTS subquery for better performance
         base_query = f"""
             SELECT 
                 n.id, n.clean_url AS url, n.description, n.title, n.source, 
@@ -959,41 +959,50 @@ def get_articles(
             FROM autokmdb_news n
             LEFT JOIN users u ON n.mod_id = u.user_id
             WHERE {where_clause}
+              AND (n.group_id IS NULL 
+                   OR n.id = (SELECT MIN(n2.id) 
+                             FROM autokmdb_news n2 
+                             WHERE n2.group_id = n.group_id))
             ORDER BY {sort_field} {sort_order}
         """
 
-        cursor.execute(base_query, params)
-        all_articles = cursor.fetchall()
-
-        # Deduplicate in Python - keep only the first article from each group
-        seen_groups = set()
-        deduplicated_articles = []
+        # Count query - more efficient with the same deduplication logic
+        count_query = f"""
+            SELECT COUNT(*) as total_count 
+            FROM autokmdb_news n
+            WHERE {where_clause}
+              AND (n.group_id IS NULL 
+                   OR n.id = (SELECT MIN(n2.id) 
+                             FROM autokmdb_news n2 
+                             WHERE n2.group_id = n.group_id))
+        """
         
-        for article in all_articles:
-            group_key = article['group_id'] if article['group_id'] else f"single_{article['id']}"
-            if group_key not in seen_groups:
-                seen_groups.add(group_key)
-                deduplicated_articles.append(article)
+        cursor.execute(count_query, params)
+        count = cursor.fetchone()["total_count"]
 
-        # Count and paginate
-        count = len(deduplicated_articles)
-        start_idx = (page - 1) * 10
-        end_idx = start_idx + 10
-        paginated_articles = deduplicated_articles[start_idx:end_idx]
+        # Main query with pagination
+        offset = (page - 1) * 10
+        paginated_query = f"""
+            {base_query}
+            LIMIT 10 OFFSET {offset}
+        """
 
-        # Now get grouped articles for each main article that has a group_id
+        cursor.execute(paginated_query, params)
+        main_articles = cursor.fetchall()
+
+        # Get grouped articles for each main article that has a group_id
         articles_with_groups = []
-        for article in paginated_articles:
+        for article in main_articles:
             article['groupedArticles'] = []
             
             if article['group_id']:
-                # Get other articles in the same group
+                # Optimized grouped articles query
                 group_query = """
                     SELECT 
                         n.id, n.clean_url AS url, n.title, n.description,
                         CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date, 
                         n.newspaper_name, annotation_label, classification_label, negative_reason
-                    FROM autokmdb_news n
+                    FROM autokmdb_news n USE INDEX (idx_news_grouped_lookup)
                     WHERE n.group_id = %s AND n.id != %s
                     ORDER BY n.id
                 """
