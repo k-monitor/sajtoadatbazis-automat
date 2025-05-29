@@ -1,5 +1,5 @@
 <template>
-  <div class="p-4">
+  <div class="p-4" color="gray">
     <div class="max-w-2xl w-full rounded overflow-hidden shadow-lg mb-4 p-4">
       <p class="inline">
         <UBadge class="m-1 inline p-2" color="gray">
@@ -39,18 +39,20 @@
           @click="() => $emit('update:filter_newspaper', { name: article.newspaper_name, id: article.newspaper_id })">
           {{
             article.newspaper_name }} </UButton>
-        <a :href="article.url" target="_blank" class="font-bold text-xl mb-2 ml-1">{{
-          article.title
-        }}</a>
+        <a :href="article.url" target="_blank" class="font-bold text-xl mb-2 ml-1"
+          :style="article.group_id && article.annotation_label != null ? 'color: #888' : ''">{{
+            article.title
+          }}</a>
 
       </p>
       <UBadge v-if="article.source == 1" class="m-1" color="orange">
         manuálisan hozzáadott
       </UBadge>
-      <p class="text-base text-pretty">{{ article.description }}</p>
+      <p v-if="!is_small" class="text-base text-pretty">{{ article.description }}</p>
       <p class="text-base text-right py-1">{{ article.date }}</p>
+
       <UContainer v-if="
-        article.processing_step >= 4 && article.skip_reason == null
+        article.processing_step >= 4 && article.skip_reason == null && !is_small
       " class="flex justify-between px-0 sm:px-0 lg:px-0">
         <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }" v-if="true">
           <UButton color="red"
@@ -66,17 +68,34 @@
           title="Teszt: ez a szám azt mutatja, algoritmusaink szerint mennyire illik a cikk a módszertanba (100% - nagyon, 0% - kevésbé)">
           {{ Math.round(article.classification_score * 100) }}%
         </p>
-        <UButton v-if="article.annotation_label == null && article.classification_label == 0" @click="processAndAccept" :loading="accepting" class="">Feldolgoz és átsorol</UButton>
-        <UButton v-if="article.annotation_label == null && article.classification_label == 1" @click="openModal" :loading="isOpening" class="">Szerkesztés</UButton>
-        <UButton v-if="article.annotation_label == 1" @click="openModal" :loading="isOpening" class="">Szerkesztés</UButton>
-        <UButton v-if="article.annotation_label == 0" @click="openModal" :loading="isOpening" class="">Mégis elfogad</UButton>
+        <UButton v-if="article.annotation_label == null && article.classification_label == 0" @click="processAndAccept"
+          :loading="accepting" class="" :disabled="allLabels == null">Feldolgoz és átsorol</UButton>
+        <UButton v-if="article.annotation_label == null && article.classification_label == 1" @click="openModal"
+          :loading="isOpening" class="" :disabled="allLabels == null">Szerkesztés</UButton>
+        <UButton v-if="article.annotation_label == 1" @click="openModal" :loading="isOpening" :disabled="allLabels == null" class="">Szerkesztés
+        </UButton>
+        <UButton v-if="article.annotation_label == 0" @click="openModal" :loading="isOpening" :disabled="allLabels == null" class="">Mégis elfogad
+        </UButton>
       </UContainer>
-      <div class="flex justify-between">
+      <div class="flex justify-between" v-if="!is_small">
         <UButton v-if="article.skip_reason >= 1" color="orange" @click="retryArticle">Újra feldolgoz</UButton>
         <UButton v-if="(article.skip_reason >= 1)" @click="forceAccept" class="ml-auto r-0" color="purple">{{
           "Szerkesztésre küld" }}</UButton>
       </div>
+      <div class="flex justify-between" v-else>
+        <UButton v-if="!(article.negative_reason == 1 && article.annotation_label == 0)" color="red" @click="toPool">
+          Hasonló tartalom
+        </UButton>
+        <UButton @click="pickOut" class="ml-auto r-0" color="green">Kiszed</UButton>
+      </div>
+      <div v-if="!is_small">
+        <Card v-for="gArticle in article.groupedArticles" :is_small="true" :article="gArticle" :key="gArticle.id"
+          :allLabels="allLabels" :keywordSynonyms="keywordSynonyms" :allFiles="allFiles" :refresh="refresh"
+          class="w-full max-w-2xl pr-0 pl-8" />
+      </div>
     </div>
+
+
     <UModal v-model="isOpen" :ui="{ padding: 'p-0 sm:p-4', width: 'sm:max-w-7xl' }">
       <div class="p-4 w-full">
         <div class="my-2 flex justify-center px-0 sm:px-0 lg:px-0 flex-col md:flex-row">
@@ -242,6 +261,22 @@ async function processAndAccept() {
   accepting.value = false;
 }
 
+async function toPool() {
+  await postUrl(baseUrl + "/api/annote/negative", {
+    method: "POST",
+    body: { id: article.value.id, reason: 1 }, // átvett
+  });
+  refresh();
+}
+
+async function pickOut() {
+  $authFetch(baseUrl + "/api/annote/pick_out", {
+    method: "POST",
+    body: { id: article.value.id },
+  });
+  refresh();
+}
+
 function selected() {
   console.log("selected " + selection.value);
   article.value.selected = selection.value;
@@ -381,6 +416,7 @@ function openModal() {
         const keywords = getKeywords(article.value.text);
         allOthers.value = mapEntities(keywords);
         article.value.original_date = article.value.article_date;
+        article.value.groupedArticles = article.value.original.groupedArticles;
 
         article.value.date = formatDate(article.value.date);
         article.value.article_date = formatDate(article.value.article_date);
@@ -448,7 +484,8 @@ const {
   allFiles,
   refresh,
   keywordSynonyms,
-} = defineProps(["article", "allLabels", "allFiles", "refresh", "keywordSynonyms"]);
+  is_small,
+} = defineProps(["article", "allLabels", "allFiles", "refresh", "keywordSynonyms", "is_small"]);
 
 const article = ref(articleValue);
 article.value.text = "";

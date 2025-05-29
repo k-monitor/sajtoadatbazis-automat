@@ -19,4 +19,6 @@ playwright
 requests[socks]
 cachetools
 cloudscraper
+chromadb
 datasets==3.1.0
+google-genai

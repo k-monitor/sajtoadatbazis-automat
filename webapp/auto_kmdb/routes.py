@@ -137,6 +137,8 @@ def api_articles():
         if article_response is None:
             return jsonify({"error": "Hiba a lekérés során!"}), 500
         length, articles = article_response
+        articles = db.group_articles(articles)
+        logging.info(f"articles: {articles}")
 
     return jsonify({"pages": ceil(length / 10), "articles": articles}), 200
 
@@ -197,6 +199,25 @@ def process_and_accept():
         article_id: int = content["article_id"]
         db.process_and_accept_article(connection, article_id, user_id)
         return jsonify({}), 200
+
+
+@api.route("/annote/pick_out", methods=["POST"])
+def pick_out():
+    session_id: Optional[str] = get_session_id(request)
+    with db.connection_pool.get_connection() as connection:
+        user_id: Optional[int | bool] = db.validate_session(connection, session_id)
+        if not user_id:
+            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    content: Optional[dict] = request.json
+
+    if not content:
+        return jsonify({}), 400
+
+    id: int = content["id"]
+    with db.connection_pool.get_connection() as connection:
+        db.pick_out_article(connection, id, user_id)
+    return jsonify({}), 200
 
 
 @api.route("/annote/positive", methods=["POST"])
