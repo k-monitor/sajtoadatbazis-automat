@@ -355,7 +355,7 @@ def login_444(username: str, password: str) -> dict[str, str]:
     username = username.strip('"')
     password = password.strip('"')
     with sync_playwright() as p:
-        browser: Browser = p.firefox.launch(proxy=playwright_proxy)
+        browser: Browser = p.firefox.launch(proxy=playwright_proxy, headless=False)
         context: BrowserContext = browser.new_context()
         page: Page = context.new_page()
         page.goto("http://444.hu")
@@ -368,6 +368,12 @@ def login_444(username: str, password: str) -> dict[str, str]:
         page.add_locator_handler(
             page.get_by_role("button", name="ELFOGADOM", exact=True), handler
         )
+
+        page.wait_for_timeout(1000)
+        try:
+            page.get_by_role("button", name="ELFOGADOM", exact=True).click()
+        except Exception:
+            logging.info("No cookie consent button found or already clicked.")
 
         page.get_by_title("Felhasználói fiók").click()
         page.screenshot(path="data/screenshot.png")
