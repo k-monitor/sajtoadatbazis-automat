@@ -25,6 +25,14 @@ CREATE INDEX idx_qualifying_groups_negative ON autokmdb_news (group_id, processi
 CREATE INDEX idx_qualifying_groups_processing ON autokmdb_news (group_id, processing_step, newspaper_id, article_date);
 CREATE INDEX idx_qualifying_groups_all ON autokmdb_news (group_id, processing_step, newspaper_id, article_date);
 
+-- Remove invalid WHERE clause indexes and add better alternatives
+-- For negative status optimization - specific compound indexes
+CREATE INDEX idx_negative_groups_fast ON autokmdb_news (processing_step, annotation_label, group_id, article_date, newspaper_id, source);
+CREATE INDEX idx_negative_ungrouped_fast ON autokmdb_news (processing_step, annotation_label, group_id, article_date, newspaper_id, source, id);
+
+-- Ultra-wide covering index for negative status to avoid table lookups
+CREATE INDEX idx_negative_covering_wide ON autokmdb_news (processing_step, annotation_label, article_date, newspaper_id, source, group_id, id, title, description, classification_label, skip_reason, negative_reason, category);
+
 -- For the main query - covers the MIN(n3.id) subquery
 CREATE INDEX idx_news_group_min_lookup ON autokmdb_news (group_id, id);
 
@@ -50,3 +58,6 @@ CREATE INDEX idx_search_all ON autokmdb_news (processing_step, newspaper_id, art
 
 -- Skip reason filtering
 CREATE INDEX idx_skip_reason_filter ON autokmdb_news (skip_reason, newspaper_id, article_date, processing_step);
+
+-- Add index for bulk grouped articles fetching
+CREATE INDEX idx_bulk_grouped_articles ON autokmdb_news (group_id, id, article_date, title, description, newspaper_name, annotation_label, classification_label, negative_reason);
