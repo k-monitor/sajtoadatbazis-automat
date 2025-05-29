@@ -355,7 +355,7 @@ def login_444(username: str, password: str) -> dict[str, str]:
     username = username.strip('"')
     password = password.strip('"')
     with sync_playwright() as p:
-        browser: Browser = p.firefox.launch(proxy=playwright_proxy, headless=False)
+        browser: Browser = p.firefox.launch(proxy=playwright_proxy)
         context: BrowserContext = browser.new_context()
         page: Page = context.new_page()
         page.goto("http://444.hu")
