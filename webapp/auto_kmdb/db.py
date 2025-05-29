@@ -948,7 +948,6 @@ def get_articles(
 
     with connection.cursor(dictionary=True) as cursor:
         # Step 1: Find all group_ids that have at least one matching article
-        # This is much faster than using EXISTS in the main query
         qualifying_groups_query = f"""
             SELECT DISTINCT n.group_id
             FROM autokmdb_news n
@@ -960,11 +959,10 @@ def get_articles(
         
         # Step 2: Build the main query with optimized logic
         if qualifying_groups:
-            # Convert to comma-separated string for IN clause
             groups_list = ",".join(map(str, qualifying_groups))
             group_condition = f"main.group_id IN ({groups_list})"
         else:
-            group_condition = "FALSE"  # No qualifying groups
+            group_condition = "FALSE"
         
         # Main query: get articles that either match directly OR are main articles of qualifying groups
         base_query = f"""
@@ -1004,7 +1002,6 @@ def get_articles(
               )
         """
         
-        # Execute count query
         cursor.execute(count_query, params)
         count = cursor.fetchone()["total_count"]
 
@@ -1018,25 +1015,46 @@ def get_articles(
         cursor.execute(paginated_query, params)
         main_articles = cursor.fetchall()
 
-        # Get grouped articles for each main article that has a group_id
+        # Step 3: Bulk fetch all grouped articles for all groups on this page
         articles_with_groups = []
-        for article in main_articles:
-            article['groupedArticles'] = []
+        if main_articles:
+            # Get all group_ids that have groups on this page
+            page_group_ids = [article['group_id'] for article in main_articles if article['group_id']]
             
-            if article['group_id']:
-                # Get other articles in the same group
-                group_query = """
+            if page_group_ids:
+                # Single query to get all grouped articles for all groups on this page
+                groups_list_page = ",".join(map(str, page_group_ids))
+                bulk_group_query = f"""
                     SELECT 
+                        n.group_id,
                         n.id, n.clean_url AS url, n.title, n.description,
                         CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date, 
                         n.newspaper_name, annotation_label, classification_label, negative_reason
-                    FROM autokmdb_news n USE INDEX (idx_news_grouped_lookup)
-                    WHERE n.group_id = %s AND n.id != %s
-                    ORDER BY n.id
+                    FROM autokmdb_news n 
+                    WHERE n.group_id IN ({groups_list_page}) 
+                      AND n.id NOT IN ({",".join(str(article['id']) for article in main_articles if article['group_id'])})
+                    ORDER BY n.group_id, n.id
                 """
-                cursor.execute(group_query, (article['group_id'], article['id']))
-                grouped_articles = cursor.fetchall()
-                article['groupedArticles'] = grouped_articles
+                
+                cursor.execute(bulk_group_query)
+                all_grouped_articles = cursor.fetchall()
+                
+                # Group the results by group_id for easy lookup
+                grouped_by_group_id = {}
+                for article in all_grouped_articles:
+                    group_id = article['group_id']
+                    if group_id not in grouped_by_group_id:
+                        grouped_by_group_id[group_id] = []
+                    # Remove group_id from the article dict since it's not needed in the response
+                    article_copy = {k: v for k, v in article.items() if k != 'group_id'}
+                    grouped_by_group_id[group_id].append(article_copy)
+        
+        # Step 4: Assign grouped articles to their main articles
+        for article in main_articles:
+            if article['group_id'] and page_group_ids:
+                article['groupedArticles'] = grouped_by_group_id.get(article['group_id'], [])
+            else:
+                article['groupedArticles'] = []
             
             articles_with_groups.append(article)
 
