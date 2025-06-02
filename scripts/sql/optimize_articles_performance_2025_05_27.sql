@@ -18,7 +18,6 @@ DROP INDEX idx_news_group_min ON autokmdb_news;
 
 -- Optimized indexes for the qualifying groups query (first step)
 -- This covers the WHERE clause in the qualifying_groups_query
---todo
 CREATE INDEX idx_qualifying_groups_mixed ON autokmdb_news (group_id, classification_label, processing_step, annotation_label, skip_reason, newspaper_id, article_date);
 CREATE INDEX idx_qualifying_groups_positive ON autokmdb_news (group_id, processing_step, annotation_label, newspaper_id, article_date);
 CREATE INDEX idx_qualifying_groups_negative ON autokmdb_news (group_id, processing_step, annotation_label, newspaper_id, article_date);
