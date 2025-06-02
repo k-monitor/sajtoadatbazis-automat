@@ -1162,8 +1162,7 @@ def get_articles(
                     group_id = article["group_id"]
                     if group_id not in grouped_by_group_id:
                         grouped_by_group_id[group_id] = []
-                    # Remove group_id from the article dict since it's not needed in the response
-                    article_copy = {k: v for k, v in article.items() if k != "group_id"}
+                    article_copy = {k: v for k, v in article.items()}
                     grouped_by_group_id[group_id].append(article_copy)
 
         # Step 4: Assign grouped articles to their main articles
