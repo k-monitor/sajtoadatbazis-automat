@@ -35,6 +35,7 @@ from google.genai.types import GenerateContentResponse
 
 USE_GEMINI = environ.get("USE_GEMINI", "false").lower() == "true"
 SIMILARITY_THRESHOLD = 0.7
+CLASSIFICATION_SCORE_THRESHOLD = 0.42
 GEMINI_MODEL = environ.get("GEMINI_MODEL", "gemini-2.5-flash-preview-05-20")
 
 
@@ -219,7 +220,7 @@ class ClassificationProcessor(Processor):
 
             probabilities = F.softmax(logits[0], dim=-1)
             score = float(probabilities[1])
-            label = 1 if score > 0.42 else 0
+            label = 1 if score > CLASSIFICATION_SCORE_THRESHOLD else 0
             if label == 1 and USE_GEMINI and text.strip():
                 google_label, token_counts = genai_label(title, description, text)
                 if google_label:
