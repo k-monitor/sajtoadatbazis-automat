@@ -35,7 +35,7 @@ from google.genai.types import GenerateContentResponse
 
 USE_GEMINI = environ.get("USE_GEMINI", "false").lower() == "true"
 SIMILARITY_THRESHOLD = 0.7
-GEMINI_MODEL = environ.get("GEMINI_MODEL", "gemini-2.5-flash-preview-04-17")
+GEMINI_MODEL = environ.get("GEMINI_MODEL", "gemini-2.5-flash-preview-05-20")
 
 
 def genai_label(title, description, text):
@@ -48,37 +48,31 @@ def genai_label(title, description, text):
             role="user",
             parts=[
                 types.Part.from_text(
-                    text=f"""A köetkező a K-Monitor sajtóadatbázisának módszertana, ami alapján majd egy cikkről el kell döntened, hogy illik-e az adatbázisba:
+                    text=f"""A következő a K-Monitor sajtóadatbázisának módszertana, ami alapján majd egy cikkről el kell döntened, hogy illik-e az adatbázisba:
 
-# **Sajtóadatbázis módszertan**
+# Sajtóadatbázis módszertan
 
-Adatbázisunk ([adatbazis.k-monitor.hu](https://adatbazis.k-monitor.hu/)) könyvtárszerűen gyűjti össze a magyar online-sajtó **korrupcióról**, **közbeszerzésekről**, **közpénzfelhasználásról**, illetve általában a **közélet tisztaságáról**, **átláthatóságáról** szóló, és a konkrét ügyeket, eseteket leíró cikkekre vonatkozó adatokat, melyeket állandó, szigorú módszertan szerint válogatunk és címkézünk.  
-A Sajtóadatbázist 2023-ban közel 450.000 felhasználó látogatta.
+Adatbázisunk könyvtárszerűen gyűjti össze a magyar online-sajtó **korrupcióról**, **közbeszerzésekről**, **közpénzfelhasználásról**, illetve általában a **közélet tisztaságáról**, **átláthatóságáról** szóló, és a konkrét ügyeket, eseteket leíró cikkekre vonatkozó adatokat, melyeket állandó, szigorú módszertan szerint válogatunk és címkézünk.
 
-# **A címkézés alapelve**
+## A címkézés alapelve
 
 A címkézés célja, hogy az adott cikk a K-Monitor saját, illetve a világháló keresőmotorjai által könnyen megtalálható legyen. Cél: aki felmegy az adatbázisra és adott személyről, intézményről, témakörben keres, az találja meg a korábbi történeteket.
 
-# **Felhasználói fiók**
+## A cikkek kiválasztásának szempontjai
 
-- Regisztrációdat egy K-Monitor munkatársunk tudja létrehozni és beállítani a hozzá kapcsolódó szükséges hozzáféréseket.  
-- Ha ez megtörtént, itt tudsz belépni: [https://adatbazis.k-monitor.hu/admin.php](https://adatbazis.k-monitor.hu/admin.php)
-
-# **A cikkek kiválasztásának szempontjai**
-
-1. **Konkrét** korrupciós esetet ír le (*Tibi bácsi megvesztegette a záhonyi vámosokat*).  
-2. A **cikk** **szerzője állítja, vagy sugallja**, hogy valaki a ráruházott hatalmat saját maga, vagy egy harmadik fél hasznára fordította (*polgármester a józan ésszel beláthatónál jóval drágábban vásárolt traktort a falunak*).  
-3. A cikk korrupciós ügyben történő **jogi eljárásról** tájékoztat (*vádat emeltek xy képviselővel szemben hűtlen kezelés ügyében*).  
-4. Egy korrupciós **vádat cáfolnak** vagy védekeznek (*én, Tóbiás Szilamér, nem is vagyok korrupt*).  
-5. A következő **témák esetében szabálytalanságok** merülnek fel: közbeszerzés, pártfinanszírozás, pályázatok, kormányzati szerv vagy állami vállalat gazdálkodása, vagyonosodás, juttatások, privatizáció, whistleblowing.   
+1. **Konkrét** korrupciós esetet ír le (*Tibi bácsi megvesztegette a záhonyi vámosokat*).
+2. A **cikk** **szerzője állítja, vagy sugallja**, hogy valaki a ráruházott hatalmat saját maga, vagy egy harmadik fél hasznára fordította (*polgármester a józan ésszel beláthatónál jóval drágábban vásárolt traktort a falunak*).
+3. A cikk korrupciós ügyben történő **jogi eljárásról** tájékoztat (*vádat emeltek xy képviselővel szemben hűtlen kezelés ügyében*).
+4. Egy korrupciós **vádat cáfolnak** vagy védekeznek (*én, Tóbiás Szilamér, nem is vagyok korrupt*).
+5. A következő **témák esetében szabálytalanságok** merülnek fel: közbeszerzés, pártfinanszírozás, pályázatok, kormányzati szerv vagy állami vállalat gazdálkodása, vagyonosodás, juttatások, privatizáció, whistleblowing.
 6. A következő **kifejezések** közül valamelyik előfordul a cikkben: korrupció, sikkasztás (közszolga által), hűtlen kezelés, vesztegetés, hivatali visszaélés, hatalommal való visszaélés, befolyással üzérkedés, hanyagság, adócsalás, számviteli fegyelem megsértése, protekció, nepotizmus, jogosulatlan gazdasági előny, versenykorlátozás, kartell, whistleblowing/közérdekű bejelentés, közérdekű adatok, átláthatóság.
 
 **Nem kell felvinni**:
 
-* pártközlemény  
-* publicisztika  
-* random mocskolódás (*Matolcsy egy korrupt őrült*)  
-* ha nem saját anyag, hanem más lapra hivatkozik (*... írja az Index*) **és** nincs hozzáadott információ
+* pártközlemény
+* publicisztika
+* random mocskolódás (Matolcsy egy korrupt őrült)
+* ha nem saját anyag, hanem más lapra hivatkozik (... írja az Index) és nincs hozzáadott információ
 
 
 Ez volt a módszertan, most következik a cikk, amiről döntened kell:
@@ -89,7 +83,7 @@ Ez volt a módszertan, most következik a cikk, amiről döntened kell:
 
 {text}
 
-Ez volt a cikk, most dönts, hogy illik-e az adatbázisba, a választ sima json formátumban add meg! Ha illik, akkor a label értéke legyen true, ha pedig nem, akkor false."""
+Ez volt a cikk, most dönts, hogy illik-e az adatbázisba, a választ sima json formátumban add meg! Ha illik az adatbázisba, akkor a label értéke legyen true, ha pedig nem, akkor false."""
                 ),
             ],
         ),
@@ -226,7 +220,7 @@ class ClassificationProcessor(Processor):
             probabilities = F.softmax(logits[0], dim=-1)
             score = float(probabilities[1])
             label = 1 if score > 0.42 else 0
-            if label == 1 and USE_GEMINI:
+            if label == 1 and USE_GEMINI and text.strip():
                 google_label, token_counts = genai_label(title, description, text)
                 if google_label:
                     label = 1
