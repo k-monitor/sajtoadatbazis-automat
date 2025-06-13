@@ -227,6 +227,7 @@ class ClassificationProcessor(Processor):
                     label = 1
                 else:
                     label = 0
+                logging.info(f"Google Gemini classification: {google_label}, token counts: {token_counts}")
             if label == 1:
                 str_embedding = encode_embedding(cls_embedding)
             category = CATEGORY_MAP.get(
