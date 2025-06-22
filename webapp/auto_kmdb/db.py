@@ -693,13 +693,17 @@ def map_entities(entities: list[dict]):
         score = avg([normalized_score(e) for e in entity_group])
         label = 1 if score > 0.5 else 0
         old_score = unnormalized_score(score)
+        annotation_label = 0
+        if any([e["annotation_label"] == 1 for e in entity_group]):
+            annotation_label = 1
+
         entity = {
             "db_id": entity_group[0]["db_id"],
             "name": entity_group[0]["name"],
             "score": score,
             "classification_score": old_score,
             "classification_label": label,
-            "annotation_label": annotation_label,
+            "annotation_label": entity_group[0]["annotation_label"],
             "occurences": entity_group,
         }
         entity_list.append(entity)
