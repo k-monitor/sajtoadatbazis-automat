@@ -1319,18 +1319,19 @@ def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
     tag_insert = """INSERT INTO news_tags (names, news_id) VALUES (%s, %s)"""
 
     cursor.execute(tag_query, (news_id,))
-    tag_id: list[Optional[int]] = cursor.fetchone()
+    tag_result = cursor.fetchone()
 
-    if tag_id and tag_id[0]:
+    if tag_result and tag_result.get("tag_id"):
+        tag_id = tag_result["tag_id"]
         cursor.execute(
             tag_update,
             (
                 names_str,
-                news_id,
+                tag_id,
             ),
         )
         logging.info(
-            f"updating tag_id={tag_id[0]} news_id={news_id} with text: {names_str}"
+            f"updating tag_id={tag_id} news_id={news_id} with text: {names_str}"
         )
     else:
         cursor.execute(
@@ -1363,296 +1364,282 @@ def annote_positive(
     file_ids,
     pub_date,
 ):
-    # Pre-process entities to create missing ones in batch
-    persons_to_create = [
-        p for p in persons if ("db_id" not in p or not p["db_id"]) and p.get("name")
-    ]
-    institutions_to_create = [
-        i
-        for i in institutions
-        if ("db_id" not in i or not i["db_id"]) and i.get("name")
-    ]
+    """
+        This function annotates an article as positive, updating or creating the necessary records in the database.
+        It handles both the creation of new articles and the updating of existing ones, ensuring that all related entities are properly linked.
+        It should remove entities that are not present in the new data. It should update the article's status, source URL, and other metadata.
+    """
 
-    # Check existing entities in batch to avoid duplicates
-    existing_persons = {}
-    existing_institutions = {}
-
-    if persons_to_create:
-        person_names = [p["name"] for p in persons_to_create]
-        placeholders = ",".join(["%s"] * len(person_names))
-        check_persons_query = (
-            f"SELECT person_id, name FROM news_persons WHERE name IN ({placeholders})"
-        )
-
-    if institutions_to_create:
-        institution_names = [i["name"] for i in institutions_to_create]
-        placeholders = ",".join(["%s"] * len(institution_names))
-        check_institutions_query = f"SELECT institution_id, name FROM news_institutions WHERE name IN ({placeholders})"
-
+    # Pre-calculate all constants
     current_datetime = datetime.now()
     cre_time = int(current_datetime.timestamp())
     category_dict = {0: 5, 1: 6, 2: 7, None: 5}
     alias = slugify(title)
     seo_url_default = "hirek/magyar-hirek/" + alias
+    processed_text = text.replace("\n", "<br>")
+    pub_timestamp = int(pub_date.timestamp())
+    status_flag = "Y" if is_active else "N"
+    
+    # Prepare entity collections
+    persons_to_create = [p for p in persons if ("db_id" not in p or not p["db_id"]) and p.get("name")]
+    institutions_to_create = [i for i in institutions if ("db_id" not in i or not i["db_id"]) and i.get("name")]
 
     with connection.cursor(dictionary=True) as cursor:
-        # Single query to check existing news_id
-        cursor.execute("SELECT news_id FROM autokmdb_news WHERE id = %s LIMIT 1", (id,))
+        # Single query to get all initial data needed
+        cursor.execute("SELECT news_id FROM autokmdb_news WHERE id = %s", (id,))
         result = cursor.fetchone()
         news_id = result["news_id"] if result else None
         is_update = bool(news_id)
 
-        # Check existing persons and institutions in batch
+        # Batch check existing entities in single transaction
+        existing_persons = {}
+        existing_institutions = {}
+        
         if persons_to_create:
-            cursor.execute(check_persons_query, person_names)
-            existing_persons = {
-                row["name"]: row["person_id"] for row in cursor.fetchall()
-            }
+            person_names = [p["name"] for p in persons_to_create]
+            placeholders = ",".join(["%s"] * len(person_names))
+            cursor.execute(
+                f"SELECT person_id, name FROM news_persons WHERE name IN ({placeholders})",
+                person_names
+            )
+            existing_persons = {row["name"]: row["person_id"] for row in cursor.fetchall()}
 
         if institutions_to_create:
-            cursor.execute(check_institutions_query, institution_names)
-            existing_institutions = {
-                row["name"]: row["institution_id"] for row in cursor.fetchall()
-            }
+            institution_names = [i["name"] for i in institutions_to_create]
+            placeholders = ",".join(["%s"] * len(institution_names))
+            cursor.execute(
+                f"SELECT institution_id, name FROM news_institutions WHERE name IN ({placeholders})",
+                institution_names
+            )
+            existing_institutions = {row["name"]: row["institution_id"] for row in cursor.fetchall()}
 
-        # Create missing persons in batch
+        # Create missing entities (still needs individual calls for SEO)
         for person in persons_to_create:
             if person["name"] in existing_persons:
                 person["db_id"] = existing_persons[person["name"]]
             else:
                 person["db_id"] = create_person(connection, person["name"], user_id)
+                all_persons_by_id[person["db_id"]] = person["name"]
 
-        # Create missing institutions in batch
         for institution in institutions_to_create:
             if institution["name"] in existing_institutions:
                 institution["db_id"] = existing_institutions[institution["name"]]
             else:
-                institution["db_id"] = create_institution(
-                    connection, institution["name"], user_id
-                )
+                institution["db_id"] = create_institution(connection, institution["name"], user_id)
+                all_institutions_by_id[institution["db_id"]] = institution["name"]
 
-        # Main news operations
+        # Handle main news record operations
         if is_update:
+            # Consolidated UPDATE for existing records
             cursor.execute(
                 """UPDATE news_news SET source_url = %s, source_url_string = %s, 
-                             mod_time = %s, mod_id = %s, status = %s WHERE news_id = %s""",
-                (
-                    source_url,
-                    source_url_string,
-                    cre_time,
-                    user_id,
-                    "Y" if is_active else "N",
-                    news_id,
-                ),
+                   mod_time = %s, mod_id = %s, status = %s WHERE news_id = %s""",
+                (source_url, source_url_string, cre_time, user_id, status_flag, news_id)
             )
+            
+            # Clear existing links before adding new ones
+            delete_queries = [
+                ("DELETE FROM news_persons_link WHERE news_id = %s", "persons"),
+                ("DELETE FROM news_institutions_link WHERE news_id = %s", "institutions"),
+                ("DELETE FROM news_places_link WHERE news_id = %s", "places"),
+                ("DELETE FROM news_others_link WHERE news_id = %s", "others"),
+                ("DELETE FROM news_files_link WHERE news_id = %s", "files")
+            ]
+            
+            for query, table_name in delete_queries:
+                try:
+                    cursor.execute(query, (news_id,))
+                    rows_affected = cursor.rowcount
+                    logging.info(f"Deleted {rows_affected} rows from {table_name} for news_id {news_id}")
+                except Exception as e:
+                    logging.error(f"Error deleting from {table_name}: {e}")
+                    # Re-raise to prevent duplicate key errors
+                    raise
+            
         else:
+            # Create new news record
             cursor.execute(
                 """INSERT INTO news_news (source_url, source_url_string, cre_time, 
-                             mod_time, pub_time, cre_id, mod_id, status, news_type, news_rel) 
-                             VALUES (%s, %s, %s, %s, %s, %s, %s, %s, "D", "N")""",
-                (
-                    source_url,
-                    source_url_string,
-                    cre_time,
-                    cre_time,
-                    int(pub_date.timestamp()),
-                    user_id,
-                    user_id,
-                    "Y" if is_active else "N",
-                ),
+                   mod_time, pub_time, cre_id, mod_id, status, news_type, news_rel) 
+                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'D', 'N')""",
+                (source_url, source_url_string, cre_time, cre_time, pub_timestamp, 
+                 user_id, user_id, status_flag)
             )
             news_id = cursor.lastrowid
 
-        # Update autokmdb_news
+        # Batch update autokmdb_news with category
         cursor.execute(
             """UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, 
-                         news_id = %s, title = %s, description = %s, text = %s, mod_id = %s 
-                         WHERE id = %s""",
-            (news_id, title, description, text, user_id, id),
+               news_id = %s, title = %s, description = %s, text = %s, mod_id = %s, category = %s 
+               WHERE id = %s""",
+            (news_id, title, description, text, user_id, category, id)
         )
 
-        # Handle SEO and language data
-        cursor.execute("DELETE FROM seo_urls_data WHERE item_id = %s", (news_id,))
+        # Use REPLACE for SEO URLs (more efficient than DELETE + INSERT)
         cursor.execute(
-            """INSERT INTO seo_urls_data (seo_url, modul, action, item_id, lang) 
-                         VALUES (%s, "news", "view", %s, "hu")""",
-            (seo_url_default, news_id),
+            """REPLACE INTO seo_urls_data (seo_url, modul, action, item_id, lang) 
+               VALUES (%s, 'news', 'view', %s, 'hu')""",
+            (seo_url_default, news_id)
         )
 
+        # Handle language data
         if is_update:
             cursor.execute(
-                """UPDATE news_lang SET lang = %s, name = %s, teaser = %s, 
-                             articletext = %s, alias = %s, seo_url_default = %s WHERE news_id = %s""",
-                (
-                    "hu",
-                    title,
-                    description,
-                    text.replace("\n", "<br>"),
-                    alias,
-                    seo_url_default,
-                    news_id,
-                ),
+                """UPDATE news_lang SET lang = 'hu', name = %s, teaser = %s, 
+                   articletext = %s, alias = %s, seo_url_default = %s WHERE news_id = %s""",
+                (title, description, processed_text, alias, seo_url_default, news_id)
             )
         else:
             cursor.execute(
-                """INSERT INTO news_lang (news_id, lang, name, teaser, articletext, 
-                             alias, seo_url_default) VALUES (%s, %s, %s, %s, %s, %s, %s)""",
-                (
-                    news_id,
-                    "hu",
-                    title,
-                    description,
-                    text.replace("\n", "<br>"),
-                    alias,
-                    seo_url_default,
-                ),
+                """INSERT INTO news_lang (news_id, lang, name, teaser, articletext, alias, seo_url_default) 
+                   VALUES (%s, 'hu', %s, %s, %s, %s, %s)""",
+                (news_id, title, description, processed_text, alias, seo_url_default)
             )
 
         # Handle newspaper and category links
         if is_update:
             cursor.execute(
                 "UPDATE news_newspapers_link SET newspaper_id = %s WHERE news_id = %s",
-                (newspaper_id, news_id),
+                (newspaper_id, news_id)
             )
             cursor.execute(
-                "UPDATE news_categories_link SET cid = %s, head = %s WHERE news_id = %s",
-                (category_dict[category], "Y", news_id),
+                "UPDATE news_categories_link SET cid = %s, head = 'Y' WHERE news_id = %s",
+                (category_dict[category], news_id)
             )
         else:
             cursor.execute(
                 "INSERT INTO news_newspapers_link (news_id, newspaper_id) VALUES (%s, %s)",
-                (news_id, newspaper_id),
+                (news_id, newspaper_id)
             )
             cursor.execute(
-                "INSERT INTO news_categories_link (news_id, cid, head) VALUES (%s, %s, %s)",
-                (news_id, category_dict[category], "Y"),
+                "INSERT INTO news_categories_link (news_id, cid, head) VALUES (%s, %s, 'Y')",
+                (news_id, category_dict[category])
             )
 
+        # Efficiently collect unique entity IDs and prepare batch operations
+        unique_person_ids = set()
+        unique_institution_ids = set()
+        unique_place_ids = set()
+        
+        person_updates = []
+        institution_updates = []
+        place_updates = []
+        
+        for person in persons:
+            if person.get("db_id"):
+                unique_person_ids.add(person["db_id"])
+            if "id" in person and isinstance(person["id"], int):
+                person_updates.append(person["id"])
+
+        for institution in institutions:
+            if institution.get("db_id"):
+                unique_institution_ids.add(institution["db_id"])
+            if "id" in institution and isinstance(institution["id"], int):
+                institution_updates.append(institution["id"])
+
+        for place in places:
+            if place.get("db_id"):
+                unique_place_ids.add(place["db_id"])
+            if "id" in place and isinstance(place["id"], int):
+                place_updates.append(place["id"])
+
+        # Get parent places in batch if needed
+        if unique_place_ids:
+            place_list = list(unique_place_ids)
+            placeholders = ",".join(["%s"] * len(place_list))
+            cursor.execute(
+                f"SELECT parent_id FROM news_places WHERE place_id IN ({placeholders}) AND parent_id IS NOT NULL",
+                place_list
+            )
+            for row in cursor.fetchall():
+                if row["parent_id"]:
+                    unique_place_ids.add(row["parent_id"])
+
+        # Prepare all batch insert operations
+        batch_inserts = []
+        
+        if unique_person_ids:
+            person_links = [(news_id, pid) for pid in unique_person_ids]
+            batch_inserts.append(("INSERT INTO news_persons_link (news_id, person_id) VALUES (%s, %s)", person_links))
+            
+        if unique_institution_ids:
+            institution_links = [(news_id, iid) for iid in unique_institution_ids]
+            batch_inserts.append(("INSERT INTO news_institutions_link (news_id, institution_id) VALUES (%s, %s)", institution_links))
+            
+        if unique_place_ids:
+            place_links = [(news_id, pid) for pid in unique_place_ids]
+            batch_inserts.append(("INSERT INTO news_places_link (news_id, place_id) VALUES (%s, %s)", place_links))
+            
+        if others:
+            other_links = [(news_id, other["db_id"]) for other in others if other.get("db_id")]
+            if other_links:
+                batch_inserts.append(("INSERT INTO news_others_link (news_id, other_id) VALUES (%s, %s)", other_links))
+            
+        if file_ids:
+            file_links = [(news_id, fid) for fid in file_ids]
+            batch_inserts.append(("INSERT INTO news_files_link (news_id, file_id) VALUES (%s, %s)", file_links))
+
+        # Execute all batch inserts with error handling
+        for query, data in batch_inserts:
+            if data:
+                try:
+                    cursor.executemany(query, data)
+                    logging.info(f"Successfully inserted {len(data)} records for: {query.split()[2]}")
+                except Exception as e:
+                    logging.error(f"Error inserting data with query {query}: {e}")
+                    logging.error(f"Data sample: {data[:3] if len(data) > 3 else data}")
+                    raise
+
+        # First set all existing entities for this article to annotation_label = 0
         cursor.execute(
-            "UPDATE autokmdb_news SET category = %s WHERE news_id = %s",
-            (category, news_id),
+            "UPDATE autokmdb_persons SET annotation_label = 0 WHERE autokmdb_news_id = %s",
+            (id,)
+        )
+        cursor.execute(
+            "UPDATE autokmdb_institutions SET annotation_label = 0 WHERE autokmdb_news_id = %s",
+            (id,)
+        )
+        cursor.execute(
+            "UPDATE autokmdb_places SET annotation_label = 0 WHERE autokmdb_news_id = %s",
+            (id,)
+        )
+        cursor.execute(
+            "UPDATE autokmdb_others SET annotation_label = 0 WHERE autokmdb_news_id = %s",
+            (id,)
         )
 
-        # Batch delete operations for updates
-        if is_update:
-            delete_queries = [
-                ("DELETE FROM news_persons_link WHERE news_id = %s", (news_id,)),
-                ("DELETE FROM news_institutions_link WHERE news_id = %s", (news_id,)),
-                ("DELETE FROM news_places_link WHERE news_id = %s", (news_id,)),
-                ("DELETE FROM news_others_link WHERE news_id = %s", (news_id,)),
-                ("DELETE FROM news_files_link WHERE news_id = %s", (news_id,)),
-            ]
-            for query, params in delete_queries:
-                cursor.execute(query, params)
-
-        # Batch insert operations
-        done_person_ids = set()
-        done_institution_ids = set()
-        done_place_ids = set()
-
-        # Collect unique persons
-        person_links = []
-        person_updates = []
-        for person in persons:
-            if person["db_id"] not in done_person_ids:
-                person_links.append((news_id, person["db_id"]))
-                done_person_ids.add(person["db_id"])
-            if "id" in person and isinstance(person["id"], int):
-                person_updates.append((person["id"],))
-
-        # Batch insert person links
-        if person_links:
-            cursor.executemany(
-                "INSERT INTO news_persons_link (news_id, person_id) VALUES (%s, %s)",
-                person_links,
-            )
+        # Then update annotation labels to 1 for entities present in the request
         if person_updates:
             cursor.executemany(
                 "UPDATE autokmdb_persons SET annotation_label = 1 WHERE id = %s",
-                person_updates,
+                [(pid,) for pid in person_updates]
             )
-
-        # Collect unique institutions
-        institution_links = []
-        institution_updates = []
-        for institution in institutions:
-            if institution["db_id"] not in done_institution_ids:
-                institution_links.append((news_id, institution["db_id"]))
-                done_institution_ids.add(institution["db_id"])
-            if "id" in institution and isinstance(institution["id"], int):
-                institution_updates.append((institution["id"],))
-
-        # Batch insert institution links
-        if institution_links:
-            cursor.executemany(
-                "INSERT INTO news_institutions_link (news_id, institution_id) VALUES (%s, %s)",
-                institution_links,
-            )
+            
         if institution_updates:
             cursor.executemany(
                 "UPDATE autokmdb_institutions SET annotation_label = 1 WHERE id = %s",
-                institution_updates,
+                [(iid,) for iid in institution_updates]
             )
-
-        # Handle places with parent lookup in batch
-        place_links = []
-        place_updates = []
-        parent_lookups = []
-
-        for place in places:
-            if place["db_id"] not in done_place_ids:
-                place_links.append((news_id, place["db_id"]))
-                done_place_ids.add(place["db_id"])
-                parent_lookups.append(place["db_id"])
-            if "id" in place and isinstance(place["id"], int):
-                place_updates.append((place["id"],))
-
-        # Batch insert place links
-        if place_links:
-            cursor.executemany(
-                "INSERT INTO news_places_link (news_id, place_id) VALUES (%s, %s)",
-                place_links,
-            )
+            
         if place_updates:
             cursor.executemany(
                 "UPDATE autokmdb_places SET annotation_label = 1 WHERE id = %s",
-                place_updates,
+                [(pid,) for pid in place_updates]
             )
 
-        # Get parent places in batch
-        if parent_lookups:
-            placeholders = ",".join(["%s"] * len(parent_lookups))
-            cursor.execute(
-                f"SELECT place_id, parent_id FROM news_places WHERE place_id IN ({placeholders}) AND parent_id IS NOT NULL",
-                parent_lookups,
-            )
-            parent_links = []
-            for row in cursor.fetchall():
-                if row["parent_id"] not in done_place_ids:
-                    parent_links.append((news_id, row["parent_id"]))
-                    done_place_ids.add(row["parent_id"])
-
-            if parent_links:
-                cursor.executemany(
-                    "INSERT INTO news_places_link (news_id, place_id) VALUES (%s, %s)",
-                    parent_links,
-                )
-
-        # Batch insert others and files
-        if others:
-            other_links = [(news_id, other["db_id"]) for other in others]
+        # Update others entities that are present in the request
+        others_updates = []
+        for other in others:
+            if "id" in other and isinstance(other["id"], int):
+                others_updates.append(other["id"])
+        
+        if others_updates:
             cursor.executemany(
-                "INSERT INTO news_others_link (news_id, other_id) VALUES (%s, %s)",
-                other_links,
+                "UPDATE autokmdb_others SET annotation_label = 1 WHERE id = %s",
+                [(oid,) for oid in others_updates]
             )
 
-        if file_ids:
-            file_links = [(news_id, file_id) for file_id in file_ids]
-            cursor.executemany(
-                "INSERT INTO news_files_link (news_id, file_id) VALUES (%s, %s)",
-                file_links,
-            )
-
+        # Handle tags last
         setTags(cursor, news_id, persons, newspaper_name, institutions, places, others)
 
     connection.commit()
