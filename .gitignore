@@ -1,7 +1,6 @@
 node_modules/
 .venv/
 .avenv/
-.vscode/
 .nuxt/
 .output/
 __pycache__/
