@@ -1,6 +1,24 @@
 <template>
   <div class="container">
     <div class="controls">
+      <div class="filter-section">
+        <label for="domain-select">Hírportál:</label>
+        <select 
+          id="domain-select" 
+          v-model="selectedDomainId" 
+          @change="fetchData"
+          class="domain-select"
+        >
+          <option value="">Összes hírportál</option>
+          <option 
+            v-for="domain in domains" 
+            :key="domain.id" 
+            :value="domain.id"
+          >
+            {{ domain.name }}
+          </option>
+        </select>
+      </div>
       <div class="summary" v-if="filteredData.length > 0">
         <div style="color: #666; margin-bottom: 8px">
           Átlagosan <br />
@@ -105,23 +123,41 @@ ChartJS.register(
 );
 
 const data = ref<DataRow[]>([]);
+const domains = ref<Array<{id: number, name: string}>>([]);
+const selectedDomainId = ref<string>("");
 const { startDateIndex, endDateIndex, filteredData, updateDateRange } =
   useDateRange(data);
 
-onMounted(async () => {
+const fetchData = async () => {
   const config = useRuntimeConfig();
-  const response = await fetch(
-    config.public.baseUrl + "/api/articles_by_day.csv"
-  );
+  const params = new URLSearchParams();
+  if (selectedDomainId.value) {
+    params.append('newspaper_id', selectedDomainId.value);
+  }
+  
+  const url = `${config.public.baseUrl}/api/articles_by_day.csv${params.toString() ? '?' + params.toString() : ''}`;
+  const response = await fetch(url);
   const csv = await response.text();
   const result = parse<DataRow>(csv, { header: true, skipEmptyLines: true });
-  console.log(result.data);
-
+  
   data.value = result.data;
   startDateIndex.value = 0;
   endDateIndex.value = data.value.length;
   updateDateRange();
+};
+
+onMounted(async () => {
+  const config = useRuntimeConfig();
+  
+  // Fetch domains
+  const domainsResponse = await fetch(`${config.public.baseUrl}/api/domains`);
+  const domainsData = await domainsResponse.json();
+  domains.value = domainsData.domains;
+  
+  // Initial data fetch
+  await fetchData();
 });
+
 const getCount = (type: "positive" | "todo" | "negative"): number => {
   const total = filteredData.value.reduce((sum, row) => {
     return sum + Number(row.total_count);
@@ -166,5 +202,23 @@ const getCount = (type: "positive" | "todo" | "negative"): number => {
 }
 .graph {
   flex-grow: 1;
+}
+.filter-section {
+  margin: 8px;
+  margin-bottom: 16px;
+}
+
+.filter-section label {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+
+.domain-select {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: white;
 }
 </style>
