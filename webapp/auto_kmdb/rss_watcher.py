@@ -77,19 +77,6 @@ def get_atv():
     return urls_dates
 
 
-def get_hvg360():
-    logging.info("checking hvg360")
-    now: str = date.today().strftime("%Y-%m-%d")
-    response = requests.get(f"https://hvg.hu/cms-control/latest/{now}?skip=0&limit=20")
-
-    urls_dates = [
-        ("https://hvg.hu" + article["url"], article["releaseDateIso"])
-        for article in response.json()
-        if article["url"].startswith("/360/")
-    ]
-    return urls_dates
-
-
 def get_rss(rssurl):
     try:
         response = scraper.get(rssurl)
@@ -147,11 +134,13 @@ def get_new_from_rss(newspaper):
     urls_dates: list[tuple[str, Optional[str]]] = []
     if newspaper["rss_url"] == "atv":
         urls_dates = get_atv()
-    elif newspaper["rss_url"] == "hvg360":
-        urls_dates = get_hvg360()
     else:
         urls_dates = get_rss(newspaper["rss_url"])
     for url, release_date in urls_dates:
+        if newspaper["name"] == "HVG360" and "/360/" not in url:
+            continue
+        if newspaper["name"] == "HVG" and "/360/" in url:
+            continue
         # parsed_date = datetime.strptime(release_date, '%Y-%m-%dT%H:%M:%S.%f%z')
         # pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
         clean_url: str = clear_url(url)
