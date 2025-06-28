@@ -521,29 +521,77 @@ def get_human_queue(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
 def get_articles_by_day(
     start: str, end: str, newspaper_id: Optional[int] = None
 ) -> list[dict]:
-    query = f"""
-        SELECT 
-            DATE(article_date) AS date, 
-            SUM(CASE WHEN (processing_step = 5 AND annotation_label = 1) OR (processing_step = 5 AND annotation_label = 0) OR (classification_label = 1 AND processing_step = 4 AND annotation_label IS NULL AND (skip_reason = 0 OR skip_reason IS NULL)) THEN 1 ELSE 0 END) AS total_count, 
-            SUM(CASE WHEN processing_step = 5 AND annotation_label = 1 THEN 1 ELSE 0 END) AS count_positive,
-            SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 THEN 1 ELSE 0 END) AS count_negative,
-            SUM(CASE WHEN classification_label = 1 AND processing_step = 4 AND annotation_label IS NULL AND (skip_reason = 0 OR skip_reason IS NULL) THEN 1 ELSE 0 END) AS count_todo
-        FROM 
-            autokmdb_news 
-        WHERE 
-            article_date BETWEEN %s AND %s {"AND newspaper_id = %s" if newspaper_id else ""}
-        GROUP BY 
-            DATE(article_date) 
-        ORDER BY 
-            date
-    """
-
+    # Break down into separate optimized queries for better performance
+    newspaper_condition = "AND newspaper_id = %s" if newspaper_id else ""
+    params_base = [start, end] + ([newspaper_id] if newspaper_id else [])
+    
     with connection_pool.get_connection() as connection:
         with connection.cursor(dictionary=True) as cursor:
-            cursor.execute(
-                query, (start, end, newspaper_id) if newspaper_id else (start, end)
-            )
-            return cursor.fetchall()
+            # Get all unique dates first
+            date_query = f"""
+                SELECT DISTINCT DATE(article_date) AS date
+                FROM autokmdb_news 
+                WHERE article_date BETWEEN %s AND %s {newspaper_condition}
+                ORDER BY date
+            """
+            cursor.execute(date_query, params_base)
+            dates = [row["date"] for row in cursor.fetchall()]
+            
+            if not dates:
+                return []
+            
+            # Prepare batch queries for each metric
+            queries = {
+                "positive": f"""
+                    SELECT DATE(article_date) AS date, COUNT(*) AS count
+                    FROM autokmdb_news 
+                    WHERE article_date BETWEEN %s AND %s 
+                      AND processing_step = 5 AND annotation_label = 1
+                      {newspaper_condition}
+                    GROUP BY DATE(article_date)
+                """,
+                "negative": f"""
+                    SELECT DATE(article_date) AS date, COUNT(*) AS count
+                    FROM autokmdb_news 
+                    WHERE article_date BETWEEN %s AND %s 
+                      AND processing_step = 5 AND annotation_label = 0
+                      {newspaper_condition}
+                    GROUP BY DATE(article_date)
+                """,
+                "todo": f"""
+                    SELECT DATE(article_date) AS date, COUNT(*) AS count
+                    FROM autokmdb_news 
+                    WHERE article_date BETWEEN %s AND %s 
+                      AND classification_label = 1 AND processing_step = 4 
+                      AND annotation_label IS NULL AND COALESCE(skip_reason, 0) = 0
+                      {newspaper_condition}
+                    GROUP BY DATE(article_date)
+                """
+            }
+            
+            # Execute all queries and collect results
+            results = {}
+            for metric, query in queries.items():
+                cursor.execute(query, params_base)
+                results[metric] = {row["date"]: row["count"] for row in cursor.fetchall()}
+            
+            # Combine results
+            final_results = []
+            for date in dates:
+                positive_count = results["positive"].get(date, 0)
+                negative_count = results["negative"].get(date, 0)
+                todo_count = results["todo"].get(date, 0)
+                total_count = positive_count + negative_count + todo_count
+                
+                final_results.append({
+                    "date": date,
+                    "total_count": total_count,
+                    "count_positive": positive_count,
+                    "count_negative": negative_count,
+                    "count_todo": todo_count
+                })
+            
+            return final_results
 
 
 def find_group_by_autokmdb_id(connection, autokmdb_id):

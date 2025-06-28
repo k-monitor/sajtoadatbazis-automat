@@ -12,7 +12,7 @@ with db.connection_pool.get_connection() as connection:
     keyword_synonyms: list[dict] = db.get_keyword_synonyms(connection)
 
 api = Blueprint("api", __name__, url_prefix="/api")
-
+all_domains: list[dict] = db.get_all_newspapers()
 
 def get_session_id(request) -> Optional[str]:
     return request.headers.get("Authorization")
@@ -376,7 +376,7 @@ def domains():
     return (
         jsonify(
             {
-                "domains": db.get_all_newspapers(),
+                "domains": all_domains,
             }
         ),
         200,
