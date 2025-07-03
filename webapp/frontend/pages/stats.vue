@@ -108,6 +108,7 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import type { ChartOptions } from "chart.js";
 import { chartOptions, chartColors } from "../config/chart";
 import { useDateRange } from "../composables/useDateRange";
 import type { DataRow } from "../types.ts";
