@@ -11,7 +11,7 @@
           )
         "
         :min="0"
-        :max="max"
+        :max="max-1"
         class="range-input start"
         @change="$emit('update')"
       />
@@ -25,7 +25,7 @@
           )
         "
         :min="0"
-        :max="max"
+        :max="max-1"
         class="range-input end"
         @change="$emit('update')"
       />
