@@ -43,7 +43,7 @@ except OSError:
     hungarian_stopwords = set()
 
 USE_GEMINI = environ.get("USE_GEMINI", "false").lower() == "true"
-SIMILARITY_THRESHOLD = 0.2
+SIMILARITY_THRESHOLD = 0.15
 CLASSIFICATION_SCORE_THRESHOLD = 0.42
 GEMINI_MODEL = environ.get("GEMINI_MODEL", "gemini-2.5-flash-preview-05-20")
 
