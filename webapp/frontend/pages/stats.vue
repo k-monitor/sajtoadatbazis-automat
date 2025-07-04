@@ -58,6 +58,13 @@
           </div>
           Elutasított cikkek
         </div>
+        <div class="negative-breakdown">
+          <div class="breakdown-item">Nem releváns: {{ getCount("negative_0") }}%</div>
+          <div class="breakdown-item">Átvett: {{ getCount("negative_1") }}%</div>
+          <div class="breakdown-item">Külföldi: {{ getCount("negative_2") }}%</div>
+          <div class="breakdown-item">Már szerepel: {{ getCount("negative_3") }}%</div>
+          <div class="breakdown-item">Egyéb: {{ getCount("negative_100") }}%</div>
+        </div>
       </div>
     </div>
     <div class="graph">
@@ -79,10 +86,34 @@
               borderColor: chartColors.todo.border,
             },
             {
-              label: 'Elutasított cikkek',
-              data: displayData.map((row) => row.count_negative),
-              backgroundColor: chartColors.negative.background,
-              borderColor: chartColors.negative.border,
+              label: 'Nem releváns',
+              data: displayData.map((row) => row.count_negative_0),
+              backgroundColor: '#ef4444',
+              borderColor: '#dc2626',
+            },
+            {
+              label: 'Átvett',
+              data: displayData.map((row) => row.count_negative_1),
+              backgroundColor: '#f97316',
+              borderColor: '#ea580c',
+            },
+            {
+              label: 'Külföldi',
+              data: displayData.map((row) => row.count_negative_2),
+              backgroundColor: '#eab308',
+              borderColor: '#ca8a04',
+            },
+            {
+              label: 'Már szerepel',
+              data: displayData.map((row) => row.count_negative_3),
+              backgroundColor: '#FFEB3B',
+              borderColor: '#7c3aed',
+            },
+            {
+              label: 'Egyéb',
+              data: displayData.map((row) => row.count_negative_100),
+              backgroundColor: '#6b7280',
+              borderColor: '#4b5563',
             },
           ],
         }"
@@ -221,6 +252,11 @@ const weeklyData = computed(() => {
         count_positive: 0,
         count_todo: 0,
         count_negative: 0,
+        count_negative_0: 0,
+        count_negative_1: 0,
+        count_negative_2: 0,
+        count_negative_3: 0,
+        count_negative_100: 0,
         total_count: 0
       });
     }
@@ -229,6 +265,11 @@ const weeklyData = computed(() => {
     week.count_positive += Number(row.count_positive) || 0;
     week.count_todo += Number(row.count_todo) || 0;
     week.count_negative += Number(row.count_negative) || 0;
+    week.count_negative_0 += Number(row.count_negative_0) || 0;
+    week.count_negative_1 += Number(row.count_negative_1) || 0;
+    week.count_negative_2 += Number(row.count_negative_2) || 0;
+    week.count_negative_3 += Number(row.count_negative_3) || 0;
+    week.count_negative_100 += Number(row.count_negative_100) || 0;
     week.total_count += Number(row.total_count) || 0;
   });
   
@@ -243,7 +284,7 @@ function onAggregationChange() {
   updateDateRange();
 }
 
-const getCount = (type: "positive" | "todo" | "negative"): number => {
+const getCount = (type: "positive" | "todo" | "negative" | "negative_0" | "negative_1" | "negative_2" | "negative_3" | "negative_100"): number => {
   const total = displayData.value.reduce((sum, row) => {
     return sum + Number(row.total_count);
   }, 0);
@@ -305,5 +346,17 @@ const getCount = (type: "positive" | "todo" | "negative"): number => {
   border: 1px solid #ccc;
   border-radius: 4px;
   background-color: white;
+}
+
+.negative-breakdown {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid #e5e7eb;
+  font-size: 0.9em;
+  color: #4b5563;
+}
+
+.breakdown-item {
+  margin: 2px 0;
 }
 </style>

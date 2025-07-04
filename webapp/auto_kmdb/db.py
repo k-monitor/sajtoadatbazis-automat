@@ -550,11 +550,43 @@ def get_articles_by_day(
                       {newspaper_condition}
                     GROUP BY DATE(article_date)
                 """,
-                "negative": f"""
+                "negative_0": f"""
                     SELECT DATE(article_date) AS date, COUNT(*) AS count
                     FROM autokmdb_news 
                     WHERE article_date BETWEEN %s AND %s 
-                      AND processing_step = 5 AND annotation_label = 0
+                      AND processing_step = 5 AND annotation_label = 0 AND negative_reason = 0
+                      {newspaper_condition}
+                    GROUP BY DATE(article_date)
+                """,
+                "negative_1": f"""
+                    SELECT DATE(article_date) AS date, COUNT(*) AS count
+                    FROM autokmdb_news 
+                    WHERE article_date BETWEEN %s AND %s 
+                      AND processing_step = 5 AND annotation_label = 0 AND negative_reason = 1
+                      {newspaper_condition}
+                    GROUP BY DATE(article_date)
+                """,
+                "negative_2": f"""
+                    SELECT DATE(article_date) AS date, COUNT(*) AS count
+                    FROM autokmdb_news 
+                    WHERE article_date BETWEEN %s AND %s 
+                      AND processing_step = 5 AND annotation_label = 0 AND negative_reason = 2
+                      {newspaper_condition}
+                    GROUP BY DATE(article_date)
+                """,
+                "negative_3": f"""
+                    SELECT DATE(article_date) AS date, COUNT(*) AS count
+                    FROM autokmdb_news 
+                    WHERE article_date BETWEEN %s AND %s 
+                      AND processing_step = 5 AND annotation_label = 0 AND negative_reason = 3
+                      {newspaper_condition}
+                    GROUP BY DATE(article_date)
+                """,
+                "negative_100": f"""
+                    SELECT DATE(article_date) AS date, COUNT(*) AS count
+                    FROM autokmdb_news 
+                    WHERE article_date BETWEEN %s AND %s 
+                      AND processing_step = 5 AND annotation_label = 0 AND negative_reason = 100
                       {newspaper_condition}
                     GROUP BY DATE(article_date)
                 """,
@@ -579,15 +611,27 @@ def get_articles_by_day(
             final_results = []
             for date in dates:
                 positive_count = results["positive"].get(date, 0)
-                negative_count = results["negative"].get(date, 0)
+                negative_0_count = results["negative_0"].get(date, 0)
+                negative_1_count = results["negative_1"].get(date, 0)
+                negative_2_count = results["negative_2"].get(date, 0)
+                negative_3_count = results["negative_3"].get(date, 0)
+                negative_100_count = results["negative_100"].get(date, 0)
                 todo_count = results["todo"].get(date, 0)
-                total_count = positive_count + negative_count + todo_count
+                
+                # Calculate total negative and overall total
+                total_negative = negative_0_count + negative_1_count + negative_2_count + negative_3_count + negative_100_count
+                total_count = positive_count + total_negative + todo_count
                 
                 final_results.append({
                     "date": date,
                     "total_count": total_count,
                     "count_positive": positive_count,
-                    "count_negative": negative_count,
+                    "count_negative": total_negative,
+                    "count_negative_0": negative_0_count,  # nem releváns
+                    "count_negative_1": negative_1_count,  # átvett
+                    "count_negative_2": negative_2_count,  # külföldi
+                    "count_negative_3": negative_3_count,  # már szerepel
+                    "count_negative_100": negative_100_count,  # egyéb
                     "count_todo": todo_count
                 })
             
