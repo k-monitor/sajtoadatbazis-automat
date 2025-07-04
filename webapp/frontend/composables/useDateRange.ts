@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { ref, computed, watch, type Ref } from 'vue'
 import type { DataRow } from '../types'
 
 export function useDateRange(data: Ref<DataRow[]>) {
@@ -7,23 +7,22 @@ export function useDateRange(data: Ref<DataRow[]>) {
   const startDateIndex = ref(0)
   const endDateIndex = ref(0)
 
-watch(data, (newData) => {
+  watch(data, (newData) => {
     if (newData.length > 0) {
-        endDate.value = newData[newData.length - 1].date
-        endDateIndex.value = newData.length - 1
+      startDate.value = newData[0].date
+      startDateIndex.value = 0
+      endDate.value = newData[newData.length - 1].date
+      endDateIndex.value = newData.length - 1
     }
-}, { immediate: true })
-  
+  }, { immediate: true })
 
   const filteredData = computed(() => {
-
-    if (!endDate.value) return data.value
-
-    return data.value.filter(
-      (row) =>
-        new Date(row.date) >= new Date(startDate.value) &&
-        new Date(row.date) <= new Date(endDate.value)
-    )
+    if (data.value.length === 0) return []
+    
+    const start = Math.max(0, startDateIndex.value)
+    const end = Math.min(data.value.length - 1, endDateIndex.value)
+    
+    return data.value.slice(start, end + 1)
   })
 
   const updateDateRange = () => {
@@ -33,9 +32,10 @@ watch(data, (newData) => {
       endDateIndex.value = Number(temp)
     }
 
-    startDate.value = data.value[startDateIndex.value]?.date
-    endDate.value = data.value[endDateIndex.value]?.date
-    
+    if (data.value.length > 0) {
+      startDate.value = data.value[startDateIndex.value]?.date || ''
+      endDate.value = data.value[endDateIndex.value]?.date || ''
+    }
   }
 
   return {

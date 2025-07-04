@@ -3,22 +3,25 @@
     <div class="controls">
       <div class="filter-section">
         <label for="domain-select">Hírportál:</label>
-        <select 
-          id="domain-select" 
-          v-model="selectedDomainId" 
+        <select
+          id="domain-select"
+          v-model="selectedDomainId"
           @change="fetchData"
           class="domain-select"
         >
           <option value="">Összes hírportál</option>
-          <option 
-            v-for="domain in domains" 
-            :key="domain.id" 
-            :value="domain.id"
-          >
+          <option v-for="domain in domains" :key="domain.id" :value="domain.id">
             {{ domain.name }}
           </option>
         </select>
       </div>
+      <DateRangeSelector
+        class="m-1"
+        :selected="selected"
+        :ranges="ranges"
+        @update:selected="updateSelectedDateRange"
+        @refresh="refresh"
+      />
       <div class="summary" v-if="filteredData.length > 0">
         <div style="color: #666; margin-bottom: 8px">
           Átlagosan <br />
@@ -26,28 +29,19 @@
           {{ filteredData[filteredData.length - 1].date }}
         </div>
         <div>
-          <div
-            class="square"
-            :style="{ background: chartColors.positive.background }"
-          >
+          <div class="square" :style="{ background: chartColors.positive.background }">
             {{ getCount("positive") }}%
           </div>
           Elfogadott cikkek
         </div>
         <div>
-          <div
-            class="square"
-            :style="{ background: chartColors.todo.background }"
-          >
+          <div class="square" :style="{ background: chartColors.todo.background }">
             {{ getCount("todo") }}%
           </div>
           Kezeletlen cikkek
         </div>
         <div>
-          <div
-            class="square"
-            :style="{ background: chartColors.negative.background }"
-          >
+          <div class="square" :style="{ background: chartColors.negative.background }">
             {{ getCount("negative") }}%
           </div>
           Elutasított cikkek
@@ -113,34 +107,71 @@ import { chartOptions, chartColors } from "../config/chart";
 import { useDateRange } from "../composables/useDateRange";
 import type { DataRow } from "../types.ts";
 import DateRangeSlider from "../components/DateRangeSlider.vue";
+import { sub, format } from "date-fns";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const data = ref<DataRow[]>([]);
-const domains = ref<Array<{id: number, name: string}>>([]);
+const domains = ref<Array<{ id: number; name: string }>>([]);
 const selectedDomainId = ref<string>("");
-const { startDateIndex, endDateIndex, filteredData, updateDateRange } =
-  useDateRange(data);
+const { startDateIndex, endDateIndex, filteredData, updateDateRange } = useDateRange(
+  data
+);
+const selected = ref({ start: sub(new Date(), { days: 14 }), end: new Date() });
+
+const ranges = [
+  { label: "Elmúlt 1 nap", duration: { days: 1 - 1 } },
+  { label: "Elmúlt 2 nap", duration: { days: 2 - 1 } },
+  { label: "Elmúlt 7 nap", duration: { days: 7 - 1 } },
+  { label: "Elmúlt 2 hét", duration: { days: 14 - 1 } },
+  { label: "Elmúlt 1 hónap", duration: { days: 30 - 1 } },
+  { label: "Elmúlt 3 hónap", duration: { months: 3 } },
+  { label: "Elmúlt 6 hónap", duration: { months: 6 } },
+  { label: "Elmúlt 1 év", duration: { years: 1 } },
+  { label: "Elmúlt 3 év", duration: { years: 3 } },
+];
+
+function updateSelectedDateRange(newRange) {
+  selected.value = newRange;
+
+  // Find the start and end indices based on the selected date range
+  const startDate = format(newRange.start, "yyyy-MM-dd");
+  const endDate = format(newRange.end, "yyyy-MM-dd");
+
+  const startIndex = data.value.findIndex((row) => row.date >= startDate);
+  const endIndex = data.value.findIndex((row) => row.date > endDate);
+
+  startDateIndex.value = startIndex !== -1 ? startIndex : 0;
+  endDateIndex.value = endIndex !== -1 ? endIndex : data.value.length;
+
+  console.log("Selected date range updated:", {
+    start: newRange.start,
+    end: newRange.end,
+    startIndex: startDateIndex.value,
+    endIndex: endDateIndex.value,
+  });
+
+  updateDateRange();
+}
+
+function refresh() {
+  console.log("refresh");
+}
 
 const fetchData = async () => {
   const config = useRuntimeConfig();
   const params = new URLSearchParams();
   if (selectedDomainId.value) {
-    params.append('newspaper_id', selectedDomainId.value);
+    params.append("newspaper_id", selectedDomainId.value);
   }
-  
-  const url = `${config.public.baseUrl}/api/articles_by_day.csv${params.toString() ? '?' + params.toString() : ''}`;
+
+  const url = `${config.public.baseUrl}/api/articles_by_day.csv${
+    params.toString() ? "?" + params.toString() : ""
+  }`;
   const response = await fetch(url);
   const csv = await response.text();
   const result = parse<DataRow>(csv, { header: true, skipEmptyLines: true });
-  
+
   data.value = result.data;
   startDateIndex.value = 0;
   endDateIndex.value = data.value.length;
@@ -149,12 +180,12 @@ const fetchData = async () => {
 
 onMounted(async () => {
   const config = useRuntimeConfig();
-  
+
   // Fetch domains
   const domainsResponse = await fetch(`${config.public.baseUrl}/api/domains`);
   const domainsData = await domainsResponse.json();
   domains.value = domainsData.domains;
-  
+
   // Initial data fetch
   await fetchData();
 });
