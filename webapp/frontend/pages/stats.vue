@@ -15,6 +15,18 @@
           </option>
         </select>
       </div>
+      <div class="filter-section">
+        <label for="aggregation-select">Megjelenítés:</label>
+        <select
+          id="aggregation-select"
+          v-model="aggregationType"
+          @change="onAggregationChange"
+          class="domain-select"
+        >
+          <option value="days">Napok</option>
+          <option value="weeks">Hetek</option>
+        </select>
+      </div>
       <DateRangeSelector
         class="m-1"
         :selected="selected"
@@ -22,11 +34,11 @@
         @update:selected="updateSelectedDateRange"
         @refresh="refresh"
       />
-      <div class="summary" v-if="filteredData.length > 0">
+      <div class="summary" v-if="displayData.length > 0">
         <div style="color: #666; margin-bottom: 8px">
           Átlagosan <br />
-          {{ filteredData[0].date }} -
-          {{ filteredData[filteredData.length - 1].date }}
+          {{ displayData[0].date }} -
+          {{ displayData[displayData.length - 1].date }}
         </div>
         <div>
           <div class="square" :style="{ background: chartColors.positive.background }">
@@ -52,23 +64,23 @@
       <Bar
         v-if="data.length > 0"
         :data="{
-          labels: filteredData.map((row) => row.date),
+          labels: displayData.map((row) => row.date),
           datasets: [
             {
               label: 'Elfogadott cikkek',
-              data: filteredData.map((row) => row.count_positive),
+              data: displayData.map((row) => row.count_positive),
               backgroundColor: chartColors.positive.background,
               borderColor: chartColors.positive.border,
             },
             {
               label: 'Kezeletlen cikkek',
-              data: filteredData.map((row) => row.count_todo),
+              data: displayData.map((row) => row.count_todo),
               backgroundColor: chartColors.todo.background,
               borderColor: chartColors.todo.border,
             },
             {
               label: 'Elutasított cikkek',
-              data: filteredData.map((row) => row.count_negative),
+              data: displayData.map((row) => row.count_negative),
               backgroundColor: chartColors.negative.background,
               borderColor: chartColors.negative.border,
             },
@@ -90,7 +102,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { Bar } from "vue-chartjs";
 import { parse } from "papaparse";
 import {
@@ -107,13 +119,14 @@ import { chartOptions, chartColors } from "../config/chart";
 import { useDateRange } from "../composables/useDateRange";
 import type { DataRow } from "../types.ts";
 import DateRangeSlider from "../components/DateRangeSlider.vue";
-import { sub, format } from "date-fns";
+import { sub, format, startOfWeek, addWeeks } from "date-fns";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const data = ref<DataRow[]>([]);
 const domains = ref<Array<{ id: number; name: string }>>([]);
 const selectedDomainId = ref<string>("");
+const aggregationType = ref<"days" | "weeks">("days");
 const { startDateIndex, endDateIndex, filteredData, updateDateRange } = useDateRange(
   data
 );
@@ -190,12 +203,52 @@ onMounted(async () => {
   await fetchData();
 });
 
+const weeklyData = computed(() => {
+  if (aggregationType.value !== "weeks" || filteredData.value.length === 0) {
+    return [];
+  }
+
+  const weekMap = new Map();
+  
+  filteredData.value.forEach(row => {
+    const date = new Date(row.date);
+    const weekStart = startOfWeek(date, { weekStartsOn: 1 }); // Monday as start
+    const weekKey = format(weekStart, "yyyy-MM-dd");
+    
+    if (!weekMap.has(weekKey)) {
+      weekMap.set(weekKey, {
+        date: weekKey,
+        count_positive: 0,
+        count_todo: 0,
+        count_negative: 0,
+        total_count: 0
+      });
+    }
+    
+    const week = weekMap.get(weekKey);
+    week.count_positive += Number(row.count_positive) || 0;
+    week.count_todo += Number(row.count_todo) || 0;
+    week.count_negative += Number(row.count_negative) || 0;
+    week.total_count += Number(row.total_count) || 0;
+  });
+  
+  return Array.from(weekMap.values()).sort((a, b) => a.date.localeCompare(b.date));
+});
+
+const displayData = computed(() => {
+  return aggregationType.value === "weeks" ? weeklyData.value : filteredData.value;
+});
+
+function onAggregationChange() {
+  updateDateRange();
+}
+
 const getCount = (type: "positive" | "todo" | "negative"): number => {
-  const total = filteredData.value.reduce((sum, row) => {
+  const total = displayData.value.reduce((sum, row) => {
     return sum + Number(row.total_count);
   }, 0);
 
-  const typeCount = filteredData.value.reduce(
+  const typeCount = displayData.value.reduce(
     (sum, row) => sum + Number(row[`count_${type}`]),
     0
   );
