@@ -11,7 +11,7 @@
           )
         "
         :min="0"
-        :max="max"
+        :max="max-1"
         class="range-input start"
         @change="$emit('update')"
       />
@@ -25,7 +25,7 @@
           )
         "
         :min="0"
-        :max="max"
+        :max="max-1"
         class="range-input end"
         @change="$emit('update')"
       />
@@ -69,11 +69,15 @@ defineEmits<{
   position: absolute;
   width: 100%;
   pointer-events: none;
-  appearance: none;
   height: 0px;
   border: none;
   background: none;
 }
+
+.start {
+  border-bottom: solid #000 !important;
+}
+
 .range-input::before {
   content: "";
   display: block;
@@ -82,7 +86,6 @@ defineEmits<{
   position: absolute;
   height: 0px;
   width: 100%;
-  border-bottom: solid #000 !important;
 }
 
 .range-input::-webkit-slider-thumb {
@@ -95,6 +98,23 @@ defineEmits<{
   border: #a2a2a2 1px solid;
   cursor: pointer;
   z-index: 10;
+}
+
+.range-input::-moz-range-thumb {
+  pointer-events: auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f5f5f5;
+  border: #a2a2a2 1px solid;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.range-input::-moz-range-track {
+  background: transparent;
+  border: none;
+  height: 0px;
 }
 
 .inputs {

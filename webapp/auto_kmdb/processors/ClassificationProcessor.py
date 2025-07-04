@@ -1,5 +1,4 @@
 from os import environ
-from typing import Any
 from numpy import ndarray
 from sklearn.svm import SVC
 from transformers.tokenization_utils_base import BatchEncoding
@@ -19,24 +18,39 @@ import torch
 import logging
 import gc
 import traceback
-from chromadb import (
-    Documents,
-    EmbeddingFunction,
-    Embeddings,
-    PersistentClient,
-    Collection,
-    QueryResult,
-)
-import numpy as np
 from datetime import datetime
 from google import genai
 from google.genai import types
 from google.genai.types import GenerateContentResponse
+from datasketch import MinHash
+import re
+import nltk
+from nltk.corpus import stopwords
+from nltk.stem import SnowballStemmer
+
+# Download required NLTK data
+try:
+    nltk.data.find("corpora/stopwords")
+except LookupError:
+    nltk.download("stopwords")
+
+# Initialize Hungarian stemmer and stopwords
+hungarian_stemmer = SnowballStemmer("hungarian")
+try:
+    hungarian_stopwords = set(stopwords.words("hungarian"))
+except OSError:
+    # Fallback if Hungarian stopwords are not available
+    hungarian_stopwords = set()
 
 USE_GEMINI = environ.get("USE_GEMINI", "false").lower() == "true"
-SIMILARITY_THRESHOLD = 0.7
+SIMILARITY_THRESHOLD = 0.15
 CLASSIFICATION_SCORE_THRESHOLD = 0.42
 GEMINI_MODEL = environ.get("GEMINI_MODEL", "gemini-2.5-flash-preview-05-20")
+
+# In-memory search index for MinHash similarity
+search_index = (
+    []
+)  # List of dicts: {"id": autokmdb_id, "minhash": minhash_obj, "domain": domain, "date": date}
 
 
 def genai_label(title, description, text):
@@ -120,41 +134,75 @@ Ez volt a cikk, most dönts, hogy illik-e az adatbázisba, a választ sima json 
     return response.parsed["label"], token_counts
 
 
-class MyEmbeddingFunction(EmbeddingFunction):
-    def __call__(self, input: Documents) -> Embeddings:
-        return [parse_embedding(text) for text in input]
+def text_to_shingles(text: str, k: int = 1) -> set:
+    """Convert text to k-shingles (k-grams) for MinHash."""
+    # Clean and normalize text
+    text = re.sub(r"[^\w\s]", " ", text.lower())
+    text = re.sub(r"\s+", " ", text.strip())
+    words = text.split()
+
+    # Remove stopwords and stem words
+    processed_words = []
+    for word in words:
+        if word not in hungarian_stopwords and len(word) > 2:
+            stemmed_word = hungarian_stemmer.stem(word)
+            processed_words.append(stemmed_word)
+
+    # Create k-shingles
+    shingles = set()
+    for i in range(len(processed_words) - k + 1):
+        shingle = " ".join(processed_words[i : i + k])
+        shingles.add(shingle)
+
+    return shingles
 
 
-def parse_embedding(embedding: str) -> ndarray:
-    return np.array([float(x) for x in embedding.split(",")])
+def create_minhash(text: str) -> MinHash:
+    """Create MinHash signature from text."""
+    shingles = text_to_shingles(text)
+    print(f"shingles: {shingles}")
+    minhash = MinHash(num_perm=128)
+    for shingle in shingles:
+        minhash.update(shingle.encode("utf-8"))
+    return minhash
 
 
-def encode_embedding(embedding: ndarray) -> str:
-    return ",".join(str(x) for x in embedding)
-
-
-def find_similar(embedding: ndarray, collection: Collection, domain: str):
+def find_similar_minhash(text: str, domain: str, threshold: float = 0.7):
+    """Find similar articles using MinHash similarity."""
+    target_minhash = create_minhash(text)
+    print(f"minhash created for text: {text[:50]}...")
+    print(f"target_minhash: {target_minhash}")
     now = datetime.now()
     date = now.strftime("%Y-%m-%d")
-    qfilter = (
-        {"$and": [{"date": {"$eq": date}}, {"domain": {"$ne": domain}}]}
-        if domain
-        else {"date": {"$eq": date}}
+
+    similar_articles = []
+    for article in search_index:
+        # Skip articles from same domain or different date
+        if article["date"] != date or (domain and article["domain"] == domain):
+            continue
+
+        similarity = target_minhash.jaccard(article["minhash"])
+        print(f"similarity: {similarity} for article {article['id']}")
+        if similarity >= threshold:
+            similar_articles.append(
+                (article["id"], 1 - similarity)
+            )  # Convert to distance
+
+    # Sort by distance (lower is more similar)
+    similar_articles.sort(key=lambda x: x[1])
+    return similar_articles[:10]  # Return top 10
+
+
+def add_to_search_index(autokmdb_id: int, text: str, domain: str):
+    """Add article to in-memory search index."""
+    now = datetime.now()
+    date = now.strftime("%Y-%m-%d")
+
+    minhash = create_minhash(text)
+    search_index.append(
+        {"id": autokmdb_id, "minhash": minhash, "domain": domain, "date": date}
     )
-    result: QueryResult = collection.query([embedding], n_results=10, where=qfilter)
-    if not result or not result["distances"]:
-        return None
-    return list(zip(result["ids"][0], result["distances"][0]))
 
-
-chroma_client = PersistentClient(path="data/chroma.db")
-
-chroma_collection = chroma_client.get_or_create_collection(
-    name="my_collection",
-    embedding_function=MyEmbeddingFunction(),
-)
-
-logging.info("ChromaDB collection created")
 
 CATEGORY_MAP: dict[str, int] = {"hungarian-news": 0, "eu-news": 1, "world-news": 2}
 
@@ -214,7 +262,7 @@ class ClassificationProcessor(Processor):
         score: float
         label: int
         category: int
-        str_embedding: Optional[str] = None
+        article_text: str = None
         with torch.no_grad():
             logits, cls_embedding = self._extract_outputs(inputs)
 
@@ -227,15 +275,17 @@ class ClassificationProcessor(Processor):
                     label = 1
                 else:
                     label = 0
-                logging.info(f"Google Gemini classification: {google_label}, token counts: {token_counts}")
+                logging.info(
+                    f"Google Gemini classification: {google_label}, token counts: {token_counts}"
+                )
             if label == 1:
-                str_embedding = encode_embedding(cls_embedding)
+                article_text = prediction_text
             category = CATEGORY_MAP.get(
                 self.svm_classifier.predict([cls_embedding])[0], 0
             )
 
         del inputs, logits, probabilities
-        return label, score, category, str_embedding
+        return label, score, category, article_text
 
     def _save_classification(self, connection, next_row, label, score, category):
         """Saves the classification result to the database."""
@@ -255,11 +305,12 @@ class ClassificationProcessor(Processor):
                 sleep(30)
                 return
             autokmdb_id = next_row["id"]
+            full_text = f"{next_row['title']}\n{next_row['description']}\n{next_row['text']}"
 
             logging.info("Processing next classification")
 
             try:
-                label, score, category, str_embedding = self.predict(
+                label, score, category, article_text = self.predict(
                     next_row["title"],
                     next_row["description"],
                     next_row["text"],
@@ -267,19 +318,17 @@ class ClassificationProcessor(Processor):
                 )
                 domain = ".".join(next_row["clean_url"].split("/")[2].split(".")[-2:])
                 if label == 1:
-                    cls_embedding = parse_embedding(str_embedding)
-                    similar_result = find_similar(
-                        cls_embedding, chroma_collection, domain
+                    similar_result = find_similar_minhash(
+                        full_text, domain, SIMILARITY_THRESHOLD
                     )
-                    good_results = (
-                        [
-                            (article_id, distance)
-                            for article_id, distance in similar_result
-                            if distance < SIMILARITY_THRESHOLD * 100
-                        ]
-                        if similar_result
-                        else []
-                    )
+                    good_results = [
+                        (article_id, distance)
+                        for article_id, distance in similar_result
+                        if distance
+                        < (
+                            1 - SIMILARITY_THRESHOLD
+                        )  # Convert similarity back to distance
+                    ]
                     good_results = sorted(
                         good_results, key=lambda x: x[1], reverse=False
                     )
@@ -307,18 +356,9 @@ class ClassificationProcessor(Processor):
                                     connection, autokmdb_id, group_id
                                 )
                         break  # temporary solution
-                    now = datetime.now()
-                    date = now.strftime("%Y-%m-%d")
-                    chroma_collection.add(
-                        documents=[str_embedding],
-                        ids=[str(autokmdb_id)],
-                        metadatas=[
-                            {
-                                "date": date,
-                                "domain": domain,
-                            }
-                        ],
-                    )
+
+                    # Add to search index for future comparisons
+                    add_to_search_index(autokmdb_id, full_text, domain)
 
                 with db.connection_pool.get_connection() as connection:
                     self._save_classification(
