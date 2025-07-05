@@ -1758,3 +1758,61 @@ def get_roles(connection: PooledMySQLConnection, session_id: int):
     ]
 
     return roles
+
+
+def validate_user_credentials(connection: PooledMySQLConnection, username: str, password: str) -> Optional[int]:
+    """
+    Validate user credentials against the database.
+    
+    Args:
+        connection: Database connection
+        username: Username to validate
+        password: Password to validate (will be MD5 hashed)
+    
+    Returns:
+        User ID if valid, None if invalid
+    """
+    import hashlib
+    
+    # Hash the password using MD5
+    password_hash = hashlib.md5(password.encode('utf-8')).hexdigest()
+    
+    query = """SELECT user_id FROM users WHERE uname = %s AND upass = %s AND ustatus = 'Y'"""
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query, (username, password_hash))
+        result = cursor.fetchone()
+        return result["user_id"] if result else None
+
+
+def create_user_session(connection: PooledMySQLConnection, user_id: int) -> str:
+    """
+    Create a new session for the user.
+    
+    Args:
+        connection: Database connection
+        user_id: ID of the user to create session for
+    
+    Returns:
+        Session ID string
+    """
+    import secrets
+    import time
+    import string
+    
+    # Generate a secure random session ID using only alphanumeric characters
+    alphabet = string.ascii_letters + string.digits
+    session_id = ''.join(secrets.choice(alphabet) for _ in range(32))
+    
+    # Set session to expire in 8 hours
+    current_time = int(time.time())
+    expires_time = current_time + (8 * 60 * 60)  # 8 hours from now
+    
+    # Insert session into database
+    query = """INSERT INTO users_sessions (session_id, registered, session_expires) 
+               VALUES (%s, %s, %s)"""
+    
+    with connection.cursor() as cursor:
+        cursor.execute(query, (session_id, user_id, expires_time))
+    
+    connection.commit()
+    return session_id

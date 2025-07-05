@@ -31,6 +31,7 @@ let errorText = ref("");
 let errorTitle = ref("");
 let reverseSort = ref(false);
 let loginError = ref(false);
+let isAuthenticated = ref(true);
 let selectedReasonId = ref(-1);
 const reasons = [
   { name: "Bármilyen ok", id: -1 },
@@ -96,10 +97,13 @@ function filterNewspaper(newspaper) {
 }
 
 function sendLoginError() {
-  loginError.value = true;
-  isOpenError.value = true;
-  errorText.value = 'Kérlek, jelentkezz be a K-Monitor Adatbázis admin felületén, majd töltsd újra ezt a lapot!';
-  errorTitle.value = "Hiba";
+  isAuthenticated.value = false;
+}
+
+function handleLoginSuccess() {
+  isAuthenticated.value = true;
+  refreshAll();
+  document.location.reload();
 }
 
 function updateFromURL() {
@@ -418,76 +422,80 @@ async function handleAddUrl(newUrl, selectedDomain) {
 
 <template>
   <div>
-    <UContainer class="my-1 justify-between flex flex-wrap lg:px-0 px-4 sm:px-0 ml-1 max-w-full items-center">
-      <PageTitle :baseUrl="baseUrl" />
-      <a href="./stats"><Icon title="Statisztikák" name="mdi:chart-arc" size="30" style="color:rgb(34 197 94 / 1);"></Icon></a>
-      <UContainer class="my-1 flex lg:px-0 px-2 sm:px-0 ml-auto mr-1 flex-wrap">
-        <UButton class="mr-1 h-fit my-1" @click="openNewUrl">Új cikk</UButton>
-        <div class="flex my-auto px-1 my-1">
-          <NewspaperSelectMenu :allDomains="allDomains" :selectedDomains="selectedDomains"
-            @update:selectedDomains="updateSelectedDomains" @refresh="refresh" />
-        </div>
+    <!-- Show login form if not authenticated -->
+    <LoginForm v-if="!isAuthenticated" @loginSuccess="handleLoginSuccess" />
+    
+    <!-- Show main content if authenticated -->
+    <template v-else>
+      <UContainer class="my-1 justify-between flex flex-wrap lg:px-0 px-4 sm:px-0 ml-1 max-w-full items-center">
+        <PageTitle :baseUrl="baseUrl" />
+        <a href="./stats"><Icon title="Statisztikák" name="mdi:chart-arc" size="30" style="color:rgb(34 197 94 / 1);"></Icon></a>
+        <UContainer class="my-1 flex lg:px-0 px-2 sm:px-0 ml-auto mr-1 flex-wrap">
+          <UButton class="mr-1 h-fit my-1" @click="openNewUrl">Új cikk</UButton>
+          <div class="flex my-auto px-1 my-1">
+            <NewspaperSelectMenu :allDomains="allDomains" :selectedDomains="selectedDomains"
+              @update:selectedDomains="updateSelectedDomains" @refresh="refresh" />
+          </div>
 
-        <ReverseSortButton :reverseSort="reverseSort" @update:reverseSort="updateReverseSort" @refresh="refresh" />
+          <ReverseSortButton :reverseSort="reverseSort" @update:reverseSort="updateReverseSort" @refresh="refresh" />
 
-        <DateRangeSelector :selected="selected" :ranges="ranges" @update:selected="updateSelectedDateRange"
-          @refresh="refresh" />
+          <DateRangeSelector :selected="selected" :ranges="ranges" @update:selected="updateSelectedDateRange"
+            @refresh="refresh" />
 
-        <SkipReasonSelectMenu v-if="statusId == 4" :reasons="reasons" @update:selectedReason="updateSelectedReason"
-          @refresh="refresh" />
+          <SkipReasonSelectMenu v-if="statusId == 4" :reasons="reasons" @update:selectedReason="updateSelectedReason"
+            @refresh="refresh" />
 
-        <UInput class="px-1 my-1" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
-        <AnnoteMultiple :articles="articles" :items="items" :loadingDelete="loadingDelete" />
+          <UInput class="px-1 my-1" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
+          <AnnoteMultiple :articles="articles" :items="items" :loadingDelete="loadingDelete" />
+        </UContainer>
       </UContainer>
-    </UContainer>
 
-    <AddArticleModal :isOpen="isOpen" :domains="allLabels ? allLabels['domains'] : []" @update:isOpen="isOpen = $event"
-      @add-url="handleAddUrl" />
+      <AddArticleModal :isOpen="isOpen" :domains="allLabels ? allLabels['domains'] : []" @update:isOpen="isOpen = $event"
+        @add-url="handleAddUrl" />
 
-    <UModal v-model="isOpenError" :prevent-close="true">
-      <div class="p-4">
-        <h1 class="font-bold">{{ errorTitle }}</h1>
-        <p class="py-5">{{ errorText }}</p>
-        <p v-if="loginError"><a :href="config.public.adminUrl" target="_blank" class="text-blue-700">admin felület</a>
-        </p>
-        <UButton v-else @click="isOpenError = false">Bezárás</UButton>
-      </div>
-    </UModal>
+      <UModal v-model="isOpenError" :prevent-close="true">
+        <div class="p-4">
+          <h1 class="font-bold">{{ errorTitle }}</h1>
+          <p class="py-5">{{ errorText }}</p>
+          <UButton @click="isOpenError = false">Bezárás</UButton>
+        </div>
+      </UModal>
 
-    <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh">
-      <template #item="{ item }" v-if="!pending">
-        <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @change="refresh" />
+      <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh">
+        <template #item="{ item }" v-if="!pending">
+          <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @change="refresh" />
 
-        <template v-for="(group, index) in groupedArticles" :key="group.date">
-          <!-- Date separator -->
-          <div class="date-separator my-4 flex items-center">
-            <div class="h-px bg-gray-300 flex-grow mr-4"></div>
-            <div class="text-lg font-semibold text-gray-700">{{ group.displayDate }}</div>
-            <div class="h-px bg-gray-300 flex-grow ml-4"></div>
-          </div>
+          <template v-for="(group, index) in groupedArticles" :key="group.date">
+            <!-- Date separator -->
+            <div class="date-separator my-4 flex items-center">
+              <div class="h-px bg-gray-300 flex-grow mr-4"></div>
+              <div class="text-lg font-semibold text-gray-700">{{ group.displayDate }}</div>
+              <div class="h-px bg-gray-300 flex-grow ml-4"></div>
+            </div>
 
-          <div class="flex flex-col items-center">
-            <Card 
-              v-for="article in group.articles" 
-              :key="article.id" 
-              :article="article" 
-              :allLabels="allLabels" 
-              :keywordSynonyms="keywordSynonyms" 
-              :allFiles="allFiles" 
-              :refresh="refreshAll"
-              :is_small="false"
-              @update:filter_newspaper="filterNewspaper" 
-              class="w-full max-w-2xl"
-            />
-          </div>
+            <div class="flex flex-col items-center">
+              <Card 
+                v-for="article in group.articles" 
+                :key="article.id" 
+                :article="article" 
+                :allLabels="allLabels" 
+                :keywordSynonyms="keywordSynonyms" 
+                :allFiles="allFiles" 
+                :refresh="refreshAll"
+                :is_small="false"
+                @update:filter_newspaper="filterNewspaper" 
+                class="w-full max-w-2xl"
+              />
+            </div>
+          </template>
+
+          <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @change="refresh" />
         </template>
-
-        <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @change="refresh" />
-      </template>
-      <template #item="{ item }" v-else>
-        <UProgress animation="elastic" v-if="pending" />
-      </template>
-    </UTabs>
+        <template #item="{ item }" v-else>
+          <UProgress animation="elastic" v-if="pending" />
+        </template>
+      </UTabs>
+    </template>
   </div>
 </template>
 

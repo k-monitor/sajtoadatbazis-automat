@@ -386,3 +386,47 @@ def domains():
 @api.route("/status")
 def hello():
     return "OK"
+
+
+@api.route("/login", methods=["POST"])
+def login():
+    """
+    Authenticate user and create session.
+    Expects JSON with 'username' and 'password' fields.
+    Sets session cookie on successful authentication.
+    """
+    content: Optional[dict] = request.json
+    
+    if not content:
+        return jsonify({"error": "Missing request body"}), 400
+    
+    username: str = content.get("username", "")
+    password: str = content.get("password", "")
+    
+    if not username or not password:
+        return jsonify({"error": "Username and password required"}), 400
+    
+    with db.connection_pool.get_connection() as connection:
+        # Validate credentials
+        user_id = db.validate_user_credentials(connection, username, password)
+        
+        if not user_id:
+            return jsonify({"error": "Invalid credentials"}), 401
+        
+        # Create session
+        session_id = db.create_user_session(connection, user_id)
+        
+        # Create response
+        response = jsonify({"success": True, "message": "Login successful"})
+        
+        # Set session cookie
+        response.set_cookie(
+            'PHPSESSID',
+            session_id,
+            max_age=8*60*60,
+            httponly=False,
+            secure=True,
+            samesite='None'
+        )
+        
+        return response, 200
