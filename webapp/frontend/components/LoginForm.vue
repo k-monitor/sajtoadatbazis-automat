@@ -97,6 +97,7 @@ async function handleLogin() {
     if (response.success) {
       emit('loginSuccess');
       console.log('Bejelentkezés sikeres');
+      useCookie('PHPSESSID').value = response.session_id;
     } else {
       error.value = 'Bejelentkezési hiba történt';
     }

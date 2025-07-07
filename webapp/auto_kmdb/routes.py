@@ -417,16 +417,6 @@ def login():
         session_id = db.create_user_session(connection, user_id)
         
         # Create response
-        response = jsonify({"success": True, "message": "Login successful"})
-        
-        # Set session cookie
-        response.set_cookie(
-            'PHPSESSID',
-            session_id,
-            max_age=8*60*60,
-            httponly=False,
-            secure=True,
-            samesite='None'
-        )
+        response = jsonify({"success": True, "message": "Login successful", "session_id": session_id})
         
         return response, 200
