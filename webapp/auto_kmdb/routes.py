@@ -30,7 +30,7 @@ def get_articles_by_day():
     end: str = content.get("to", "2050-01-01")
     newspaper_id: Optional[int] = content.get("newspaper_id", None)
     with db.connection_pool.get_connection() as connection:
-        articles_by_day: list[dict] = db.get_articles_by_day(start, end, newspaper_id)
+        articles_by_day: list[dict] = db.get_articles_by_day(newspaper_id)
 
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=articles_by_day[0].keys())
@@ -52,7 +52,7 @@ def get_articles_by_day_json():
     end: str = content.get("to", "2050-01-01")
     newspaper_id: Optional[int] = content.get("newspaper_id", None)
     with db.connection_pool.get_connection() as connection:
-        articles_by_day: list[dict] = db.get_articles_by_day(start, end, newspaper_id)
+        articles_by_day: list[dict] = db.get_articles_by_day(newspaper_id)
         for article in articles_by_day:
             if "date" in article and type(article["date"]) == datetime:
                 article["date"] = article["date"].strftime("%Y-%m-%d")
@@ -386,3 +386,37 @@ def domains():
 @api.route("/status")
 def hello():
     return "OK"
+
+
+@api.route("/login", methods=["POST"])
+def login():
+    """
+    Authenticate user and create session.
+    Expects JSON with 'username' and 'password' fields.
+    Sets session cookie on successful authentication.
+    """
+    content: Optional[dict] = request.json
+    
+    if not content:
+        return jsonify({"error": "Missing request body"}), 400
+    
+    username: str = content.get("username", "")
+    password: str = content.get("password", "")
+    
+    if not username or not password:
+        return jsonify({"error": "Username and password required"}), 400
+    
+    with db.connection_pool.get_connection() as connection:
+        # Validate credentials
+        user_id = db.validate_user_credentials(connection, username, password)
+        
+        if not user_id:
+            return jsonify({"error": "Invalid credentials"}), 401
+        
+        # Create session
+        session_id = db.create_user_session(connection, user_id)
+        
+        # Create response
+        response = jsonify({"success": True, "message": "Login successful", "session_id": session_id})
+        
+        return response, 200

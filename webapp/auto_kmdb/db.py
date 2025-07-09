@@ -519,79 +519,63 @@ def get_human_queue(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
 
 @cached(cache=TTLCache(maxsize=32, ttl=3600))
 def get_articles_by_day(
-    start: str, end: str, newspaper_id: Optional[int] = None
+    newspaper_id: Optional[int] = None
 ) -> list[dict]:
-    # Break down into separate optimized queries for better performance
-    newspaper_condition = "AND newspaper_id = %s" if newspaper_id else ""
-    params_base = [start, end] + ([newspaper_id] if newspaper_id else [])
+    newspaper_condition = "WHERE newspaper_id = %s" if newspaper_id else ""
+    params = [newspaper_id] if newspaper_id else []
     
     with connection_pool.get_connection() as connection:
         with connection.cursor(dictionary=True) as cursor:
-            # Get all unique dates first
-            date_query = f"""
-                SELECT DISTINCT DATE(article_date) AS date
+            # Single optimized query using conditional aggregation
+            query = f"""
+                SELECT 
+                    DATE(article_date) AS date,
+                    COUNT(*) AS total_count,
+                    SUM(CASE WHEN processing_step = 5 AND annotation_label = 1 THEN 1 ELSE 0 END) AS count_positive,
+                    SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 0 THEN 1 ELSE 0 END) AS count_negative_0,
+                    SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 1 THEN 1 ELSE 0 END) AS count_negative_1,
+                    SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 2 THEN 1 ELSE 0 END) AS count_negative_2,
+                    SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 3 THEN 1 ELSE 0 END) AS count_negative_3,
+                    SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 100 THEN 1 ELSE 0 END) AS count_negative_100,
+                    SUM(CASE WHEN classification_label = 1 AND processing_step = 4 
+                             AND annotation_label IS NULL AND COALESCE(skip_reason, 0) = 0 THEN 1 ELSE 0 END) AS count_todo
                 FROM autokmdb_news 
-                WHERE article_date BETWEEN %s AND %s {newspaper_condition}
+                {newspaper_condition}
+                GROUP BY DATE(article_date)
                 ORDER BY date
             """
-            cursor.execute(date_query, params_base)
-            dates = [row["date"] for row in cursor.fetchall()]
             
-            if not dates:
-                return []
+            cursor.execute(query, params)
+            results = cursor.fetchall()
             
-            # Prepare batch queries for each metric
-            queries = {
-                "positive": f"""
-                    SELECT DATE(article_date) AS date, COUNT(*) AS count
-                    FROM autokmdb_news 
-                    WHERE article_date BETWEEN %s AND %s 
-                      AND processing_step = 5 AND annotation_label = 1
-                      {newspaper_condition}
-                    GROUP BY DATE(article_date)
-                """,
-                "negative": f"""
-                    SELECT DATE(article_date) AS date, COUNT(*) AS count
-                    FROM autokmdb_news 
-                    WHERE article_date BETWEEN %s AND %s 
-                      AND processing_step = 5 AND annotation_label = 0
-                      {newspaper_condition}
-                    GROUP BY DATE(article_date)
-                """,
-                "todo": f"""
-                    SELECT DATE(article_date) AS date, COUNT(*) AS count
-                    FROM autokmdb_news 
-                    WHERE article_date BETWEEN %s AND %s 
-                      AND classification_label = 1 AND processing_step = 4 
-                      AND annotation_label IS NULL AND COALESCE(skip_reason, 0) = 0
-                      {newspaper_condition}
-                    GROUP BY DATE(article_date)
-                """
-            }
-            
-            # Execute all queries and collect results
-            results = {}
-            for metric, query in queries.items():
-                cursor.execute(query, params_base)
-                results[metric] = {row["date"]: row["count"] for row in cursor.fetchall()}
-            
-            # Combine results
+            # Calculate derived fields
             final_results = []
-            for date in dates:
-                positive_count = results["positive"].get(date, 0)
-                negative_count = results["negative"].get(date, 0)
-                todo_count = results["todo"].get(date, 0)
-                total_count = positive_count + negative_count + todo_count
+            for row in results:
+                count_negative = (row["count_negative_0"] + row["count_negative_1"] + 
+                                row["count_negative_2"] + row["count_negative_3"] + 
+                                row["count_negative_100"])
                 
                 final_results.append({
-                    "date": date,
-                    "total_count": total_count,
-                    "count_positive": positive_count,
-                    "count_negative": negative_count,
-                    "count_todo": todo_count
+                    "date": row["date"],
+                    "total_count": row["count_positive"] + count_negative + row["count_todo"],
+                    "count_positive": row["count_positive"],
+                    "count_negative": count_negative,
+                    "count_negative_0": row["count_negative_0"],  # nem releváns
+                    "count_negative_1": row["count_negative_1"],  # átvett
+                    "count_negative_2": row["count_negative_2"],  # külföldi
+                    "count_negative_3": row["count_negative_3"],  # már szerepel
+                    "count_negative_100": row["count_negative_100"],  # egyéb
+                    "count_todo": row["count_todo"]
                 })
             
             return final_results
+
+# Add these indexes to your database for optimal performance:
+# CREATE INDEX idx_autokmdb_news_article_date ON autokmdb_news (article_date);
+# CREATE INDEX idx_autokmdb_news_processing_annotation ON autokmdb_news (processing_step, annotation_label, negative_reason);
+# CREATE INDEX idx_autokmdb_news_classification_step ON autokmdb_news (classification_label, processing_step, annotation_label, skip_reason);
+# CREATE INDEX idx_autokmdb_news_newspaper_date ON autokmdb_news (newspaper_id, article_date);
+# CREATE INDEX idx_autokmdb_news_compound ON autokmdb_news (article_date, newspaper_id, processing_step, annotation_label, classification_label);
 
 
 def find_group_by_autokmdb_id(connection, autokmdb_id):
@@ -1774,3 +1758,61 @@ def get_roles(connection: PooledMySQLConnection, session_id: int):
     ]
 
     return roles
+
+
+def validate_user_credentials(connection: PooledMySQLConnection, username: str, password: str) -> Optional[int]:
+    """
+    Validate user credentials against the database.
+    
+    Args:
+        connection: Database connection
+        username: Username to validate
+        password: Password to validate (will be MD5 hashed)
+    
+    Returns:
+        User ID if valid, None if invalid
+    """
+    import hashlib
+    
+    # Hash the password using MD5
+    password_hash = hashlib.md5(password.encode('utf-8')).hexdigest()
+    
+    query = """SELECT user_id FROM users WHERE uname = %s AND upass = %s AND ustatus = 'Y'"""
+    with connection.cursor(dictionary=True) as cursor:
+        cursor.execute(query, (username, password_hash))
+        result = cursor.fetchone()
+        return result["user_id"] if result else None
+
+
+def create_user_session(connection: PooledMySQLConnection, user_id: int) -> str:
+    """
+    Create a new session for the user.
+    
+    Args:
+        connection: Database connection
+        user_id: ID of the user to create session for
+    
+    Returns:
+        Session ID string
+    """
+    import secrets
+    import time
+    import string
+    
+    # Generate a secure random session ID using only alphanumeric characters
+    alphabet = string.ascii_letters + string.digits
+    session_id = ''.join(secrets.choice(alphabet) for _ in range(32))
+    
+    # Set session to expire in 8 hours
+    current_time = int(time.time())
+    expires_time = current_time + (8 * 60 * 60)  # 8 hours from now
+    
+    # Insert session into database
+    query = """INSERT INTO users_sessions (session_id, registered, session_expires) 
+               VALUES (%s, %s, %s)"""
+    
+    with connection.cursor() as cursor:
+        cursor.execute(query, (session_id, user_id, expires_time))
+    
+    connection.commit()
+    return session_id
