@@ -366,23 +366,19 @@ def add_auto_other(
     connection: PooledMySQLConnection,
     autokmdb_news_id: int,
     other_id: int,
-    found_name: str,
-    found_position: int,
     name: str,
     classification_score: float,
     classification_label: int,
 ) -> None:
     with connection.cursor() as cursor:
         query = """INSERT INTO autokmdb_others
-                (autokmdb_news_id, other_id, found_name, found_position, name, classification_score, classification_label, version_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)"""
+                (autokmdb_news_id, other_id, name, classification_score, classification_label, version_number)
+                VALUES (%s, %s, %s, %s, %s, %s)"""
         cursor.execute(
             query,
             (
                 autokmdb_news_id,
                 other_id,
-                found_name,
-                found_position,
                 name,
                 classification_score,
                 classification_label,
