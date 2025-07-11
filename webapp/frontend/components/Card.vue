@@ -333,6 +333,7 @@ async function postUrl(url, data) {
 let allPersons = ref([]);
 let allInstitutions = ref([]);
 let allPlaces = ref([]);
+let kwOthers = ref([]);
 let allOthers = ref([]);
 
 let positivePersons = ref([]);
@@ -414,7 +415,8 @@ function openModal() {
         allInstitutions.value = article.value.mapped_institutions;
         allPlaces.value = article.value.mapped_places;
         const keywords = getKeywords(article.value.text);
-        allOthers.value = mapEntities(keywords);
+        kwOthers.value = mapEntities(keywords);
+        allOthers.value = kwOthers.value.concat(article.value.others ?? []);
         article.value.original_date = article.value.article_date;
         article.value.groupedArticles = article.value.original.groupedArticles;
 
@@ -631,7 +633,7 @@ function getRichText() {
     element.etype = "place";
   });
   let allEntities = allPersons
-    .concat(allInstitutions, allPlaces, allOthers.value)
+    .concat(allInstitutions, allPlaces, kwOthers.value)
     .filter(
       (obj1, i, arr) =>
         arr.findIndex((obj2) => obj2.found_position === obj1.found_position) ===
