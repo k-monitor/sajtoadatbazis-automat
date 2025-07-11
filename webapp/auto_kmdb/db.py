@@ -802,15 +802,20 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
             -- Other data
             ao.id as other_auto_id, ao.name as other_name, ao.other_id as other_db_id,
             ao.classification_score as other_classification_score, ao.classification_label as other_classification_label,
-            ao.annotation_label as other_annotation_label
-            
+            ao.annotation_label as other_annotation_label,
+
+            -- Files data
+            af.id as files_id, af.name as files_name, af.files_id as files_db_id,
+            af.classification_score as files_classification_score, af.classification_label as files_classification_label,
+            af.annotation_label as annotation_label
+
         FROM autokmdb_news n 
         LEFT JOIN users u ON n.mod_id = u.user_id
         LEFT JOIN autokmdb_persons ap ON n.id = ap.autokmdb_news_id
         LEFT JOIN autokmdb_institutions ai ON n.id = ai.autokmdb_news_id  
         LEFT JOIN autokmdb_places apl ON n.id = apl.autokmdb_news_id
         LEFT JOIN autokmdb_others ao ON n.id = ao.autokmdb_news_id
-        LEFT JOIN autokmdb_files ao ON n.id = ao.autokmdb_news_id
+        LEFT JOIN autokmdb_files af ON n.id = ao.autokmdb_news_id
         WHERE n.id = %s
     """
     
@@ -921,7 +926,7 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
             if row["files_id"] and row["files_id"] not in seen_files:
                 files.append({
                     "id": row["files_id"],
-                    "name": row["name"],
+                    "name": row["files_name"],
                     "db_id": row["files_id"],
                     "classification_score": row["classification_score"],
                     "classification_label": row["classification_label"],
