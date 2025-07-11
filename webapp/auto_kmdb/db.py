@@ -388,6 +388,32 @@ def add_auto_other(
     connection.commit()
 
 
+def add_auto_files(
+    connection: PooledMySQLConnection,
+    autokmdb_news_id: int,
+    files_id: int,
+    name: str,
+    classification_score: float,
+    classification_label: int,
+) -> None:
+    with connection.cursor() as cursor:
+        query = """INSERT INTO autokmdb_files
+                (autokmdb_news_id, files_id, name, classification_score, classification_label, version_number)
+                VALUES (%s, %s, %s, %s, %s, %s)"""
+        cursor.execute(
+            query,
+            (
+                autokmdb_news_id,
+                files_id,
+                name,
+                classification_score,
+                classification_label,
+                VERSION_NUMBER,
+            ),
+        )
+    connection.commit()
+
+
 def save_download_step(
     connection: PooledMySQLConnection,
     id: int,
@@ -650,6 +676,12 @@ def get_article_others(cursor, id) -> list[dict]:
     return cursor.fetchall()
 
 
+def get_article_files(cursor, id) -> list[dict]:
+    query = """SELECT name, id, files_id AS db_id, classification_score, classification_label, annotation_label FROM autokmdb_files WHERE autokmdb_news_id = %s"""
+    cursor.execute(query, (id,))
+    return cursor.fetchall()
+
+
 def group_dicts_by_name(dict_list):
     groups = []
     visited = set()  # To keep track of the processed dictionaries
@@ -778,6 +810,7 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
         LEFT JOIN autokmdb_institutions ai ON n.id = ai.autokmdb_news_id  
         LEFT JOIN autokmdb_places apl ON n.id = apl.autokmdb_news_id
         LEFT JOIN autokmdb_others ao ON n.id = ao.autokmdb_news_id
+        LEFT JOIN autokmdb_files ao ON n.id = ao.autokmdb_news_id
         WHERE n.id = %s
     """
     
@@ -817,12 +850,14 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
         institutions = []
         places = []
         others = []
+        files = []
         
         # Process all rows to extract entity data
         seen_persons = set()
         seen_institutions = set()
         seen_places = set()
         seen_others = set()
+        seen_files = set()
         
         for row in rows:
             # Process persons
@@ -881,6 +916,18 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
                     "annotation_label": row["other_annotation_label"]
                 })
                 seen_others.add(row["other_auto_id"])
+            
+            # Process files
+            if row["files_id"] and row["files_id"] not in seen_files:
+                files.append({
+                    "id": row["files_id"],
+                    "name": row["name"],
+                    "db_id": row["files_id"],
+                    "classification_score": row["classification_score"],
+                    "classification_label": row["classification_label"],
+                    "annotation_label": row["annotation_label"]
+                })
+                seen_files.add(row["files_id"])
         
         # Handle KMDB entities if news_id exists
         news_id = article["news_id"]
@@ -944,12 +991,20 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
                         "name": all_others_by_id[entity_id],
                         "db_name": all_others_by_id[entity_id]
                     })
+                elif entity_type == "file" and entity_id in all_files_by_id:
+                    files.append({
+                        "annotation_label": 1,
+                        "db_id": entity_id,
+                        "name": all_files_by_id[entity_id],
+                        "db_name": all_files_by_id[entity_id]
+                    })
         
         # Map entities efficiently
         article["mapped_persons"] = map_entities(persons)
         article["mapped_institutions"] = map_entities(institutions)
         article["mapped_places"] = map_entities(places)
         article["others"] = others
+        article["files"] = files
         
         return article
 
@@ -1635,6 +1690,10 @@ def annote_positive(
             "UPDATE autokmdb_others SET annotation_label = 0 WHERE autokmdb_news_id = %s",
             (id,)
         )
+        cursor.execute(
+            "UPDATE autokmdb_files SET annotation_label = 0 WHERE autokmdb_news_id = %s",
+            (id,)
+        )
 
         # Then update annotation labels to 1 for entities present in the request
         if person_updates:
@@ -1665,6 +1724,18 @@ def annote_positive(
             cursor.executemany(
                 "UPDATE autokmdb_others SET annotation_label = 1 WHERE id = %s",
                 [(oid,) for oid in others_updates]
+            )
+        
+        # Update files entities that are present in the request
+        files_updates = []
+        for file_id in file_ids:
+            if isinstance(file_id, int):
+                files_updates.append(file_id)
+
+        if files_updates:
+            cursor.executemany(
+                "UPDATE autokmdb_files SET annotation_label = 1 WHERE id = %s",
+                [(fid,) for fid in files_updates]
             )
 
         # Handle tags last

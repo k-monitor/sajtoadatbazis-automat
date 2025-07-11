@@ -8,9 +8,8 @@ import scipy.sparse as sp
 from sklearn.preprocessing import normalize
 from sklearn.feature_extraction.text import TfidfTransformer, CountVectorizer
 
-all_others = db.get_all_others()
-other_name_to_id = {other["name"]: other["id"] for other in all_others if other["name"]}
-
+other_name_to_id = {other["name"]: other["id"] for other in db.get_all_others() if other["name"]}
+file_name_to_id = {file["name"]: file["id"] for file in db.get_all_files() if file["name"]}
 
 class CTFIDFVectorizer(TfidfTransformer):
     def __init__(self, *args, **kwargs):
@@ -126,9 +125,13 @@ class KeywordProcessor(Processor):
     def is_done(self):
         return self.done
 
-    def predict(self, text):
+    def predict_others(self, text):
         """Predict keywords for the next article."""
         return self.others_classifier.predict(text)
+    
+    def predict_files(self, text):
+        """Predict files for the next article."""
+        return self.files_classifier.predict(text)
 
     def process_next(self):
         with db.connection_pool.get_connection() as connection:
@@ -140,7 +143,8 @@ class KeywordProcessor(Processor):
             logging.info("keyword processor next")
             print("next_row:", next_row)
             text = next_row["text"]
-            others = self.predict(text)
+            others = self.predict_others(text)
+            files = self.predict_files(text)
 
             with db.connection_pool.get_connection() as connection:
                 for other in others:
@@ -163,5 +167,21 @@ class KeywordProcessor(Processor):
                     )
                     print(
                         f"Added other: {other_name} with id: {other_id} to article: {next_row['id']}"
+                    )
+                for file in files:
+                    print("file:", file)
+                    file_name = file[0]
+                    classification_score = file[1]
+                    file_id = file_name_to_id.get(file_name, None)
+                    db.add_auto_files(
+                        connection,
+                        next_row["id"],
+                        file_id,
+                        file_name,
+                        float(classification_score),
+                        1,
+                    )
+                    print(
+                        f"Added file: {file_name} to article: {next_row['id']}"
                     )
                 db.save_keyword_step(connection, next_row["id"])
