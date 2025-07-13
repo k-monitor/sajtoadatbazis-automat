@@ -15,3 +15,8 @@ CHARACTER SET utf8 COLLATE utf8_general_ci;
 
 CREATE INDEX idx_files_news_id ON autokmdb_files (autokmdb_news_id);
 CREATE INDEX idx_files_status_name ON news_files (status, name_hu);
+CREATE INDEX idx_files_article_join ON autokmdb_files (autokmdb_news_id, id);
+CREATE INDEX idx_files_covering ON autokmdb_files (autokmdb_news_id, id, name, files_id, classification_score, classification_label, annotation_label);
+CREATE INDEX idx_news_files_link_lookup ON news_files_link(news_id, file_id);
+CREATE INDEX idx_news_files_link_file_id ON news_files_link(file_id);
+CREATE INDEX idx_news_files_freq ON news_files(status, file_id, name_hu);
