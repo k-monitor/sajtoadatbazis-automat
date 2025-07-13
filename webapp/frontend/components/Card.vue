@@ -136,6 +136,8 @@
             <USelect class="my-2" v-model="category" :options="categories" option-attribute="name"
               value-attribute="id" />
             <p class="font-bold">Akta:</p>
+            <SelectMenu :list="allFiles" type="akta" :creatable="false" :positive-list="positiveFiles"
+              @update:positiveList="updatePositiveFiles" :labels="allLabels['files']" />
             <USelectMenu class="my-2" searchable multiple :search-attributes="['name']"
               searchable-placeholder="Keresés..." clear-search-on-close v-model="file" :options="allFiles"
               option-attribute="name" value-attribute="id">
@@ -340,6 +342,7 @@ let positivePersons = ref([]);
 let positiveInstitutions = ref([]);
 let positivePlaces = ref([]);
 let positiveOthers = ref([]);
+let positiveFiles = ref([]);
 
 function mapEntities(entities) {
   const entitiesMap = {};
@@ -417,6 +420,7 @@ function openModal() {
         const keywords = getKeywords(article.value.text);
         kwOthers.value = mapEntities(keywords);
         allOthers.value = kwOthers.value.concat(article.value.others ?? []);
+        allFiles.value = article.value.files ?? [];
         article.value.original_date = article.value.article_date;
         article.value.groupedArticles = article.value.original.groupedArticles;
 
@@ -455,6 +459,16 @@ function openModal() {
                   other.annotation_label == 1)) &&
               other.db_id
           );
+          positiveFiles.value = article.value.files.filter(
+            (file) =>
+              ((article.value.annotation_label != 1 &&
+                file.classification_label == 1) ||
+                (article.value.annotation_label == 1 &&
+                  file.annotation_label == 1)) &&
+              file.db_id
+          );
+          console.log("positiveFiles");
+          console.log(positiveFiles.value);
         }
 
         article.value.institutions = article.value.institutions ?? [];
@@ -480,14 +494,14 @@ function closeModal() {
   showThanks.value = false;
 }
 
+let allFiles = ref([]);
 const {
   article: articleValue,
   allLabels,
-  allFiles,
   refresh,
   keywordSynonyms,
   is_small,
-} = defineProps(["article", "allLabels", "allFiles", "refresh", "keywordSynonyms", "is_small"]);
+} = defineProps(["article", "allLabels", "refresh", "keywordSynonyms", "is_small"]);
 
 const article = ref(articleValue);
 article.value.text = "";
@@ -696,5 +710,10 @@ const updatePositivePlaces = (newValue) => {
 // Handle update event for positiveTags
 const updatePositiveOthers = (newValue) => {
   positiveOthers.value = newValue;
+};
+
+// Handle update event for positiveTags
+const updatePositiveFiles = (newValue) => {
+  positiveFiles.value = newValue;
 };
 </script>
