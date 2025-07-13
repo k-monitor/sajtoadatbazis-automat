@@ -173,6 +173,11 @@ class KeywordProcessor(Processor):
                     file_name = file[0]
                     classification_score = file[1]
                     file_id = file_name_to_id.get(file_name, None)
+                    if file_id is None:
+                        logging.warning(
+                            f"KeywordProcessor: {file_name} not found in files table"
+                        )
+                        continue
                     db.add_auto_files(
                         connection,
                         next_row["id"],
