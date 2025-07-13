@@ -815,7 +815,7 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
         LEFT JOIN autokmdb_institutions ai ON n.id = ai.autokmdb_news_id  
         LEFT JOIN autokmdb_places apl ON n.id = apl.autokmdb_news_id
         LEFT JOIN autokmdb_others ao ON n.id = ao.autokmdb_news_id
-        LEFT JOIN autokmdb_files af ON n.id = ao.autokmdb_news_id
+        LEFT JOIN autokmdb_files af ON n.id = af.autokmdb_news_id
         WHERE n.id = %s
     """
     
