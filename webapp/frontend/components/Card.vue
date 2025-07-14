@@ -135,22 +135,8 @@
             <p class="font-bold">Kategória:</p>
             <USelect class="my-2" v-model="category" :options="categories" option-attribute="name"
               value-attribute="id" />
-            <p class="font-bold">Akta:</p>
             <SelectMenu :list="allFiles" type="akta" :creatable="false" :positive-list="positiveFiles"
               @update:positiveList="updatePositiveFiles" :labels="allLabels['files']" />
-            <USelectMenu class="my-2" searchable multiple :search-attributes="['name']"
-              searchable-placeholder="Keresés..." clear-search-on-close v-model="file" :options="allFiles"
-              option-attribute="name" value-attribute="id">
-              <template #empty> betöltés... </template>
-              <template #label>
-                <span>{{
-                  allFiles
-                    .filter((item) => file.includes(item.id))
-                    .map((item) => item.name)
-                    .join(", ") || "semmi"
-                }}</span>
-              </template>
-            </USelectMenu>
             <p>publikálás: {{ article.article_date }}</p>
             <p>{{ errorText }}</p>
             <UButton class="my-5" v-if="article.annotation_label == 1" target="_blank"
