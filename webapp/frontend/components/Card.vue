@@ -583,7 +583,7 @@ async function submitArticle() {
         category: parseInt(category.value),
         tags: positiveOthers.value,
         active: is_active.value,
-        file_ids: file.value,
+        file_ids: positiveFiles.value.map((file) => file.db_id),
         pub_date: article.value.original_date,
       },
       onResponseError({ request, response, options }) {
