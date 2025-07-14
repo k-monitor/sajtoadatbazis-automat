@@ -805,7 +805,7 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
             ao.annotation_label as other_annotation_label,
 
             -- Files data
-            af.id as files_id, af.name as files_name, af.files_id as files_db_id,
+            af.id as files_auto_id, af.name as files_name, af.files_id as files_db_id,
             af.classification_score as files_classification_score, af.classification_label as files_classification_label,
             af.annotation_label as annotation_label
 
@@ -923,16 +923,16 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
                 seen_others.add(row["other_auto_id"])
             
             # Process files
-            if row["files_id"] and row["files_id"] not in seen_files:
+            if row["files_db_id"] and row["files_db_id"] not in seen_files:
                 files.append({
-                    "id": row["files_id"],
+                    "id": row["files_auto_id"],
                     "name": row["files_name"],
-                    "db_id": row["files_id"],
+                    "db_id": row["files_db_id"],
                     "classification_score": row["classification_score"],
                     "classification_label": row["classification_label"],
                     "annotation_label": row["annotation_label"]
                 })
-                seen_files.add(row["files_id"])
+                seen_files.add(row["files_db_id"])
         
         # Handle KMDB entities if news_id exists
         news_id = article["news_id"]
