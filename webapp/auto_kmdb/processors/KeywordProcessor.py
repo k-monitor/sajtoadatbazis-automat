@@ -38,6 +38,10 @@ class CTFIDFVectorizer(TfidfTransformer):
 
 class CTFIDFClassifier:
     def __init__(self, class_name="others"):
+        if class_name == "others":
+            names = other_name_to_id.keys()
+        elif class_name == "files":
+            names = file_name_to_id.keys()
         from datasets import load_dataset
         from nltk.corpus import stopwords
         from nltk.stem import SnowballStemmer
@@ -55,7 +59,7 @@ class CTFIDFClassifier:
         )
 
         text_by_articles = [
-            {other: article["text"] for other in article[class_name]} for article in ds
+            {other: article["text"] for other in article[class_name] if other in names} for article in ds
         ]
 
         documents = []
@@ -102,9 +106,8 @@ class CTFIDFClassifier:
         indexed_distances.sort(key=lambda x: x[1], reverse=True)
         predictions = indexed_distances[:5]
         top5_indexes, top5_distances = zip(*predictions)
-        sm_distances = softmax(np.array(top5_distances), 0.03)
         predictions = [
-            (self.docs_per_class.Class[i], sm_distances[j])
+            (self.docs_per_class.Class[i], top5_distances[j])
             for j, i in enumerate(top5_indexes)
         ]
 
@@ -147,10 +150,8 @@ class KeywordProcessor(Processor):
             files = self.predict_files(text)
 
             with db.connection_pool.get_connection() as connection:
-                for other in others:
-                    print("other:", other)
-                    other_name = other[0]
-                    classification_score = other[1]
+                for other_name, classification_score in others:
+                    print("other:", other_name, classification_score)
                     other_id = other_name_to_id.get(other_name, None)
                     if other_id is None:
                         logging.warning(
@@ -168,10 +169,8 @@ class KeywordProcessor(Processor):
                     print(
                         f"Added other: {other_name} with id: {other_id} to article: {next_row['id']}"
                     )
-                for file in files:
-                    print("file:", file)
-                    file_name = file[0]
-                    classification_score = file[1]
+                for file_name, classification_score in files:
+                    print("file:", file_name, classification_score)
                     file_id = file_name_to_id.get(file_name, None)
                     if file_id is None:
                         logging.warning(
