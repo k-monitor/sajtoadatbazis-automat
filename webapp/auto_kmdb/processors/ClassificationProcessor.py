@@ -347,12 +347,15 @@ class ClassificationProcessor(Processor):
                                     connection, autokmdb_id, group_id
                                 )
                             else:
-                                db.add_article_group(connection, article_id)
+                                # time comparison can be implemented in the future
+                                original_article_id = article_id
+                                new_article_id = autokmdb_id
+                                db.add_article_group(connection, original_article_id)
                                 group_id = db.find_group_by_autokmdb_id(
-                                    connection, article_id
+                                    connection, original_article_id
                                 )
                                 db.add_article_to_group(
-                                    connection, autokmdb_id, group_id
+                                    connection, new_article_id, group_id
                                 )
                         break  # temporary solution
 

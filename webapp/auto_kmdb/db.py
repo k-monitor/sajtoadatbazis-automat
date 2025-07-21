@@ -513,7 +513,7 @@ def get_step_queue(
         4: "text",
     }
     query: str = f"""SELECT id, {fields[step]} FROM autokmdb_news
-               WHERE processing_step = {step} ORDER BY source DESC, mod_time DESC LIMIT 50"""
+               WHERE processing_step = {step} ORDER BY source DESC, article_date DESC LIMIT 50"""
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query)
         return cursor.fetchall()
