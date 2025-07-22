@@ -43,7 +43,7 @@ def rss_watcher(app_context):
         for newspaper in newspapers:
             if newspaper["rss_url"]:
                 try:
-                    get_new_from_rss(newspaper)
+                    get_new_from_rss(newspaper, newspapers)
                 except requests.exceptions.JSONDecodeError:
                     logging.error("JSONDecodeError for " + newspaper["name"])
                 except Exception as e:
@@ -128,7 +128,7 @@ def get_rss(rssurl):
     return urls_dates
 
 
-def get_new_from_rss(newspaper):
+def get_new_from_rss(newspaper, newspapers):
     articles_found = 0
 
     urls_dates: list[tuple[str, Optional[str]]] = []
@@ -137,10 +137,12 @@ def get_new_from_rss(newspaper):
     else:
         urls_dates = get_rss(newspaper["rss_url"])
     for url, release_date in urls_dates:
-        if newspaper["name"] == "HVG360" and "/360/" not in url:
-            continue
-        if newspaper["name"] == "HVG" and "/360/" in url:
-            continue
+        if '/360/' in url:
+            newspaper360 = next((
+                n for n in newspapers if n["name"] == "HVG360"
+            ), None)
+            if newspaper360:
+                newspaper = newspaper360
         # parsed_date = datetime.strptime(release_date, '%Y-%m-%dT%H:%M:%S.%f%z')
         # pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
         clean_url: str = clear_url(url)
