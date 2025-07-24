@@ -801,13 +801,11 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
             
             -- Other data
             ao.id as other_auto_id, ao.name as other_name, ao.other_id as other_db_id,
-            ao.classification_score as other_classification_score, ao.classification_label as other_classification_label,
-            ao.annotation_label as other_annotation_label,
+            ao.classification_label as other_classification_label, ao.annotation_label as other_annotation_label,
 
             -- Files data
             af.id as files_auto_id, af.name as files_name, af.files_id as files_db_id,
-            af.classification_score as files_classification_score, af.classification_label as files_classification_label,
-            af.annotation_label as annotation_label
+            af.classification_label as files_classification_label, af.annotation_label as files_annotation_label
 
         FROM autokmdb_news n 
         LEFT JOIN users u ON n.mod_id = u.user_id
@@ -916,7 +914,7 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
                     "id": row["other_auto_id"],
                     "name": row["other_name"],
                     "db_id": row["other_db_id"],
-                    "classification_score": row["other_classification_score"],
+                    "classification_score": None,
                     "classification_label": row["other_classification_label"],
                     "annotation_label": row["other_annotation_label"]
                 })
@@ -928,9 +926,9 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
                     "id": row["files_auto_id"],
                     "name": row["files_name"],
                     "db_id": row["files_db_id"],
-                    "classification_score": row["classification_score"],
-                    "classification_label": row["classification_label"],
-                    "annotation_label": row["annotation_label"]
+                    "classification_score": None,
+                    "classification_label": row["files_classification_label"],
+                    "annotation_label": row["files_annotation_label"]
                 })
                 seen_files.add(row["files_db_id"])
         
