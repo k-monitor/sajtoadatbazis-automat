@@ -4,6 +4,7 @@ WORKDIR /usr/src/app
 
 COPY auto_kmdb auto_kmdb
 
+RUN mkdir -p /var/log/auto_kmdb
 RUN apt update
 RUN apt install -y wget git gcc g++
 
