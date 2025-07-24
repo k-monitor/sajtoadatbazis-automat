@@ -16,6 +16,7 @@ from auto_kmdb.processors import (
 )
 from auto_kmdb.rss_watcher import rss_watcher
 import logging
+import os
 
 
 logger: logging.Logger = logging.getLogger(__name__)
