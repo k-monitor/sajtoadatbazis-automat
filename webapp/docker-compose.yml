@@ -7,7 +7,7 @@ services:
     volumes:
       - type: bind
         source: ./secrets
-        target: /
+        target: /secrets
       - type: bind
         source: /var/log/auto_kmdb
         target: /var/log/auto_kmdb
