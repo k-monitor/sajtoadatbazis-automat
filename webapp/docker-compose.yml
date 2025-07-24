@@ -7,7 +7,10 @@ services:
     volumes:
       - type: bind
         source: ./secrets
-        target: /secrets
+        target: /
+      - type: bind
+        source: /var/log/auto_kmdb
+        target: /var/log/auto_kmdb
     hostname: ssh_tunnel
 
   frontend:
@@ -25,6 +28,8 @@ services:
         target: /usr/src/app/data
     ports:
       - "8083:8000"
+    environment:
+      - LOG_PATH=/var/log/auto_kmdb/auto_kmdb.log
     env_file:
       - auto_kmdb.env
 
