@@ -108,7 +108,10 @@ def process_article(
             is_paywalled = 1
         elif "hvg.hu/360/" in url:
             logging.info("found paywalled hvg360 article")
-            text += "\n" + get_hvg(url.split("/360/")[1].split("?")[0])
+            try:
+                text += "\n" + get_hvg(url.split("/360/")[1].split("?")[0])
+            except Exception as e:
+                logging.error("Error fetching HVG360 article: " + str(e))
             is_paywalled = 1
 
     try:

@@ -135,20 +135,8 @@
             <p class="font-bold">Kategória:</p>
             <USelect class="my-2" v-model="category" :options="categories" option-attribute="name"
               value-attribute="id" />
-            <p class="font-bold">Akta:</p>
-            <USelectMenu class="my-2" searchable multiple :search-attributes="['name']"
-              searchable-placeholder="Keresés..." clear-search-on-close v-model="file" :options="allFiles"
-              option-attribute="name" value-attribute="id">
-              <template #empty> betöltés... </template>
-              <template #label>
-                <span>{{
-                  allFiles
-                    .filter((item) => file.includes(item.id))
-                    .map((item) => item.name)
-                    .join(", ") || "semmi"
-                }}</span>
-              </template>
-            </USelectMenu>
+            <SelectMenu :list="allFiles" type="akta" :creatable="false" :positive-list="positiveFiles"
+              @update:positiveList="updatePositiveFiles" :labels="allLabels['files']" />
             <p>publikálás: {{ article.article_date }}</p>
             <p>{{ errorText }}</p>
             <UButton class="my-5" v-if="article.annotation_label == 1" target="_blank"
@@ -333,12 +321,14 @@ async function postUrl(url, data) {
 let allPersons = ref([]);
 let allInstitutions = ref([]);
 let allPlaces = ref([]);
+let kwOthers = ref([]);
 let allOthers = ref([]);
 
 let positivePersons = ref([]);
 let positiveInstitutions = ref([]);
 let positivePlaces = ref([]);
 let positiveOthers = ref([]);
+let positiveFiles = ref([]);
 
 function mapEntities(entities) {
   const entitiesMap = {};
@@ -414,7 +404,9 @@ function openModal() {
         allInstitutions.value = article.value.mapped_institutions;
         allPlaces.value = article.value.mapped_places;
         const keywords = getKeywords(article.value.text);
-        allOthers.value = mapEntities(keywords);
+        kwOthers.value = mapEntities(keywords);
+        allOthers.value = kwOthers.value.concat(article.value.others ?? []);
+        allFiles.value = article.value.files ?? [];
         article.value.original_date = article.value.article_date;
         article.value.groupedArticles = article.value.original.groupedArticles;
 
@@ -453,6 +445,16 @@ function openModal() {
                   other.annotation_label == 1)) &&
               other.db_id
           );
+          positiveFiles.value = article.value.files.filter(
+            (file) =>
+              ((article.value.annotation_label != 1 &&
+                file.classification_label == 1) ||
+                (article.value.annotation_label == 1 &&
+                  file.annotation_label == 1)) &&
+              file.db_id
+          );
+          console.log("positiveFiles");
+          console.log(positiveFiles.value);
         }
 
         article.value.institutions = article.value.institutions ?? [];
@@ -478,14 +480,14 @@ function closeModal() {
   showThanks.value = false;
 }
 
+let allFiles = ref([]);
 const {
   article: articleValue,
   allLabels,
-  allFiles,
   refresh,
   keywordSynonyms,
   is_small,
-} = defineProps(["article", "allLabels", "allFiles", "refresh", "keywordSynonyms", "is_small"]);
+} = defineProps(["article", "allLabels", "refresh", "keywordSynonyms", "is_small"]);
 
 const article = ref(articleValue);
 article.value.text = "";
@@ -567,7 +569,7 @@ async function submitArticle() {
         category: parseInt(category.value),
         tags: positiveOthers.value,
         active: is_active.value,
-        file_ids: file.value,
+        file_ids: positiveFiles.value.map((file) => file.db_id),
         pub_date: article.value.original_date,
       },
       onResponseError({ request, response, options }) {
@@ -631,7 +633,7 @@ function getRichText() {
     element.etype = "place";
   });
   let allEntities = allPersons
-    .concat(allInstitutions, allPlaces, allOthers.value)
+    .concat(allInstitutions, allPlaces, kwOthers.value)
     .filter(
       (obj1, i, arr) =>
         arr.findIndex((obj2) => obj2.found_position === obj1.found_position) ===
@@ -694,5 +696,10 @@ const updatePositivePlaces = (newValue) => {
 // Handle update event for positiveTags
 const updatePositiveOthers = (newValue) => {
   positiveOthers.value = newValue;
+};
+
+// Handle update event for positiveTags
+const updatePositiveFiles = (newValue) => {
+  positiveFiles.value = newValue;
 };
 </script>

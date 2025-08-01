@@ -42,8 +42,11 @@ def rss_watcher(app_context):
         logging.info("checking feeds")
         for newspaper in newspapers:
             if newspaper["rss_url"]:
+                dont_convert: bool = False
+                if newspaper["name"] in ["Pécsi Stop"]:
+                    dont_convert = True
                 try:
-                    get_new_from_rss(newspaper)
+                    get_new_from_rss(newspaper, newspapers, dont_convert)
                 except requests.exceptions.JSONDecodeError:
                     logging.error("JSONDecodeError for " + newspaper["name"])
                 except Exception as e:
@@ -77,7 +80,7 @@ def get_atv():
     return urls_dates
 
 
-def get_rss(rssurl):
+def get_rss(rssurl, dont_convert: bool = False):
     try:
         response = scraper.get(rssurl)
         feed = feedparser.parse(response.content)
@@ -93,7 +96,10 @@ def get_rss(rssurl):
             parsed_date: datetime = datetime.strptime(
                 entry.published, "%a, %d %b %Y %H:%M:%S %z"
             )
-            pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
+            if not dont_convert:
+                pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
+            else:
+                pub_time = parsed_date
         except ValueError:
             try:
                 if entry.published.endswith("GMT"):
@@ -128,19 +134,21 @@ def get_rss(rssurl):
     return urls_dates
 
 
-def get_new_from_rss(newspaper):
+def get_new_from_rss(newspaper, newspapers, dont_convert: bool = False):
     articles_found = 0
 
     urls_dates: list[tuple[str, Optional[str]]] = []
     if newspaper["rss_url"] == "atv":
         urls_dates = get_atv()
     else:
-        urls_dates = get_rss(newspaper["rss_url"])
+        urls_dates = get_rss(newspaper["rss_url"], dont_convert)
     for url, release_date in urls_dates:
-        if newspaper["name"] == "HVG360" and "/360/" not in url:
-            continue
-        if newspaper["name"] == "HVG" and "/360/" in url:
-            continue
+        if '/360/' in url:
+            newspaper360 = next((
+                n for n in newspapers if n["name"] == "HVG360"
+            ), None)
+            if newspaper360:
+                newspaper = newspaper360
         # parsed_date = datetime.strptime(release_date, '%Y-%m-%dT%H:%M:%S.%f%z')
         # pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
         clean_url: str = clear_url(url)

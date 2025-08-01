@@ -65,3 +65,11 @@ A frontend egy Single Page App, ami Nuxt-ban készült. Egy REST API-n keresztü
 ~~Ez fel ssh-zik a szerverre, leállítja az ott futó backendet, frissíti a repo-t, majd újra build-eli a konténereket és elindítja a webapp-ot.~~
 
 Jelenleg ki van kapcsolva
+
+## Modellek újratanítása
+
+```bash
+cd train
+modal run modal_training.py
+modal run modal_training_category.py
+```

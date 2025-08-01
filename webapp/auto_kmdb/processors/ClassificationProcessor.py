@@ -160,7 +160,6 @@ def text_to_shingles(text: str, k: int = 1) -> set:
 def create_minhash(text: str) -> MinHash:
     """Create MinHash signature from text."""
     shingles = text_to_shingles(text)
-    print(f"shingles: {shingles}")
     minhash = MinHash(num_perm=128)
     for shingle in shingles:
         minhash.update(shingle.encode("utf-8"))
@@ -170,8 +169,6 @@ def create_minhash(text: str) -> MinHash:
 def find_similar_minhash(text: str, domain: str, threshold: float = 0.7):
     """Find similar articles using MinHash similarity."""
     target_minhash = create_minhash(text)
-    print(f"minhash created for text: {text[:50]}...")
-    print(f"target_minhash: {target_minhash}")
     now = datetime.now()
     date = now.strftime("%Y-%m-%d")
 
@@ -305,7 +302,9 @@ class ClassificationProcessor(Processor):
                 sleep(30)
                 return
             autokmdb_id = next_row["id"]
-            full_text = f"{next_row['title']}\n{next_row['description']}\n{next_row['text']}"
+            full_text = (
+                f"{next_row['title']}\n{next_row['description']}\n{next_row['text']}"
+            )
 
             logging.info("Processing next classification")
 
@@ -348,12 +347,15 @@ class ClassificationProcessor(Processor):
                                     connection, autokmdb_id, group_id
                                 )
                             else:
-                                db.add_article_group(connection, article_id)
+                                # time comparison can be implemented in the future
+                                original_article_id = article_id
+                                new_article_id = autokmdb_id
+                                db.add_article_group(connection, original_article_id)
                                 group_id = db.find_group_by_autokmdb_id(
-                                    connection, article_id
+                                    connection, original_article_id
                                 )
                                 db.add_article_to_group(
-                                    connection, autokmdb_id, group_id
+                                    connection, new_article_id, group_id
                                 )
                         break  # temporary solution
 

@@ -16,13 +16,14 @@ from auto_kmdb.processors import (
 )
 from auto_kmdb.rss_watcher import rss_watcher
 import logging
+import os
 
 
 logger: logging.Logger = logging.getLogger(__name__)
 
 
 def create_app() -> Flask:
-    logfile = "data/log.txt"
+    logfile = os.environ.get("LOG_PATH", "data/log.txt")
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(levelname)s - %(message)s",
