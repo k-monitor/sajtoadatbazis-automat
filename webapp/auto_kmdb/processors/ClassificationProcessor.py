@@ -252,7 +252,6 @@ class ClassificationProcessor(Processor):
     def predict(
         self, title: str, description: str, text: str, url: str
     ) -> tuple[int, float, int, str]:
-        logging.info("Running classification prediction")
         prediction_text: str = format_article(title, description, url)
         inputs = self._prepare_input(prediction_text).to(environ.get("DEVICE", "cpu"))
 
@@ -305,8 +304,6 @@ class ClassificationProcessor(Processor):
             full_text = (
                 f"{next_row['title']}\n{next_row['description']}\n{next_row['text']}"
             )
-
-            logging.info("Processing next classification")
 
             try:
                 label, score, category, article_text = self.predict(

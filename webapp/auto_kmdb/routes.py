@@ -101,7 +101,6 @@ def api_article(id):
 
 @api.route("/articles", methods=["POST"])
 def api_articles():
-    logging.info("requesting api articles")
     session_id: Optional[str] = get_session_id(request)
     with db.connection_pool.get_connection() as connection:
         if not db.validate_session(connection, session_id):
@@ -138,7 +137,6 @@ def api_articles():
             return jsonify({"error": "Hiba a lekérés során!"}), 500
         length, articles = article_response
         articles = db.group_articles(articles)
-        logging.info(f"articles: {articles}")
 
     return jsonify({"pages": ceil(length / 10), "articles": articles}), 200
 

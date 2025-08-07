@@ -143,15 +143,12 @@ class KeywordProcessor(Processor):
             if next_row is None:
                 sleep(30)
                 return
-            logging.info("keyword processor next")
-            print("next_row:", next_row)
             text = next_row["text"]
             others = self.predict_others(text)
             files = self.predict_files(text)
 
             with db.connection_pool.get_connection() as connection:
                 for other_name, classification_score in others:
-                    print("other:", other_name, classification_score)
                     other_id = other_name_to_id.get(other_name, None)
                     if other_id is None:
                         logging.warning(
@@ -166,11 +163,7 @@ class KeywordProcessor(Processor):
                         float(classification_score),
                         1,
                     )
-                    print(
-                        f"Added other: {other_name} with id: {other_id} to article: {next_row['id']}"
-                    )
                 for file_name, classification_score in files:
-                    print("file:", file_name, classification_score)
                     file_id = file_name_to_id.get(file_name, None)
                     if file_id is None:
                         logging.warning(
@@ -184,8 +177,5 @@ class KeywordProcessor(Processor):
                         file_name,
                         float(classification_score),
                         1,
-                    )
-                    print(
-                        f"Added file: {file_name} to article: {next_row['id']}"
                     )
                 db.save_keyword_step(connection, next_row["id"])

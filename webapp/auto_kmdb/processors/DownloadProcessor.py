@@ -483,7 +483,6 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
 
 class DownloadProcessor(Processor):
     def __init__(self) -> None:
-        logging.info("initialized download processor")
         self.cookies: dict[str, dict[str, str]] = {}
 
     def load_model(self):

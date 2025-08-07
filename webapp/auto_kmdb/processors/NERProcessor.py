@@ -123,7 +123,6 @@ class NERProcessor(Processor):
             if len(e["word"]) > 3
         ]
         for entity in classifications:
-            logging.info(entity)
             label, e_type = entity["entity_group"].split("_")
             found_name = text[entity["start"] : entity["end"]]
             entity_object = {
@@ -173,8 +172,6 @@ class NERProcessor(Processor):
             'combed_mapping': suggested db keyword mapping
             'keyword_id': the id of the suggested db keyword mapping
         """
-        # logging.info(entity_type)
-        # logging.info(detected_entities)
         synonym_mapping: Optional[pd.DataFrame] = (
             get_synonyms_file(entity_type)
             if (entity_type in ["places", "institutions"])
@@ -233,7 +230,6 @@ class NERProcessor(Processor):
                 mapping: pd.DataFrame = self.get_db_entity_linking(
                     detected_entities, type
                 )
-                # logging.info(mapping)
                 assert mapping.index.is_unique, (
                     "Database " + type + " keywords to be added should be unique"
                 )
