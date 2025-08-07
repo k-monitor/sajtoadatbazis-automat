@@ -149,6 +149,12 @@ def get_new_from_rss(newspaper, newspapers, dont_convert: bool = False):
             ), None)
             if newspaper360:
                 newspaper = newspaper360
+        if '/g7/' in url:
+            newspaper_g7 = next((
+                n for n in newspapers if n["name"] == "G7"
+            ), None)
+            if newspaper_g7:
+                newspaper = newspaper_g7
         # parsed_date = datetime.strptime(release_date, '%Y-%m-%dT%H:%M:%S.%f%z')
         # pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
         clean_url: str = clear_url(url)
