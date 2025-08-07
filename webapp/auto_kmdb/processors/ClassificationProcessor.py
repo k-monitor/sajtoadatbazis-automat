@@ -266,11 +266,14 @@ class ClassificationProcessor(Processor):
             score = float(probabilities[1])
             label = 1 if score > CLASSIFICATION_SCORE_THRESHOLD else 0
             if label == 1 and USE_GEMINI and text.strip():
-                google_label, token_counts = genai_label(title, description, text)
-                if google_label:
-                    label = 1
-                else:
-                    label = 0
+                try:
+                    google_label, token_counts = genai_label(title, description, text)
+                    if google_label:
+                        label = 1
+                    else:
+                        label = 0
+                except Exception as e:
+                    logging.error(f"Error in Google Gemini labeling: {e}")
                 logging.info(
                     f"Google Gemini classification: {google_label}, token counts: {token_counts}"
                 )
@@ -367,7 +370,7 @@ class ClassificationProcessor(Processor):
                 with db.connection_pool.get_connection() as connection:
                     db.skip_processing_error(connection, autokmdb_id)
 
-                logging.warning(f"Exception during: {autokmdb_id}")
+                logging.warning(f"Exception during Classification Processing: {autokmdb_id}")
                 logging.error(e)
                 logging.error(traceback.format_exc())
 

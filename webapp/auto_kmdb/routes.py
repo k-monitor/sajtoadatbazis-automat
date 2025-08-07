@@ -121,24 +121,28 @@ def api_articles():
     reverse: bool = content.get("reverse", False)
     skip_reasin: int = content.get("skip_reason", -1)
 
-    with db.connection_pool.get_connection() as connection:
-        article_response = db.get_articles(
-            connection,
-            page,
-            status,
-            domain_ids,
-            "%" + q + "%",
-            start,
-            end,
-            reverse,
-            skip_reasin,
-        )
-        if article_response is None:
-            return jsonify({"error": "Hiba a lekérés során!"}), 500
-        length, articles = article_response
-        articles = db.group_articles(articles)
+    try:
+        with db.connection_pool.get_connection() as connection:
+            article_response = db.get_articles(
+                connection,
+                page,
+                status,
+                domain_ids,
+                "%" + q + "%",
+                start,
+                end,
+                reverse,
+                skip_reasin,
+            )
+            if article_response is None:
+                return jsonify({"error": "Hiba a lekérés során!"}), 500
+            length, articles = article_response
+            articles = db.group_articles(articles)
 
-    return jsonify({"pages": ceil(length / 10), "articles": articles}), 200
+        return jsonify({"pages": ceil(length / 10), "articles": articles}), 200
+    except Exception as e:
+        logging.error(f"Error fetching articles: {e}")
+        return jsonify({"error": "Hiba a lekérés során!"}), 500
 
 
 @api.route("/annote/negative", methods=["POST"])
