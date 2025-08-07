@@ -26,6 +26,9 @@ services:
       - type: bind
         source: ./data
         target: /usr/src/app/data
+      - type: bind
+        source: /var/log/auto_kmdb
+        target: /var/log/auto_kmdb
     ports:
       - "8083:8000"
     environment:
