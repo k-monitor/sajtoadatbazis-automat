@@ -26,8 +26,11 @@ class Processor:
             try:
                 self.process_next()
             except Exception as e:
-                print(traceback.format_exc())
-                logging.error("encountered error in processing loop")
-                logging.error(e)
+                logging.error(
+                    "encountered error in processing loop",
+                    e,
+                    "stacktrace:",
+                    traceback.format_exc(),
+                )
                 sleep(60)
             sleep(3)
