@@ -332,9 +332,11 @@ def comb_mappings(
     ].index
     for detected_ent in mapped_from_article:
         map_to = mapping.loc[[detected_ent], "from_article"].iloc[0].split("; ")[-1]
-        mapping.loc[[detected_ent], combine_columns] = (
-            mapping.loc[[map_to], combine_columns].iloc[0].values
-        )
+        # Check if map_to exists in the mapping index before accessing it
+        if map_to in mapping.index:
+            mapping.loc[[detected_ent], combine_columns] = (
+                mapping.loc[[map_to], combine_columns].iloc[0].values
+            )
 
     # combine first mapping suggestions
     mapping = mapping.reset_index().set_index("start")
