@@ -117,7 +117,7 @@
             },
           ],
         }"
-        :options="chartOptions"
+        :options="chartOptionsWithClick"
       />
       <DateRangeSlider
         v-if="data.length > 0"
@@ -148,9 +148,14 @@ import {
 import type { ChartOptions } from "chart.js";
 import { chartOptions, chartColors } from "../config/chart";
 import { useDateRange } from "../composables/useDateRange";
-import type { DataRow } from "../types.ts";
+import type { DataRow } from "../types";
 import DateRangeSlider from "../components/DateRangeSlider.vue";
 import { sub, format, startOfWeek, addWeeks } from "date-fns";
+
+interface DateRangeSelection {
+  start: Date;
+  end: Date;
+}
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
@@ -175,7 +180,7 @@ const ranges = [
   { label: "Elmúlt 3 év", duration: { years: 3 } },
 ];
 
-function updateSelectedDateRange(newRange) {
+function updateSelectedDateRange(newRange: DateRangeSelection) {
   selected.value = newRange;
 
   // Find the start and end indices based on the selected date range
@@ -280,6 +285,47 @@ const displayData = computed(() => {
   return aggregationType.value === "weeks" ? weeklyData.value : filteredData.value;
 });
 
+const chartOptionsWithClick = computed(() => {
+  return {
+    ...chartOptions,
+    onClick: (event: any, elements: any[]) => {
+      if (elements.length > 0) {
+        const clickedIndex = elements[0].index;
+        const clickedDate = displayData.value[clickedIndex]?.date;
+        
+        if (clickedDate) {
+          handleColumnClick(clickedDate);
+        }
+      }
+    },
+    plugins: {
+      ...chartOptions.plugins,
+      tooltip: {
+        ...chartOptions.plugins?.tooltip,
+        callbacks: {
+          afterTitle: () => 'Kattintson a szűréshez'
+        }
+      }
+    }
+  };
+});
+
+function handleColumnClick(clickedDate: string) {
+  const clickedDateObj = new Date(clickedDate);
+  
+  if (aggregationType.value === "weeks") {
+    // For weekly view, filter to the entire week
+    const weekStart = startOfWeek(clickedDateObj, { weekStartsOn: 1 });
+    const weekEnd = addWeeks(weekStart, 1);
+    weekEnd.setDate(weekEnd.getDate() - 1); // End of the week
+    window.location = `/?dateFrom=${format(weekStart, "yyyy-MM-dd")}&dateTo=${format(weekEnd, "yyyy-MM-dd")}`;
+  } else {
+    window.location = `/?dateFrom=${format(clickedDateObj, "yyyy-MM-dd")}&dateTo=${format(clickedDateObj, "yyyy-MM-dd")}`;
+  }
+  
+  updateSelectedDateRange(selected.value);
+}
+
 function onAggregationChange() {
   updateDateRange();
 }
@@ -328,6 +374,10 @@ const getCount = (type: "positive" | "todo" | "negative" | "negative_0" | "negat
 }
 .graph {
   flex-grow: 1;
+}
+
+.graph canvas {
+  cursor: pointer;
 }
 .filter-section {
   margin: 8px;
