@@ -130,6 +130,10 @@ function updateFromURL() {
   if (query.q) {
     q.value = query.q;
   }
+  if (query.dateFrom && query.dateTo) {
+    selected.value.start = new Date(query.dateFrom);
+    selected.value.end = new Date(query.dateTo);
+  }
 }
 
 const { data: articleCounts, refresh: refreshArticleCounts } = useAuthLazyFetch(

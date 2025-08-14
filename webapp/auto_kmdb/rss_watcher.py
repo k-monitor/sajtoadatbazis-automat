@@ -39,7 +39,6 @@ def rss_watcher(app_context):
     with db.connection_pool.get_connection() as connection:
         newspapers: list[dict] = db.get_rss_urls(connection)
     while True:
-        logging.info("checking feeds")
         for newspaper in newspapers:
             if newspaper["rss_url"]:
                 dont_convert: bool = False
@@ -51,7 +50,6 @@ def rss_watcher(app_context):
                     logging.error("JSONDecodeError for " + newspaper["name"])
                 except Exception as e:
                     logging.error("Error for " + newspaper["name"] + ": " + str(e))
-        logging.info("done checking feeds")
 
 
 def skip_url(url) -> bool:
@@ -138,6 +136,8 @@ def get_new_from_rss(newspaper, newspapers, dont_convert: bool = False):
     articles_found = 0
 
     urls_dates: list[tuple[str, Optional[str]]] = []
+    if newspaper["rss_url"] == "hvg360":
+        return
     if newspaper["rss_url"] == "atv":
         urls_dates = get_atv()
     else:
