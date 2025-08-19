@@ -6,10 +6,14 @@ from urllib.parse import urlparse
 
 
 class Telex(Newspaper):
+    ignored_tags = ["<strong>", "</strong>"]
+
     def is_url_this(self, url: str, html: str) -> bool:
         return urlparse(url).netloc == "telex.hu"
 
     def get_text(self, url: str, html: str) -> str:
+        for tag in self.ignored_tags:
+            html = html.replace(tag, " ").replace("  ", " ")
         soup = BeautifulSoup(html, "html.parser")
         paragraphs: ResultSet[Tag] = soup.select(
             "div.article-html-content p, div.article-html-content li"

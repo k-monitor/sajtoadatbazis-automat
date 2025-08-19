@@ -149,7 +149,13 @@ def get_new_from_rss(newspaper, newspapers, dont_convert: bool = False):
             ), None)
             if newspaper360:
                 newspaper = newspaper360
-        if '/g7/' in url:
+        if '://telex.hu/' in url:
+            newspaper_telex = next((
+                n for n in newspapers if n["name"] == "Telex"
+            ), None)
+            if newspaper_telex:
+                newspaper = newspaper_telex
+        if '://telex.hu/g7/' in url:
             newspaper_g7 = next((
                 n for n in newspapers if n["name"] == "G7"
             ), None)
