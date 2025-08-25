@@ -771,244 +771,167 @@ def map_entities(entities: list[dict]):
 
 
 def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
-    # Single comprehensive query to get article with all entity data
-    query = """
-        SELECT 
-            n.id AS id, n.news_id, n.clean_url AS url, n.description, n.title, n.source, 
-            n.newspaper_name, n.newspaper_id, n.classification_score, n.classification_label, 
-            n.annotation_label, n.processing_step, n.skip_reason, n.text, 
-            CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') as date, 
-            n.category, CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') as article_date, 
-            u.name AS mod_name, n.is_paywalled,
-            
-            -- Person data
-            ap.id as person_auto_id, ap.name as person_name, ap.person_id as person_db_id, 
-            ap.person_name as person_db_name, ap.classification_score as person_classification_score,
-            ap.classification_label as person_classification_label, ap.annotation_label as person_annotation_label,
-            ap.found_name as person_found_name, ap.found_position as person_found_position,
-            
-            -- Institution data  
-            ai.id as institution_auto_id, ai.name as institution_name, ai.institution_id as institution_db_id,
-            ai.institution_name as institution_db_name, ai.classification_score as institution_classification_score,
-            ai.classification_label as institution_classification_label, ai.annotation_label as institution_annotation_label,
-            ai.found_name as institution_found_name, ai.found_position as institution_found_position,
-            
-            -- Place data
-            apl.id as place_auto_id, apl.name as place_name, apl.place_id as place_db_id,
-            apl.place_name as place_db_name, apl.classification_score as place_classification_score,
-            apl.classification_label as place_classification_label, apl.annotation_label as place_annotation_label,
-            apl.found_name as place_found_name, apl.found_position as place_found_position,
-            
-            -- Other data
-            ao.id as other_auto_id, ao.name as other_name, ao.other_id as other_db_id,
-            ao.classification_label as other_classification_label, ao.annotation_label as other_annotation_label,
-
-            -- Files data
-            af.id as files_auto_id, af.name as files_name, af.files_id as files_db_id,
-            af.classification_label as files_classification_label, af.annotation_label as files_annotation_label
-
-        FROM autokmdb_news n 
-        LEFT JOIN users u ON n.mod_id = u.user_id
-        LEFT JOIN autokmdb_persons ap ON n.id = ap.autokmdb_news_id
-        LEFT JOIN autokmdb_institutions ai ON n.id = ai.autokmdb_news_id  
-        LEFT JOIN autokmdb_places apl ON n.id = apl.autokmdb_news_id
-        LEFT JOIN autokmdb_others ao ON n.id = ao.autokmdb_news_id
-        LEFT JOIN autokmdb_files af ON n.id = af.autokmdb_news_id
-        WHERE n.id = %s
     """
-    
+    Fetch a single article and its entities without causing a cartesian product explosion.
+    """
     with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (id,))
-        rows = cursor.fetchall()
-        
-        if not rows:
+        # 1) Fetch the base article row
+        article_query = """
+            SELECT 
+                n.id AS id,
+                n.news_id,
+                n.clean_url AS url,
+                n.description,
+                n.title,
+                n.source,
+                n.newspaper_name,
+                n.newspaper_id,
+                n.classification_score,
+                n.classification_label,
+                n.annotation_label,
+                n.processing_step,
+                n.skip_reason,
+                n.text,
+                CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date,
+                n.category,
+                CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS article_date,
+                u.name AS mod_name,
+                n.is_paywalled
+            FROM autokmdb_news n
+            LEFT JOIN users u ON n.mod_id = u.user_id
+            WHERE n.id = %s
+        """
+        cursor.execute(article_query, (id,))
+        article_row = cursor.fetchone()
+        if not article_row:
             return {}
-            
-        # Extract article data from first row (all rows have same article data)
-        article_data = rows[0]
-        article = {
-            "id": article_data["id"],
-            "news_id": article_data["news_id"],
-            "url": article_data["url"],
-            "description": article_data["description"],
-            "title": article_data["title"],
-            "source": article_data["source"],
-            "newspaper_name": article_data["newspaper_name"],
-            "newspaper_id": article_data["newspaper_id"],
-            "classification_score": article_data["classification_score"],
-            "classification_label": article_data["classification_label"],
-            "annotation_label": article_data["annotation_label"],
-            "processing_step": article_data["processing_step"],
-            "skip_reason": article_data["skip_reason"],
-            "text": article_data["text"],
-            "date": article_data["date"],
-            "category": article_data["category"],
-            "article_date": article_data["article_date"],
-            "mod_name": article_data["mod_name"],
-            "is_paywalled": article_data["is_paywalled"]
-        }
-        
-        # Efficiently collect entities from joined data
-        persons = []
-        institutions = []
-        places = []
-        others = []
-        files = []
-        
-        # Process all rows to extract entity data
-        seen_persons = set()
-        seen_institutions = set()
-        seen_places = set()
-        seen_others = set()
-        seen_files = set()
-        
-        for row in rows:
-            # Process persons
-            if row["person_auto_id"] and row["person_auto_id"] not in seen_persons:
-                persons.append({
-                    "id": row["person_auto_id"],
-                    "name": row["person_name"],
-                    "db_id": row["person_db_id"],
-                    "db_name": row["person_db_name"],
-                    "classification_score": row["person_classification_score"],
-                    "classification_label": row["person_classification_label"],
-                    "annotation_label": row["person_annotation_label"],
-                    "found_name": row["person_found_name"],
-                    "found_position": row["person_found_position"]
-                })
-                seen_persons.add(row["person_auto_id"])
-                
-            # Process institutions
-            if row["institution_auto_id"] and row["institution_auto_id"] not in seen_institutions:
-                institutions.append({
-                    "id": row["institution_auto_id"],
-                    "name": row["institution_name"],
-                    "db_id": row["institution_db_id"],
-                    "db_name": row["institution_db_name"],
-                    "classification_score": row["institution_classification_score"],
-                    "classification_label": row["institution_classification_label"],
-                    "annotation_label": row["institution_annotation_label"],
-                    "found_name": row["institution_found_name"],
-                    "found_position": row["institution_found_position"]
-                })
-                seen_institutions.add(row["institution_auto_id"])
-                
-            # Process places
-            if row["place_auto_id"] and row["place_auto_id"] not in seen_places:
-                places.append({
-                    "id": row["place_auto_id"],
-                    "name": row["place_name"],
-                    "db_id": row["place_db_id"],
-                    "db_name": row["place_db_name"],
-                    "classification_score": row["place_classification_score"],
-                    "classification_label": row["place_classification_label"],
-                    "annotation_label": row["place_annotation_label"],
-                    "found_name": row["place_found_name"],
-                    "found_position": row["place_found_position"]
-                })
-                seen_places.add(row["place_auto_id"])
-                
-            # Process others
-            if row["other_auto_id"] and row["other_auto_id"] not in seen_others:
-                others.append({
-                    "id": row["other_auto_id"],
-                    "name": row["other_name"],
-                    "db_id": row["other_db_id"],
-                    "classification_score": None,
-                    "classification_label": row["other_classification_label"],
-                    "annotation_label": row["other_annotation_label"]
-                })
-                seen_others.add(row["other_auto_id"])
-            
-            # Process files
-            if row["files_db_id"] and row["files_db_id"] not in seen_files:
-                files.append({
-                    "id": row["files_auto_id"],
-                    "name": row["files_name"],
-                    "db_id": row["files_db_id"],
-                    "classification_score": None,
-                    "classification_label": row["files_classification_label"],
-                    "annotation_label": row["files_annotation_label"]
-                })
-                seen_files.add(row["files_db_id"])
-        
-        # Handle KMDB entities if news_id exists
-        news_id = article["news_id"]
+
+        article = dict(article_row)
+
+        # 2) Fetch entities with separate queries (no cross-product)
+        persons_query = """
+            SELECT 
+                id,
+                name,
+                person_id AS db_id,
+                person_name AS db_name,
+                classification_score,
+                classification_label,
+                annotation_label,
+                found_name,
+                found_position
+            FROM autokmdb_persons
+            WHERE autokmdb_news_id = %s
+            ORDER BY id
+        """
+        institutions_query = """
+            SELECT 
+                id,
+                name,
+                institution_id AS db_id,
+                institution_name AS db_name,
+                classification_score,
+                classification_label,
+                annotation_label,
+                found_name,
+                found_position
+            FROM autokmdb_institutions
+            WHERE autokmdb_news_id = %s
+            ORDER BY id
+        """
+        places_query = """
+            SELECT 
+                id,
+                name,
+                place_id AS db_id,
+                place_name AS db_name,
+                classification_score,
+                classification_label,
+                annotation_label,
+                found_name,
+                found_position
+            FROM autokmdb_places
+            WHERE autokmdb_news_id = %s
+            ORDER BY id
+        """
+
+        cursor.execute(persons_query, (id,))
+        persons = list(cursor.fetchall())
+
+        cursor.execute(institutions_query, (id,))
+        institutions = list(cursor.fetchall())
+
+        cursor.execute(places_query, (id,))
+        places = list(cursor.fetchall())
+
+        # Existing helpers for others/files
+        others = get_article_others(cursor, id)
+        files = get_article_files(cursor, id)
+
+        # 3) Merge in KMDB entities (positive annotations) if present
+        news_id = article.get("news_id")
         if news_id:
-            # Single query to get all KMDB entities for this article
             kmdb_query = """
                 SELECT 
-                    'person' as entity_type, pl.person_id as entity_id
+                    'person' AS entity_type, pl.person_id AS entity_id
                 FROM news_persons_link pl
                 WHERE pl.news_id = %s
                 UNION ALL
                 SELECT 
-                    'institution' as entity_type, il.institution_id as entity_id
+                    'institution' AS entity_type, il.institution_id AS entity_id
                 FROM news_institutions_link il
                 WHERE il.news_id = %s
                 UNION ALL
                 SELECT 
-                    'place' as entity_type, pll.place_id as entity_id
+                    'place' AS entity_type, pll.place_id AS entity_id
                 FROM news_places_link pll
                 WHERE pll.news_id = %s
                 UNION ALL
                 SELECT 
-                    'other' as entity_type, ol.other_id as entity_id
+                    'other' AS entity_type, ol.other_id AS entity_id
                 FROM news_others_link ol
                 WHERE ol.news_id = %s
             """
-            
             cursor.execute(kmdb_query, (news_id, news_id, news_id, news_id))
-            kmdb_entities = cursor.fetchall()
-            
-            # Process KMDB entities efficiently using cached lookups
-            for entity in kmdb_entities:
-                entity_type = entity["entity_type"]
-                entity_id = entity["entity_id"]
-                
-                if entity_type == "person" and entity_id in all_persons_by_id:
+            for entity in cursor.fetchall():
+                etype = entity["entity_type"]
+                eid = entity["entity_id"]
+                if etype == "person" and eid in all_persons_by_id:
                     persons.append({
                         "annotation_label": 1,
-                        "db_id": entity_id,
-                        "name": all_persons_by_id[entity_id],
-                        "db_name": all_persons_by_id[entity_id]
+                        "db_id": eid,
+                        "name": all_persons_by_id[eid],
+                        "db_name": all_persons_by_id[eid],
                     })
-                elif entity_type == "institution" and entity_id in all_institutions_by_id:
+                elif etype == "institution" and eid in all_institutions_by_id:
                     institutions.append({
                         "annotation_label": 1,
-                        "db_id": entity_id,
-                        "name": all_institutions_by_id[entity_id],
-                        "db_name": all_institutions_by_id[entity_id]
+                        "db_id": eid,
+                        "name": all_institutions_by_id[eid],
+                        "db_name": all_institutions_by_id[eid],
                     })
-                elif entity_type == "place" and entity_id in all_places_by_id:
+                elif etype == "place" and eid in all_places_by_id:
                     places.append({
                         "annotation_label": 1,
-                        "db_id": entity_id,
-                        "name": all_places_by_id[entity_id],
-                        "db_name": all_places_by_id[entity_id]
+                        "db_id": eid,
+                        "name": all_places_by_id[eid],
+                        "db_name": all_places_by_id[eid],
                     })
-                elif entity_type == "other" and entity_id in all_others_by_id:
+                elif etype == "other" and eid in all_others_by_id:
                     others.append({
                         "annotation_label": 1,
-                        "db_id": entity_id,
-                        "name": all_others_by_id[entity_id],
-                        "db_name": all_others_by_id[entity_id]
+                        "db_id": eid,
+                        "name": all_others_by_id[eid],
+                        "db_name": all_others_by_id[eid],
                     })
-                elif entity_type == "file" and entity_id in all_files_by_id:
-                    files.append({
-                        "annotation_label": 1,
-                        "db_id": entity_id,
-                        "name": all_files_by_id[entity_id],
-                        "db_name": all_files_by_id[entity_id]
-                    })
-        
-        # Map entities efficiently
+
+        # 4) Map entities
         article["mapped_persons"] = map_entities(persons)
         article["mapped_institutions"] = map_entities(institutions)
         article["mapped_places"] = map_entities(places)
         article["others"] = others
         article["files"] = files
-        
+
         return article
 
 
