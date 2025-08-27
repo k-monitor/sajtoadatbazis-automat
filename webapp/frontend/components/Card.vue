@@ -78,7 +78,16 @@
               <span class="">{{ item.label }}</span>
             </template>
           </UDropdown>
-          <UBadge v-if="article.pending_negative_reason != null" color="red" variant="soft">{{ negativeReasonLabel(article.pending_negative_reason) }}</UBadge>
+          <UBadge v-if="article.pending_negative_reason != null" color="red" variant="soft" class="flex items-center gap-1">
+            {{ negativeReasonLabel(article.pending_negative_reason) }}
+            <Icon
+              name="mdi:close"
+              size="14"
+              class="cursor-pointer opacity-80 hover:opacity-100"
+              title="Megjelölés törlése"
+              @click.stop="clearPendingNegative"
+            />
+          </UBadge>
         </div>
         <p class="items-center p-2 ml-auto"
           title="Teszt: ez a szám azt mutatja, algoritmusaink szerint mennyire illik a cikk a módszertanba (100% - nagyon, 0% - kevésbé)">
@@ -103,6 +112,16 @@
           Hasonló tartalom
         </UButton>
         <div class="flex items-center gap-2 ml-auto">
+          <UBadge v-if="article.pending_negative_reason != null" color="red" variant="soft" class="flex items-center gap-1">
+            {{ negativeReasonLabel(article.pending_negative_reason) }}
+            <Icon
+              name="mdi:close"
+              size="14"
+              class="cursor-pointer opacity-80 hover:opacity-100"
+              title="Megjelölés törlése"
+              @click.stop="clearPendingNegative"
+            />
+          </UBadge>
           <UButton @click="pickOut" class="ml-auto r-0" color="green">Kiszed</UButton>
         </div>
       </div>
@@ -287,6 +306,11 @@ function setPendingNegative(reason: number) {
   // mark the article with the chosen reason; bulk action will submit later
   article.value.pending_negative_reason = reason;
   if (article.value.original) article.value.original.pending_negative_reason = reason;
+}
+
+function clearPendingNegative() {
+  article.value.pending_negative_reason = null;
+  if (article.value.original) article.value.original.pending_negative_reason = null;
 }
 
 const reasons: Record<string, string> = { '0': 'Nem releváns', '1': 'Átvett', '2': 'Külföldi', '3': 'Már szerepel', '100': 'Egyéb' }
