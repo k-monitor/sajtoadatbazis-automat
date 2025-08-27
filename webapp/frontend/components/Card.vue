@@ -103,23 +103,6 @@
           Hasonló tartalom
         </UButton>
         <div class="flex items-center gap-2 ml-auto">
-          <UDropdown
-            v-if="article.annotation_label != 0"
-            :items="negativeItems"
-            :popper="{ placement: 'bottom-end' }"
-          >
-            <UButton
-              color="red"
-              :label="article.pending_negative_reason != null ? negativeReasonLabel(article.pending_negative_reason) : 'Elutasítás oka'"
-              trailing-icon="i-heroicons-chevron-down-20-solid"
-              size="xs"
-              variant="soft"
-            />
-            <template #item="{ item }">
-              <span class="">{{ item.label }}</span>
-            </template>
-          </UDropdown>
-          <UBadge v-if="article.pending_negative_reason != null" color="red" variant="soft">megjelölve</UBadge>
           <UButton @click="pickOut" class="ml-auto r-0" color="green">Kiszed</UButton>
         </div>
       </div>
