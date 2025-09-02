@@ -210,6 +210,7 @@
 </template>
 
 <script setup lang="ts">
+import { set } from "date-fns";
 import { $authFetch } from "~/auth_fetch";
 
 const config = useRuntimeConfig();
@@ -287,11 +288,12 @@ async function processAndAccept() {
 }
 
 async function toPool() {
-  await postUrl(baseUrl + "/api/annote/negative", {
-    method: "POST",
-    body: { id: article.value.id, reason: 1 }, // átvett
-  });
-  refresh();
+  // await postUrl(baseUrl + "/api/annote/negative", {
+  //   method: "POST",
+  //   body: { id: article.value.id, reason: 1 }, // átvett
+  // });
+  // refresh();
+  setPendingNegative(1);
 }
 
 async function pickOut() {
