@@ -47,13 +47,13 @@ let loadingDelete = ref(false);
 
 const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
-let allLabels = ref(null);
+let allLabels = ref<any | null>(null);
 // let allLabels = (await useAuthFetch(baseUrl + "/api/domains")).data;
 useAuthFetch(baseUrl + "/api/all_labels").then((response) => {
   allLabels.value = response.data.value;
   updateFromURL();
 });
-let keywordSynonyms = null;
+let keywordSynonyms: any = null;
 useAuthFetch(baseUrl + "/api/keyword_synonyms").then((response) => {
   keywordSynonyms = response.data;
 });
@@ -86,12 +86,12 @@ function updateURL() {
   });
 }
 
-function updateSelectedReason(newReason) {
+function updateSelectedReason(newReason: { id: number }) {
   selectedReasonId.value = newReason.id;
   refresh();
 }
 
-function filterNewspaper(newspaper) {
+function filterNewspaper(newspaper: { id: number; name: string }) {
   selectedDomains.value = [newspaper];
   updateURL();
 }
@@ -109,12 +109,14 @@ function handleLoginSuccess() {
 function updateFromURL() {
   console.debug(query);
   if (query.statusId) {
-    statusId.value = parseInt(query.statusId);
+    const statusQ = Array.isArray(query.statusId) ? query.statusId[0] : query.statusId;
+    if (typeof statusQ === 'string') statusId.value = parseInt(statusQ);
   }
   if (query.selectedDomains) {
-    const selectedDomainIds = query.selectedDomains
-      .split(",")
-      .map((domain: string) => parseInt(domain));
+    const domainsQ = Array.isArray(query.selectedDomains) ? query.selectedDomains[0] : query.selectedDomains;
+    const selectedDomainIds = typeof domainsQ === 'string'
+      ? domainsQ.split(",").map((domain: string) => parseInt(domain))
+      : [];
     console.debug(selectedDomainIds);
     selectedDomains.value = allDomains.value.filter(
       (domain) => selectedDomainIds.indexOf(domain.id) != -1
@@ -122,17 +124,24 @@ function updateFromURL() {
     console.debug(selectedDomains.value);
   }
   if (query.page) {
-    page.value = parseInt(query.page);
+    const pageQ = Array.isArray(query.page) ? query.page[0] : query.page;
+    if (typeof pageQ === 'string') page.value = parseInt(pageQ);
   }
   if (query.reverseSort) {
-    reverseSort.value = query.reverseSort == "true" ? true : false;
+    const rsQ = Array.isArray(query.reverseSort) ? query.reverseSort[0] : query.reverseSort;
+    reverseSort.value = rsQ == "true" ? true : false;
   }
   if (query.q) {
-    q.value = query.q;
+    const qQ = Array.isArray(query.q) ? query.q[0] : query.q;
+    if (typeof qQ === 'string') q.value = qQ;
   }
   if (query.dateFrom && query.dateTo) {
-    selected.value.start = new Date(query.dateFrom);
-    selected.value.end = new Date(query.dateTo);
+    const df = Array.isArray(query.dateFrom) ? query.dateFrom[0] : query.dateFrom;
+    const dt = Array.isArray(query.dateTo) ? query.dateTo[0] : query.dateTo;
+    if (typeof df === 'string' && typeof dt === 'string') {
+      selected.value.start = new Date(df);
+      selected.value.end = new Date(dt);
+    }
   }
 }
 
@@ -147,7 +156,7 @@ const { data: articleCounts, refresh: refreshArticleCounts } = useAuthLazyFetch(
       q: q,
       skip_reason: selectedReasonId,
     },
-    onResponse({ request, response, options }) {
+  onResponse({ request, response, options }: any) {
       if (response.status == 401) {
         sendLoginError();
       } else if (response.status >= 300) {
@@ -211,8 +220,7 @@ const {
     q: q,
     skip_reason: selectedReasonId,
   },
-  watch: [reverseSort], // Add this line to ensure it re-fetches when reverseSort changes
-  onResponse({ request, response, options }) {
+  onResponse({ request, response, options }: any) {
     if (response.status == 401) {
       sendLoginError();
     } else if (response.status >= 300) {
@@ -226,24 +234,20 @@ const {
 
 let articles = computed(() => articleQuery.value?.articles);
 let pages = computed(() => articleQuery.value?.pages);
-let itemsCount = computed(() =>
-  articleQuery.value == null ? null : pages.value * 10
-);
+let itemsCount = computed(() => (articleQuery.value == null ? 0 : (pages.value || 0) * 10));
 
 const groupedArticles = computed(() => {
-  if (!articles.value) return [];
-  
-  console.log("Grouping articles with reverseSort:", reverseSort.value);
-  
+  if (!articles.value) return [] as Array<{ date: string; displayDate: string; articles: any[] }>;
+
+  const list = articles.value as any[];
   // Separate articles with source=1 from other articles
-  const priorityArticles = articles.value.filter(article => article.source === 1);
-  const regularArticles = articles.value.filter(article => article.source !== 1);
-  
+  const priorityArticles = list.filter((article: any) => article.source === 1);
+  const regularArticles = list.filter((article: any) => article.source !== 1);
+
   // Create groups for regular articles by date
-  const groups = {};
-  regularArticles.forEach(article => {
+  const groups: Record<string, any[]> = {};
+  regularArticles.forEach((article: any) => {
     if (!article.date) return;
-    
     const dateObj = new Date(article.date);
     const dateKey = dateObj.toISOString().split('T')[0];
 
@@ -252,58 +256,49 @@ const groupedArticles = computed(() => {
     }
     groups[dateKey].push(article);
   });
-  
-  // Get the dates and sort them
+
+  // Sort date keys based on reverseSort flag
   const sortedDates = Object.keys(groups).sort((a, b) => {
-    // If reverseSort is true: oldest first (ascending)
-    // If reverseSort is false: newest first (descending)
-    if (reverseSort.value) {
-      return new Date(a).getTime() - new Date(b).getTime(); // Ascending (oldest first)
-    } else {
-      return new Date(b).getTime() - new Date(a).getTime(); // Descending (newest first)
-    }
+    const ta = new Date(a).getTime();
+    const tb = new Date(b).getTime();
+    return reverseSort.value ? ta - tb : tb - ta;
   });
-  
-  // Sort articles within each date group
-  sortedDates.forEach(dateKey => {
-    groups[dateKey].sort((a, b) => {
+
+  // Sort articles within each date group based on reverseSort flag
+  sortedDates.forEach((dateKey) => {
+    groups[dateKey].sort((a: any, b: any) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
-      // For article ordering within a day, use the same logic
-      return reverseSort.value 
-        ? dateA - dateB  // Oldest first when reverseSort is true
-        : dateB - dateA; // Newest first when reverseSort is false
+      return reverseSort.value ? dateA - dateB : dateB - dateA;
     });
   });
-  
+
   // Convert to array of objects with date and articles
-  let result = sortedDates.map(dateKey => ({
+  let result = sortedDates.map((dateKey) => ({
     date: dateKey,
     articles: groups[dateKey],
     displayDate: new Date(dateKey).toLocaleDateString('hu-HU', {
       year: 'numeric',
-      month: 'long', 
-      day: 'numeric'
-    })
+      month: 'long',
+      day: 'numeric',
+    }),
   }));
-  
-  // Add priority articles
+
+  // Always add priority articles at the beginning
   if (priorityArticles.length > 0) {
-    priorityArticles.sort((a, b) => {
+    priorityArticles.sort((a: any, b: any) => {
       const dateA = new Date(a.date).getTime();
       const dateB = new Date(b.date).getTime();
-      return reverseSort.value 
-        ? dateA - dateB 
-        : dateB - dateA;
+      return reverseSort.value ? dateA - dateB : dateB - dateA;
     });
-    
+
     result.unshift({
       date: 'priority',
       articles: priorityArticles,
-      displayDate: 'Kiemelt cikkek'
+      displayDate: 'Kiemelt cikkek',
     });
   }
-  
+
   return result;
 });
 
@@ -324,73 +319,53 @@ function refreshAll() {
   refresh();
 }
 
-function updateSelectedDomains(newDomains) {
+function updateSelectedDomains(newDomains: Array<{ id: number; name: string }>) {
   selectedDomains.value = newDomains;
   resetPageRefresh();
 }
 
-function updateSelectedDateRange(newRange) {
+function updateSelectedDateRange(newRange: { start: Date; end: Date }) {
   selected.value = newRange;
   updateURL();
 }
 
-function updateReverseSort(newValue) {
+function updateReverseSort(newValue: boolean) {
   reverseSort.value = newValue;
-  refresh(); // Call refresh directly to ensure a new fetch happens
+  updateURL();
 }
 
 function openNewUrl() {
   isOpen.value = true;
 }
 
-const items = [
-  [
-    {
-      label: "Nem releváns",
-      slot: "item",
-      click: async () => deleteArticles(0),
-    },
-    {
-      label: "Átvett",
-      slot: "item",
-      click: async () => deleteArticles(1),
-    },
-    {
-      label: "Már szerepel",
-      slot: "item",
-      click: async () => deleteArticles(3),
-    },
-    {
-      label: "Külföldi",
-      slot: "item",
-      click: async () => deleteArticles(2),
-    },
-    {
-      label: "Egyéb",
-      slot: "item",
-      click: async () => deleteArticles(100),
-    },
-  ],
-];
+// Per-article reasons are now selected on the cards; bulk action will apply them.
 
-async function deleteArticles(reason) {
-  console.debug(articles.value[0].selected);
-  console.debug(reason);
+async function deleteArticles() {
   loadingDelete.value = true;
-  for (const article of articles.value) {
-    if (article.selected) {
-      await $authFetch(baseUrl + "/api/annote/negative", {
-        method: "POST",
-        body: { id: article.id, reason: reason },
-      });
+  async function applyAndClear(list: any[]) {
+    for (const a of list) {
+      if (!a) continue;
+      if (a.pending_negative_reason != null) {
+        await $authFetch(baseUrl + "/api/annote/negative", {
+          method: "POST",
+          body: { id: a.id, reason: a.pending_negative_reason },
+        });
+        a.pending_negative_reason = null;
+      }
+      if (Array.isArray(a.groupedArticles) && a.groupedArticles.length) {
+        await applyAndClear(a.groupedArticles);
+      }
     }
   }
-  loadingDelete.value = false;
-  // resetPageRefresh();
-  refreshAll();
+  try {
+    await applyAndClear(articles.value || []);
+  } finally {
+    loadingDelete.value = false;
+    refreshAll();
+  }
 }
 
-async function handleAddUrl(newUrl, selectedDomain) {
+async function handleAddUrl(newUrl: string, selectedDomain: { id: number; name: string } | null) {
   isOpen.value = false;
   if (selectedDomain === null) {
     isOpenError.value = true;
@@ -416,11 +391,11 @@ async function handleAddUrl(newUrl, selectedDomain) {
           errorTitle.value = "Hiba";
         }
       });
-    } catch (error) {
+  } catch (error) {
       console.error(error);
       if (!isOpenError.value) {
         isOpenError.value = true;
-        errorText.value = error;
+    errorText.value = String(error);
         errorTitle.value = "Hiba ";
       }
     }
@@ -454,7 +429,7 @@ async function handleAddUrl(newUrl, selectedDomain) {
             @refresh="refresh" />
 
           <UInput class="px-1 my-1" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
-          <AnnoteMultiple :articles="articles" :items="items" :loadingDelete="loadingDelete" />
+          <AnnoteMultiple :articles="articles" :loadingDelete="loadingDelete" @bulkDelete="deleteArticles" />
         </UContainer>
       </UContainer>
 
@@ -471,7 +446,7 @@ async function handleAddUrl(newUrl, selectedDomain) {
 
       <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh">
         <template #item="{ item }" v-if="!pending">
-          <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @change="refresh" />
+          <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount || 0" @change="refresh" />
 
           <template v-for="(group, index) in groupedArticles" :key="group.date">
             <!-- Date separator -->
@@ -497,7 +472,7 @@ async function handleAddUrl(newUrl, selectedDomain) {
             </div>
           </template>
 
-          <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount" @change="refresh" />
+          <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount || 0" @change="refresh" />
         </template>
         <template #item="{ item }" v-else>
           <UProgress animation="elastic" v-if="pending" />

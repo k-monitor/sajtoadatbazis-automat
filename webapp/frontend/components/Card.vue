@@ -28,7 +28,7 @@
             <Icon size="1.2em" name="mdi:question-mark" class="text-gray-500" />
           </UTooltip>
           <UTooltip v-else-if="article.annotation_label == 0"
-            :text="'elutasított : ' + (article.mod_name ?? '') + ' : ' + reasons[article.negative_reason.toString()]">
+            :text="'elutasított : ' + (article.mod_name ?? '') + ' : ' + reasons[String(article.negative_reason)]">
             <Icon size="1.2em" name="mdi:database-remove-outline" class="text-red-500" />
           </UTooltip>
           <UTooltip v-else-if="article.annotation_label == 1" :text="'elfogadott : ' + (article.mod_name ?? '')">
@@ -54,16 +54,40 @@
       <UContainer v-if="
         article.processing_step >= 4 && article.skip_reason == null && !is_small
       " class="flex justify-between px-0 sm:px-0 lg:px-0">
-        <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }" v-if="true">
+        <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }" v-if="article.annotation_label != null">
           <UButton color="red"
-            :label="article.annotation_label == null ? 'Elutasít' : article.annotation_label == 1 ? 'Mégis elutasít' : reasons[article.negative_reason.toString()]"
+            :label="article.annotation_label == null ? 'Elutasít' : article.annotation_label == 1 ? 'Mégis elutasít' : reasons[String(article.negative_reason)]"
             trailing-icon="i-heroicons-chevron-down-20-solid" />
           <template #item="{ item }">
             <span class="">{{ item.label }}</span>
           </template>
         </UDropdown>
-        <UCheckbox v-if="article.annotation_label != 0" @change="selected" class="items-center p-2 scale-125"
-          color="red" v-model="selection" name="selection" label="" />
+        <div class="flex gap-2">
+          <UDropdown
+            v-if="article.annotation_label == null"
+            :items="negativeItems"
+            :popper="{ placement: 'bottom-end' }"
+          >
+            <UButton
+              color="red"
+              label="Megjelöl"
+              trailing-icon="i-heroicons-chevron-down-20-solid"
+            />
+            <template #item="{ item }">
+              <span class="">{{ item.label }}</span>
+            </template>
+          </UDropdown>
+          <UBadge v-if="article.pending_negative_reason != null" color="red" variant="soft" class="flex items-center gap-1">
+            {{ negativeReasonLabel(article.pending_negative_reason) }}
+            <Icon
+              name="mdi:close"
+              size="14"
+              class="cursor-pointer opacity-80 hover:opacity-100"
+              title="Megjelölés törlése"
+              @click.stop="clearPendingNegative"
+            />
+          </UBadge>
+        </div>
         <p class="items-center p-2 ml-auto"
           title="Teszt: ez a szám azt mutatja, algoritmusaink szerint mennyire illik a cikk a módszertanba (100% - nagyon, 0% - kevésbé)">
           {{ Math.round(article.classification_score * 100) }}%
@@ -86,12 +110,32 @@
         <UButton v-if="!(article.negative_reason == 1 && article.annotation_label == 0)" color="red" @click="toPool">
           Hasonló tartalom
         </UButton>
-        <UButton @click="pickOut" class="ml-auto r-0" color="green">Kiszed</UButton>
+        <div class="flex items-center gap-2 ml-auto">
+          <UBadge v-if="article.pending_negative_reason != null" color="red" variant="soft" class="flex items-center gap-1">
+            {{ negativeReasonLabel(article.pending_negative_reason) }}
+            <Icon
+              name="mdi:close"
+              size="14"
+              class="cursor-pointer opacity-80 hover:opacity-100"
+              title="Megjelölés törlése"
+              @click.stop="clearPendingNegative"
+            />
+          </UBadge>
+          <UButton @click="pickOut" class="ml-auto r-0" color="green">Kiszed</UButton>
+        </div>
       </div>
       <div v-if="!is_small">
-        <Card v-for="gArticle in article.groupedArticles" :is_small="true" :article="gArticle" :key="gArticle.id"
-          :allLabels="allLabels" :keywordSynonyms="keywordSynonyms" :allFiles="allFiles" :refresh="refresh"
-          class="w-full max-w-2xl pr-0 pl-8" />
+        <Card
+          v-for="gArticle in article.groupedArticles"
+          :is_small="true"
+          :article="gArticle"
+          :key="gArticle.id"
+          :allLabels="allLabels"
+          :keywordSynonyms="keywordSynonyms"
+          :allFiles="allFiles"
+          :refresh="refresh"
+          class="w-full max-w-2xl pr-0 pl-8"
+        />
       </div>
     </div>
 
@@ -101,7 +145,7 @@
         <div class="my-2 flex justify-center px-0 sm:px-0 lg:px-0 flex-col md:flex-row">
           <div class="max-w-2xl mx-4 flex-grow">
             <p class="font-bold">Cím:</p>
-            <UTextarea class="my-2 min-h-0" rows="1" autoresize v-model="article.title" />
+            <UTextarea class="my-2 min-h-0" :rows="1" autoresize v-model="article.title" />
             <p class="font-bold">URL:</p>
             <UInput class="my-2" v-model="article.url" />
             <p class="font-bold">Leírás:</p>
@@ -113,7 +157,7 @@
                 <UToggle class="m-2" size="md" color="primary" v-model="edit" />
               </div>
             </div>
-            <UTextarea v-if="edit" class="my-2" v-model="article.text" rows="20" />
+            <UTextarea v-if="edit" class="my-2" v-model="article.text" :rows="20" />
             <div v-if="!edit" style="overflow-y: scroll; height: 400px">
               <span class="my-2" v-html="richText"></span>
             </div>
@@ -173,6 +217,7 @@
 </template>
 
 <script setup lang="ts">
+import { set } from "date-fns";
 import { $authFetch } from "~/auth_fetch";
 
 const config = useRuntimeConfig();
@@ -182,7 +227,7 @@ function formatDate(apiDateString: string): string {
   const date = new Date(apiDateString);
 
   // Define an options object for the Hungarian format and Budapest time zone
-  const options = {
+  const options: Intl.DateTimeFormatOptions = {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
@@ -196,8 +241,9 @@ function formatDate(apiDateString: string): string {
   const formatter = new Intl.DateTimeFormat('hu-HU', options);
   const parts = formatter.formatToParts(date);
 
+  const getPart = (t: string) => parts.find(p => p.type === t)?.value ?? '';
   // Rebuild the string in "YYYY. MM. DD. HH:mm:ss" format
-  const formattedDate = `${parts.find(p => p.type === 'year').value}. ${parts.find(p => p.type === 'month').value}. ${parts.find(p => p.type === 'day').value}. ${parts.find(p => p.type === 'hour').value}:${parts.find(p => p.type === 'minute').value}:${parts.find(p => p.type === 'second').value}`;
+  const formattedDate = `${getPart('year')}. ${getPart('month')}. ${getPart('day')}. ${getPart('hour')}:${getPart('minute')}:${getPart('second')}`;
 
   console.log(formattedDate);
   return formattedDate;
@@ -219,7 +265,6 @@ const thanksMessage = ref(getRandomThanks());
 
 const showThanks = ref(false);
 const edit = ref(false);
-const selection = ref(false);
 let accepting = ref(false);
 let category = ref(0);
 let categories = ref([
@@ -250,11 +295,12 @@ async function processAndAccept() {
 }
 
 async function toPool() {
-  await postUrl(baseUrl + "/api/annote/negative", {
-    method: "POST",
-    body: { id: article.value.id, reason: 1 }, // átvett
-  });
-  refresh();
+  // await postUrl(baseUrl + "/api/annote/negative", {
+  //   method: "POST",
+  //   body: { id: article.value.id, reason: 1 }, // átvett
+  // });
+  // refresh();
+  setPendingNegative(1);
 }
 
 async function pickOut() {
@@ -265,15 +311,20 @@ async function pickOut() {
   refresh();
 }
 
-function selected() {
-  console.log("selected " + selection.value);
-  article.value.selected = selection.value;
-  if (article.value.original) article.value.original.selected = selection.value;
+function setPendingNegative(reason: number) {
+  // mark the article with the chosen reason; bulk action will submit later
+  article.value.pending_negative_reason = reason;
+  if (article.value.original) article.value.original.pending_negative_reason = reason;
 }
 
-const reasons = { '0': 'Nem releváns', '1': 'Átvett', '2': 'Külföldi', '3': 'Már szerepel', '100': 'Egyéb' }
+function clearPendingNegative() {
+  article.value.pending_negative_reason = null;
+  if (article.value.original) article.value.original.pending_negative_reason = null;
+}
 
-async function annoteNegative(reason) {
+const reasons: Record<string, string> = { '0': 'Nem releváns', '1': 'Átvett', '2': 'Külföldi', '3': 'Már szerepel', '100': 'Egyéb' }
+
+async function annoteNegative(reason: number) {
   showThanks.value = true;
   thanksMessage.value = getRandomThanks();
   await postUrl(baseUrl + "/api/annote/negative", {
@@ -314,33 +365,49 @@ const items = [
   ],
 ];
 
-async function postUrl(url, data) {
+// Dropdown items for marking negative reason without immediate submit
+const negativeItems = [
+  [
+    { label: 'Nem releváns', slot: 'item', click: () => setPendingNegative(0) },
+    { label: 'Átvett', slot: 'item', click: () => setPendingNegative(1) },
+    { label: 'Már szerepel', slot: 'item', click: () => setPendingNegative(3) },
+    { label: 'Külföldi', slot: 'item', click: () => setPendingNegative(2) },
+    { label: 'Egyéb', slot: 'item', click: () => setPendingNegative(100) },
+  ],
+];
+
+function negativeReasonLabel(reason: number) {
+  return (reasons as Record<string, string>)[String(reason)] ?? 'Elutasítás oka';
+}
+
+async function postUrl(url: string, data: any) {
   return await $authFetch(url, data);
 }
 
-let allPersons = ref([]);
-let allInstitutions = ref([]);
-let allPlaces = ref([]);
-let kwOthers = ref([]);
-let allOthers = ref([]);
+let allPersons = ref<any[]>([]);
+let allInstitutions = ref<any[]>([]);
+let allPlaces = ref<any[]>([]);
+let kwOthers = ref<any[]>([]);
+let allOthers = ref<any[]>([]);
 
-let positivePersons = ref([]);
-let positiveInstitutions = ref([]);
-let positivePlaces = ref([]);
-let positiveOthers = ref([]);
-let positiveFiles = ref([]);
+let positivePersons = ref<any[]>([]);
+let positiveInstitutions = ref<any[]>([]);
+let positivePlaces = ref<any[]>([]);
+let positiveOthers = ref<any[]>([]);
+let positiveFiles = ref<any[]>([]);
 
-function mapEntities(entities) {
-  const entitiesMap = {};
+function mapEntities(entities: any[]) {
+  const entitiesMap: Record<string, any[]> = {} as any;
   for (const entity of entities) {
-    if (entitiesMap[entity.db_id])
-      entitiesMap[entity.db_id].push({ ...entity });
-    else entitiesMap[entity.db_id] = [{ ...entity }];
+    const key = String(entity.db_id);
+    if ((entitiesMap as any)[key])
+      (entitiesMap as any)[key].push({ ...entity });
+    else (entitiesMap as any)[key] = [{ ...entity }];
   }
 
   const mappedEntities = [];
-  for (const id in entitiesMap) {
-    let entityList = entitiesMap[id];
+  for (const id in (entitiesMap as any)) {
+    let entityList = (entitiesMap as any)[id];
     if (id != null) {
       let entity = { ...entityList[0] };
       entity["list"] = [...entityList];
@@ -355,12 +422,12 @@ function mapEntities(entities) {
   return mappedEntities.flatMap((e) => (e.db_id == null ? e.list : [e]));
 }
 
-function getKeywords(text) {
-  function escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+function getKeywords(text: string) {
+  function escapeRegExp(str: string) {
+    return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
   }
 
-  function findAllKeywords(text, keywordCandidate) {
+  function findAllKeywords(text: string, keywordCandidate: any) {
     const regex = new RegExp(escapeRegExp(keywordCandidate.synonym), 'g');
     const results = [];
     let match;
@@ -380,8 +447,8 @@ function getKeywords(text) {
     return results;
   }
 
-  let allKeywords = Array();
-  for (const keywordCandidate of keywordSynonyms)
+  let allKeywords: any[] = Array();
+  for (const keywordCandidate of keywordSynonyms as any)
     allKeywords = allKeywords.concat(findAllKeywords(text, keywordCandidate));
 
   return allKeywords;
@@ -396,7 +463,7 @@ function openModal() {
   } else {
     $authFetch(baseUrl + "/api/article/" + article.value.id, {
       query: {},
-      onResponse({ request, response, options }) {
+  onResponse({ request, response, options }: any) {
         let original = article.value;
         article.value = response._data;
         article.value.original = original;
@@ -438,7 +505,7 @@ function openModal() {
               place.db_id
           );
           positiveOthers.value = article.value.others.filter(
-            (other) =>
+            (other: any) =>
               ((article.value.annotation_label != 1 &&
                 other.classification_label == 1) ||
                 (article.value.annotation_label == 1 &&
@@ -446,7 +513,7 @@ function openModal() {
               other.db_id
           );
           positiveFiles.value = article.value.files.filter(
-            (file) =>
+            (file: any) =>
               ((article.value.annotation_label != 1 &&
                 file.classification_label == 1) ||
                 (article.value.annotation_label == 1 &&
@@ -480,7 +547,7 @@ function closeModal() {
   showThanks.value = false;
 }
 
-let allFiles = ref([]);
+let allFiles = ref<any[]>([]);
 const {
   article: articleValue,
   allLabels,
@@ -489,7 +556,7 @@ const {
   is_small,
 } = defineProps(["article", "allLabels", "refresh", "keywordSynonyms", "is_small"]);
 
-const article = ref(articleValue);
+const article = ref<any>(articleValue);
 article.value.text = "";
 article.value.institutions = [];
 article.value.persons = [];
@@ -498,7 +565,7 @@ article.value.others = [];
 article.value.isDownloaded = false;
 
 const is_active = ref(true);
-let file = ref([]);
+let file = ref<any[]>([]);
 let submitted = ref(false);
 let errorText = ref("");
 let articleLength = computed(() => (article.value.text ?? "").length)
@@ -566,17 +633,17 @@ async function submitArticle() {
         positive_persons: positivePersonsList,
         positive_institutions: positiveInstitutionsList,
         positive_places: positivePlacesList,
-        category: parseInt(category.value),
+  category: Number(category.value),
         tags: positiveOthers.value,
         active: is_active.value,
         file_ids: positiveFiles.value.map((file) => file.db_id),
         pub_date: article.value.original_date,
       },
-      onResponseError({ request, response, options }) {
+  onResponseError({ request, response, options }: any) {
         submitted.value = false;
         errorText.value = response._data.error;
       },
-      onResponse({ request, response, options }) {
+  onResponse({ request, response, options }: any) {
         submitted.value = false;
         if (response.status >= 300) {
           errorText.value =
@@ -592,7 +659,7 @@ async function submitArticle() {
     if (submitted.value) {
       submitted.value = false;
       console.log(error);
-      errorText.value = error;
+  errorText.value = String(error);
     }
   }
   showThanks.value = false;
@@ -606,30 +673,30 @@ article.value.date = formatDate(article.value.date);
 function getRichText() {
   let texthtml = article.value.text ?? '';
 
-  let allPersons = article.value.mapped_persons
-    .map((person) => person.occurences ?? [person])
+  let allPersons = (article.value.mapped_persons as any[])
+    .map((person: any) => person.occurences ?? [person])
     .flat()
-    .filter((obj) => obj.found_position != null);
-  allPersons.forEach((element) => {
+    .filter((obj: any) => obj.found_position != null);
+  allPersons.forEach((element: any) => {
     element.etype = "person";
   });
 
   console.log('allPersons');
   console.log(allPersons);
 
-  let allInstitutions = article.value.mapped_institutions
-    .map((person) => person.occurences ?? [person])
+  let allInstitutions = (article.value.mapped_institutions as any[])
+    .map((person: any) => person.occurences ?? [person])
     .flat()
-    .filter((obj) => obj.found_position != null);
-  allInstitutions.forEach((element) => {
+    .filter((obj: any) => obj.found_position != null);
+  allInstitutions.forEach((element: any) => {
     element.etype = "institution";
   });
 
-  let allPlaces = article.value.mapped_places
-    .map((person) => person.occurences ?? [person])
+  let allPlaces = (article.value.mapped_places as any[])
+    .map((person: any) => person.occurences ?? [person])
     .flat()
-    .filter((obj) => obj.found_position != null);
-  allPlaces.forEach((element) => {
+    .filter((obj: any) => obj.found_position != null);
+  allPlaces.forEach((element: any) => {
     element.etype = "place";
   });
   let allEntities = allPersons
@@ -679,27 +746,27 @@ function getRichText() {
 const richText = ref("");
 
 // Handle update event for positivePeople
-const updatePositivePersons = (newValue) => {
+const updatePositivePersons = (newValue: any[]) => {
   positivePersons.value = newValue;
 };
 
 // Handle update event for positiveInstitutions
-const updatePositiveInstitutions = (newValue) => {
+const updatePositiveInstitutions = (newValue: any[]) => {
   positiveInstitutions.value = newValue;
 };
 
 // Handle update event for positivePlaces
-const updatePositivePlaces = (newValue) => {
+const updatePositivePlaces = (newValue: any[]) => {
   positivePlaces.value = newValue;
 };
 
 // Handle update event for positiveTags
-const updatePositiveOthers = (newValue) => {
+const updatePositiveOthers = (newValue: any[]) => {
   positiveOthers.value = newValue;
 };
 
 // Handle update event for positiveTags
-const updatePositiveFiles = (newValue) => {
+const updatePositiveFiles = (newValue: any[]) => {
   positiveFiles.value = newValue;
 };
 </script>
