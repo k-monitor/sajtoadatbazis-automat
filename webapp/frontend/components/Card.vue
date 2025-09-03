@@ -121,7 +121,7 @@
               @click.stop="clearPendingNegative"
             />
           </UBadge>
-          <UButton @click="pickOut" class="ml-auto r-0" color="green">Kiszed</UButton>
+          <UButton @click="pickOut" class="ml-auto r-0" color="green">Elfogad</UButton>
         </div>
       </div>
       <div v-if="!is_small">
