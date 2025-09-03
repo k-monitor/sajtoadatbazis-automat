@@ -54,7 +54,7 @@
       <UContainer v-if="
         article.processing_step >= 4 && article.skip_reason == null && !is_small
       " class="flex justify-between px-0 sm:px-0 lg:px-0">
-        <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }" v-if="true">
+        <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }" v-if="article.annotation_label != null">
           <UButton color="red"
             :label="article.annotation_label == null ? 'Elutasít' : article.annotation_label == 1 ? 'Mégis elutasít' : reasons[String(article.negative_reason)]"
             trailing-icon="i-heroicons-chevron-down-20-solid" />
@@ -62,7 +62,7 @@
             <span class="">{{ item.label }}</span>
           </template>
         </UDropdown>
-        <div class="flex items-center gap-2">
+        <div class="flex gap-2">
           <UDropdown
             v-if="article.annotation_label != 0"
             :items="negativeItems"
@@ -72,7 +72,6 @@
               color="red"
               label="Megjelöl"
               trailing-icon="i-heroicons-chevron-down-20-solid"
-              class="mx-4"
             />
             <template #item="{ item }">
               <span class="">{{ item.label }}</span>
@@ -195,7 +194,7 @@
 
           <div class="my-2 flex justify-between">
             <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }"
-              v-if="article.annotation_label == 1">
+              v-if="article.annotation_label != 0">
               <UButton color="red" :label="article.annotation_label == null ? 'Elutasít' : 'Mégis elutasít'"
                 trailing-icon="i-heroicons-chevron-down-20-solid" />
               <template #item="{ item }">
