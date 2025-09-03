@@ -64,7 +64,7 @@
         </UDropdown>
         <div class="flex gap-2">
           <UDropdown
-            v-if="article.annotation_label != 0"
+            v-if="article.annotation_label == null"
             :items="negativeItems"
             :popper="{ placement: 'bottom-end' }"
           >
