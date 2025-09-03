@@ -195,7 +195,7 @@
 
           <div class="my-2 flex justify-between">
             <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }"
-              v-if="article.annotation_label != 0">
+              v-if="article.annotation_label == 1">
               <UButton color="red" :label="article.annotation_label == null ? 'Elutasít' : 'Mégis elutasít'"
                 trailing-icon="i-heroicons-chevron-down-20-solid" />
               <template #item="{ item }">
