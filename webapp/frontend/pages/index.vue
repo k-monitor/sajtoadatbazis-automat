@@ -342,20 +342,25 @@ function openNewUrl() {
 
 async function deleteArticles() {
   loadingDelete.value = true;
-  try {
-    for (const article of articles.value || []) {
-      if (article && article.pending_negative_reason != null) {
+  async function applyAndClear(list: any[]) {
+    for (const a of list) {
+      if (!a) continue;
+      if (a.pending_negative_reason != null) {
         await $authFetch(baseUrl + "/api/annote/negative", {
           method: "POST",
-          body: { id: article.id, reason: article.pending_negative_reason },
+          body: { id: a.id, reason: a.pending_negative_reason },
         });
-        // Clear the mark after successful submit
-        article.pending_negative_reason = null;
+        a.pending_negative_reason = null;
+      }
+      if (Array.isArray(a.groupedArticles) && a.groupedArticles.length) {
+        await applyAndClear(a.groupedArticles);
       }
     }
+  }
+  try {
+    await applyAndClear(articles.value || []);
   } finally {
-  loadingDelete.value = false;
-    // Refresh counts and list
+    loadingDelete.value = false;
     refreshAll();
   }
 }

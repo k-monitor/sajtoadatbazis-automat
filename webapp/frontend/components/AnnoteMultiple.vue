@@ -25,5 +25,16 @@ defineEmits(['bulkDelete']);
 // Articles marked for bulk negative annotation are those with a pending reason set
 const isMarked = (article) => article && article.pending_negative_reason != null;
 
-const markedCount = computed(() => (props.articles || []).filter(isMarked).length);
+function countMarked(list = []) {
+    let count = 0;
+    for (const a of list) {
+        if (!a) continue;
+        if (isMarked(a)) count++;
+        const children = Array.isArray(a.groupedArticles) ? a.groupedArticles : [];
+        if (children.length) count += countMarked(children);
+    }
+    return count;
+}
+
+const markedCount = computed(() => countMarked(props.articles || []));
 </script>

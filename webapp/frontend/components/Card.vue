@@ -126,9 +126,17 @@
         </div>
       </div>
       <div v-if="!is_small">
-        <Card v-for="gArticle in article.groupedArticles" :is_small="true" :article="gArticle" :key="gArticle.id"
-          :allLabels="allLabels" :keywordSynonyms="keywordSynonyms" :allFiles="allFiles" :refresh="refresh"
-          class="w-full max-w-2xl pr-0 pl-8" />
+        <Card
+          v-for="gArticle in article.groupedArticles"
+          :is_small="true"
+          :article="gArticle"
+          :key="gArticle.id"
+          :allLabels="allLabels"
+          :keywordSynonyms="keywordSynonyms"
+          :allFiles="allFiles"
+          :refresh="refresh"
+          class="w-full max-w-2xl pr-0 pl-8"
+        />
       </div>
     </div>
 
