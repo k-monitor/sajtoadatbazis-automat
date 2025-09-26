@@ -39,17 +39,37 @@ def rss_watcher(app_context):
     with db.connection_pool.get_connection() as connection:
         newspapers: list[dict] = db.get_rss_urls(connection)
     while True:
+        articles = []
         for newspaper in newspapers:
             if newspaper["rss_url"]:
                 dont_convert: bool = False
                 if newspaper["name"] in ["Pécsi Stop"]:
                     dont_convert = True
                 try:
-                    get_new_from_rss(newspaper, newspapers, dont_convert)
+                    articles += get_new_from_rss(newspaper, newspapers, dont_convert)
                 except requests.exceptions.JSONDecodeError:
                     logging.error("JSONDecodeError for " + newspaper["name"])
                 except Exception as e:
                     logging.error("Error for " + newspaper["name"] + ": " + str(e))
+
+        articles.sort(key=lambda x: x["release_date"] or "")
+        print([a["release_date"] for a in articles])
+        for article in articles:
+            logging.info(article)
+            with db.connection_pool.get_connection() as connection:
+                if not db.check_url_exists(connection, article["clean_url"]) and not skip_url(
+                    article["clean_url"]
+                ) and not re.fullmatch(r'.*\/\d{4}\/\d{2}', article["clean_url"]):
+                    db.init_news(
+                        connection,
+                        "rss",
+                        article["url"],
+                        article["clean_url"],
+                        article["newspaper"],
+                        article["newspaper_id"],
+                        1,
+                        article["release_date"],
+                    )
 
 
 def skip_url(url) -> bool:
@@ -134,6 +154,7 @@ def get_rss(rssurl, dont_convert: bool = False):
 
 def get_new_from_rss(newspaper, newspapers, dont_convert: bool = False):
     articles_found = 0
+    articles = []
 
     urls_dates: list[tuple[str, Optional[str]]] = []
     if newspaper["rss_url"] == "hvg360":
@@ -168,17 +189,17 @@ def get_new_from_rss(newspaper, newspapers, dont_convert: bool = False):
             if not db.check_url_exists(connection, clean_url) and not skip_url(
                 clean_url
             ) and not re.fullmatch(r'.*\/\d{4}\/\d{2}', clean_url):
-                db.init_news(
-                    connection,
-                    "rss",
-                    url,
-                    clean_url,
-                    newspaper["name"],
-                    newspaper["id"],
-                    1,
-                    release_date,
-                )
+                article = {
+                    "url": url,
+                    "clean_url": clean_url,
+                    "newspaper": newspaper["name"],
+                    "newspaper_id": newspaper["id"],
+                    "release_date": release_date.isoformat() if release_date else None
+                }
+                articles.append(article)
                 articles_found += 1
 
     if articles_found > 0:
         logging.info(newspaper["name"] + " found " + str(articles_found) + " articles")
+
+    return articles
