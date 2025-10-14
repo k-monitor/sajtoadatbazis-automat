@@ -158,7 +158,7 @@ def get_new_from_rss(newspaper, newspapers, dont_convert: bool = False):
 
     urls_dates: list[tuple[str, Optional[str]]] = []
     if newspaper["rss_url"] == "hvg360":
-        return
+        return []
     if newspaper["rss_url"] == "atv":
         urls_dates = get_atv()
     else:
