@@ -950,6 +950,8 @@ def get_article_counts(
     start="2000-01-01",
     end="2050-01-01",
     skip_reason: int = -1,
+    is_url_search: bool = False,
+    cleaned_url: str = "",
 ) -> dict[str, int]:
     article_counts: dict[str, int] = {}
     start = start + " 00:00:00"
@@ -960,9 +962,19 @@ def get_article_counts(
         domain_list: str = ",".join([str(domain) for domain in domains])
         domain_condition = f" AND n.newspaper_id IN ({domain_list})"
 
-    search_condition = """
+    # Use different search condition based on whether it's a URL search
+    if is_url_search and cleaned_url:
+        search_condition = """
+        AND n.source_url = %s
+    """
+        search_tuple = (cleaned_url,)
+    else:
+        search_condition = """
         AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)
     """
+        search_tuple = (
+            (search_query, search_query, search_query) if search_query != "%%" else ()
+        )
 
     date_condition = " AND n.article_date BETWEEN %s AND %s"
 
@@ -982,13 +994,9 @@ def get_article_counts(
         FROM autokmdb_news n
         WHERE 1=1
         {domain_condition}
-        {search_condition if search_query != "%%" else ""}
+        {search_condition if (search_query != "%%" or is_url_search) else ""}
         {date_condition}
     """
-
-    search_tuple = (
-        (search_query, search_query, search_query) if search_query != "%%" else ()
-    )
 
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(
@@ -1018,6 +1026,8 @@ def get_articles(
     end="2050-01-01",
     reverse=False,
     skip_reason: int = -1,
+    is_url_search: bool = False,
+    cleaned_url: str = "",
 ) -> Optional[tuple[int, list[dict[str, Any]]]]:
     start = start + " 00:00:00"
     end = end + " 23:59:59"
@@ -1048,8 +1058,11 @@ def get_articles(
         domain_list = ",".join([str(domain) for domain in domains])
         conditions.append(f"n.newspaper_id IN ({domain_list})")
 
-    # Search condition
-    if search_query != "%%":
+    # Search condition - use different logic for URL searches
+    if is_url_search and cleaned_url:
+        conditions.append("n.source_url = %s")
+        params.append(cleaned_url)
+    elif search_query != "%%":
         conditions.append(
             "(n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)"
         )
