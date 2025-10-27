@@ -1,11 +1,13 @@
 from typing import Optional
 from flask import Response, jsonify, Blueprint, request
 from auto_kmdb import db
+from auto_kmdb.utils.preprocess import clear_url
 from math import ceil
 import logging
 from datetime import datetime
 import csv
 import io
+import re
 
 
 with db.connection_pool.get_connection() as connection:
@@ -13,6 +15,17 @@ with db.connection_pool.get_connection() as connection:
 
 api = Blueprint("api", __name__, url_prefix="/api")
 all_domains: list[dict] = db.get_all_newspapers()
+
+def is_url(text: str) -> bool:
+    """Check if the given text is a URL"""
+    url_pattern = re.compile(
+        r'^https?://'  # http:// or https://
+        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+[A-Z]{2,6}\.?|'  # domain...
+        r'localhost|'  # localhost...
+        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+        r'(?::\d+)?'  # optional port
+        r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+    return url_pattern.match(text) is not None
 
 def get_session_id(request) -> Optional[str]:
     return request.headers.get("Authorization")
@@ -78,9 +91,13 @@ def api_article_counts():
     domain_ids: list[int] = [domain["id"] for domain in domains] if domains else [-1]
     skip_reasin: int = content.get("skip_reason", -1)
 
+    # Check if search term is a URL and clean it
+    is_url_search = is_url(q)
+    cleaned_url = clear_url(q) if is_url_search else ""
+
     with db.connection_pool.get_connection() as connection:
         article_counts = db.get_article_counts(
-            connection, domain_ids, "%" + q + "%", start, end, skip_reasin
+            connection, domain_ids, "%" + q + "%", start, end, skip_reasin, is_url_search, cleaned_url
         )
 
     return jsonify(article_counts), 200
@@ -121,6 +138,10 @@ def api_articles():
     reverse: bool = content.get("reverse", False)
     skip_reasin: int = content.get("skip_reason", -1)
 
+    # Check if search term is a URL and clean it
+    is_url_search = is_url(q)
+    cleaned_url = clear_url(q) if is_url_search else ""
+
     try:
         with db.connection_pool.get_connection() as connection:
             article_response = db.get_articles(
@@ -133,6 +154,8 @@ def api_articles():
                 end,
                 reverse,
                 skip_reasin,
+                is_url_search,
+                cleaned_url,
             )
             if article_response is None:
                 return jsonify({"error": "Hiba a lekérés során!"}), 500
