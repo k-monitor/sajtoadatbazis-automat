@@ -62,7 +62,7 @@
             <span class="">{{ item.label }}</span>
           </template>
         </UDropdown>
-        <div class="flex gap-2">
+        <div class="flex gap-2" v-if="!in_search_result">
           <UDropdown
             v-if="article.annotation_label == null"
             :items="negativeItems"
@@ -87,6 +87,16 @@
               @click.stop="clearPendingNegative"
             />
           </UBadge>
+        </div>
+        <div v-else class="flex items-center">
+          <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }"
+            v-if="article.annotation_label != 0">
+            <UButton color="red" :label="article.annotation_label == null ? 'Elutasít' : 'Mégis elutasít'"
+              trailing-icon="i-heroicons-chevron-down-20-solid" />
+            <template #item="{ item }">
+              <span class="">{{ item.label }}</span>
+            </template>
+          </UDropdown>
         </div>
         <p class="items-center p-2 ml-auto"
           title="Teszt: ez a szám azt mutatja, algoritmusaink szerint mennyire illik a cikk a módszertanba (100% - nagyon, 0% - kevésbé)">
@@ -134,6 +144,7 @@
           :keywordSynonyms="keywordSynonyms"
           :allFiles="allFiles"
           :refresh="refresh"
+          :in_search_result="in_search_result"
           class="w-full max-w-2xl pr-0 pl-8"
         />
       </div>
@@ -333,6 +344,7 @@ async function annoteNegative(reason: number) {
   });
   refresh();
   showThanks.value = false;
+  isOpen.value = false;
 }
 
 const items = [
@@ -554,7 +566,8 @@ const {
   refresh,
   keywordSynonyms,
   is_small,
-} = defineProps(["article", "allLabels", "refresh", "keywordSynonyms", "is_small"]);
+  in_search_result,
+} = defineProps(["article", "allLabels", "refresh", "keywordSynonyms", "is_small", "in_search_result"]);
 
 const article = ref<any>(articleValue);
 article.value.text = "";

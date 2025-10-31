@@ -37,7 +37,7 @@ let isAuthenticated = ref(true);
 let selectedReasonId = ref(-1);
 let isOpenFindByUrl = ref(false);
 let isOpenSearchResult = ref(false);
-let searchResultData = ref<{ mainArticle: any; groupedArticles: any[]; groupId: number | null } | null>(null);
+let searchResultData = ref<{ mainArticle: any; groupedArticles: any[]; groupId: number | null; searchedUrl: string } | null>(null);
 const reasons = [
   { name: "Bármilyen ok", id: -1 },
   { name: "Átvett", id: 2 },
@@ -365,7 +365,8 @@ async function handleFindArticleByUrl(url: string) {
       searchResultData.value = {
         mainArticle: response.main_article,
         groupedArticles: response.grouped_articles || [],
-        groupId: response.group_id
+        groupId: response.group_id,
+        searchedUrl: url
       };
       isOpenSearchResult.value = true;
     }
@@ -492,6 +493,7 @@ async function handleAddUrl(newUrl: string, selectedDomain: { id: number; name: 
         :mainArticle="searchResultData.mainArticle"
         :groupedArticles="searchResultData.groupedArticles"
         :groupId="searchResultData.groupId"
+        :searchedUrl="searchResultData.searchedUrl"
         :allLabels="allLabels"
         :keywordSynonyms="keywordSynonyms"
         :allFiles="allFiles"

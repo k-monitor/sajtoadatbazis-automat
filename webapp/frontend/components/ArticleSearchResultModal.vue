@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, watch } from 'vue';
 
 const props = defineProps<{
   isOpen: boolean;
@@ -10,6 +10,7 @@ const props = defineProps<{
   keywordSynonyms: any;
   allFiles: any[];
   refresh: () => void;
+  searchedUrl: string;
 }>();
 
 const emit = defineEmits<{
@@ -51,6 +52,14 @@ function filterNewspaper(newspaper: { id: number; name: string }) {
   emit('filter-newspaper', newspaper);
   handleClose();
 }
+
+function handleRefresh() {
+  props.refresh();
+  // Close the modal after refresh (the article status will be updated in the list)
+  setTimeout(() => {
+    handleClose();
+  }, 100);
+}
 </script>
 
 <template>
@@ -60,14 +69,19 @@ function filterNewspaper(newspaper: { id: number; name: string }) {
     :ui="{ width: 'sm:max-w-6xl' }"
   >
     <div class="p-6 max-h-[80vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold">Találat - URL alapján</h2>
-        <UButton 
-          icon="i-heroicons-x-mark" 
-          color="gray" 
-          variant="ghost" 
-          @click="handleClose"
-        />
+      <div class="mb-4">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-bold">Találat - URL alapján</h2>
+          <UButton 
+            icon="i-heroicons-x-mark" 
+            color="gray" 
+            variant="ghost" 
+            @click="handleClose"
+          />
+        </div>
+        <p class="text-sm text-gray-600 mt-1 break-all">
+          Keresett URL: {{ searchedUrl }}
+        </p>
       </div>
 
       <!-- Article with grouped articles (displayed like in the regular list) -->
@@ -77,8 +91,9 @@ function filterNewspaper(newspaper: { id: number; name: string }) {
           :allLabels="allLabels"
           :keywordSynonyms="keywordSynonyms"
           :allFiles="allFiles"
-          :refresh="refresh"
+          :refresh="handleRefresh"
           :is_small="false"
+          :in_search_result="true"
           @update:filter_newspaper="filterNewspaper"
           class="w-full max-w-2xl"
         />
