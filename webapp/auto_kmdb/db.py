@@ -670,14 +670,189 @@ DELETE FROM autokmdb_news_groups WHERE autokmdb_news_id = %s;
     connetion.commit()
 
 
+def find_article_by_url_with_group(
+    connection: PooledMySQLConnection, source_url: str
+) -> Optional[dict[str, Any]]:
+    """
+    Find an article by its source_url and return it along with all articles in its group.
+    Optimized query that:
+    1. Finds the article by source_url
+    2. Gets its group_id
+    3. Fetches all articles in that group
+    
+    Returns:
+        Dict with 'main_article' and 'grouped_articles' list, or None if not found
+    """
+    with connection.cursor(dictionary=True) as cursor:
+        # First, find the article and its group_id
+        find_query = """
+            SELECT 
+                n.id,
+                n.group_id,
+                n.news_id,
+                n.source_url,
+                n.clean_url AS url,
+                n.description,
+                n.title,
+                n.source,
+                n.newspaper_name,
+                n.newspaper_id,
+                n.classification_score,
+                n.classification_label,
+                n.annotation_label,
+                n.processing_step,
+                n.skip_reason,
+                n.text,
+                CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date,
+                n.category,
+                CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS article_date,
+                u.name AS mod_name,
+                n.is_paywalled
+            FROM autokmdb_news n
+            LEFT JOIN users u ON n.mod_id = u.user_id
+            WHERE n.source_url = %s
+            LIMIT 1
+        """
+        cursor.execute(find_query, (source_url,))
+        main_article = cursor.fetchone()
+        
+        if not main_article:
+            return None
+        
+        main_article = dict(main_article)
+        group_id = main_article.get("group_id")
+        
+        # Fetch entities for the main article
+        main_article["persons"] = map_entities(_fetch_article_persons(cursor, main_article["id"]))
+        main_article["institutions"] = map_entities(_fetch_article_institutions(cursor, main_article["id"]))
+        main_article["places"] = map_entities(_fetch_article_places(cursor, main_article["id"]))
+        main_article["tags"] = map_entities(get_article_others(cursor, main_article["id"]))
+        main_article["files"] = map_entities(get_article_files(cursor, main_article["id"]))
+        
+        # If article has a group, fetch all other articles in the group
+        grouped_articles = []
+        if group_id is not None:
+            group_query = """
+                SELECT 
+                    n.id,
+                    n.group_id,
+                    n.news_id,
+                    n.source_url,
+                    n.clean_url AS url,
+                    n.description,
+                    n.title,
+                    n.source,
+                    n.newspaper_name,
+                    n.newspaper_id,
+                    n.classification_score,
+                    n.classification_label,
+                    n.annotation_label,
+                    n.processing_step,
+                    n.skip_reason,
+                    n.text,
+                    CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date,
+                    n.category,
+                    CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS article_date,
+                    u.name AS mod_name,
+                    n.is_paywalled,
+                    ang.is_main
+                FROM autokmdb_news n
+                LEFT JOIN users u ON n.mod_id = u.user_id
+                LEFT JOIN autokmdb_news_groups ang ON n.id = ang.autokmdb_news_id
+                WHERE n.group_id = %s AND n.id != %s
+                ORDER BY ang.is_main DESC, n.article_date DESC
+            """
+            cursor.execute(group_query, (group_id, main_article["id"]))
+            group_rows = cursor.fetchall()
+            
+            for row in group_rows:
+                article = dict(row)
+                # Fetch entities for each grouped article
+                article["persons"] = map_entities(_fetch_article_persons(cursor, article["id"]))
+                article["institutions"] = map_entities(_fetch_article_institutions(cursor, article["id"]))
+                article["places"] = map_entities(_fetch_article_places(cursor, article["id"]))
+                article["tags"] = map_entities(get_article_others(cursor, article["id"]))
+                article["files"] = map_entities(get_article_files(cursor, article["id"]))
+                grouped_articles.append(article)
+        
+        return {
+            "main_article": main_article,
+            "grouped_articles": grouped_articles,
+            "group_id": group_id
+        }
+
+
+def _fetch_article_persons(cursor, article_id: int) -> list[dict]:
+    """Helper function to fetch person entities for an article"""
+    query = """
+        SELECT 
+            id,
+            name,
+            person_id AS db_id,
+            person_name AS db_name,
+            classification_score,
+            classification_label,
+            annotation_label,
+            found_name,
+            found_position
+        FROM autokmdb_persons
+        WHERE autokmdb_news_id = %s
+        ORDER BY id
+    """
+    cursor.execute(query, (article_id,))
+    return list(cursor.fetchall())
+
+
+def _fetch_article_institutions(cursor, article_id: int) -> list[dict]:
+    """Helper function to fetch institution entities for an article"""
+    query = """
+        SELECT 
+            id,
+            name,
+            institution_id AS db_id,
+            institution_name AS db_name,
+            classification_score,
+            classification_label,
+            annotation_label,
+            found_name,
+            found_position
+        FROM autokmdb_institutions
+        WHERE autokmdb_news_id = %s
+        ORDER BY id
+    """
+    cursor.execute(query, (article_id,))
+    return list(cursor.fetchall())
+
+
+def _fetch_article_places(cursor, article_id: int) -> list[dict]:
+    """Helper function to fetch place entities for an article"""
+    query = """
+        SELECT 
+            id,
+            name,
+            place_id AS db_id,
+            place_name AS db_name,
+            classification_score,
+            classification_label,
+            annotation_label,
+            found_name,
+            found_position
+        FROM autokmdb_places
+        WHERE autokmdb_news_id = %s
+        ORDER BY id
+    """
+    cursor.execute(query, (article_id,))
+    return list(cursor.fetchall())
+
+
 def get_article_others(cursor, id) -> list[dict]:
-    query = """SELECT name, id, other_id AS db_id, classification_score, classification_label, annotation_label FROM autokmdb_others WHERE autokmdb_news_id = %s"""
+    query = """SELECT name, id, other_id AS db_id, name AS db_name, classification_score, classification_label, annotation_label FROM autokmdb_others WHERE autokmdb_news_id = %s"""
     cursor.execute(query, (id,))
     return cursor.fetchall()
 
 
 def get_article_files(cursor, id) -> list[dict]:
-    query = """SELECT name, id, files_id AS db_id, classification_score, classification_label, annotation_label FROM autokmdb_files WHERE autokmdb_news_id = %s"""
+    query = """SELECT name, id, files_id AS db_id, name AS db_name, classification_score, classification_label, annotation_label FROM autokmdb_files WHERE autokmdb_news_id = %s"""
     cursor.execute(query, (id,))
     return cursor.fetchall()
 

@@ -116,6 +116,41 @@ def api_article(id):
     return jsonify(article), 200
 
 
+@api.route("/article_by_url", methods=["POST"])
+def api_article_by_url():
+    """
+    Find an article by its source URL and return it with all articles in its group.
+    Expects JSON with 'url' field.
+    Returns the main article and all grouped articles.
+    """
+    session_id: Optional[str] = get_session_id(request)
+    with db.connection_pool.get_connection() as connection:
+        if not db.validate_session(connection, session_id):
+            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    content: Optional[dict] = request.json
+    
+    if not content or "url" not in content:
+        return jsonify({"error": "URL mező hiányzik!"}), 400
+    
+    source_url: str = content["url"].strip()
+    
+    if not source_url:
+        return jsonify({"error": "Üres URL!"}), 400
+
+    try:
+        with db.connection_pool.get_connection() as connection:
+            result = db.find_article_by_url_with_group(connection, source_url)
+            
+            if result is None:
+                return jsonify({"error": "Nem található cikk ezzel az URL-lel!"}), 404
+            
+            return jsonify(result), 200
+    except Exception as e:
+        logging.error(f"Error finding article by URL: {e}")
+        return jsonify({"error": "Hiba a keresés során!"}), 500
+
+
 @api.route("/articles", methods=["POST"])
 def api_articles():
     session_id: Optional[str] = get_session_id(request)

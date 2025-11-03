@@ -6,6 +6,8 @@ definePageMeta({
 import { sub, format } from "date-fns";
 import { useAuthLazyFetch, useAuthFetch, $authFetch } from "~/auth_fetch";
 import NewspaperSelectMenu from '~/components/NewspaperSelectMenu.vue';
+import FindArticleByUrlModal from '~/components/FindArticleByUrlModal.vue';
+import ArticleSearchResultModal from '~/components/ArticleSearchResultModal.vue';
 import { useRoute, useRouter } from 'vue-router'; // Ensure vue-router is imported
 
 const route = useRoute();
@@ -33,6 +35,9 @@ let reverseSort = ref(false);
 let loginError = ref(false);
 let isAuthenticated = ref(true);
 let selectedReasonId = ref(-1);
+let isOpenFindByUrl = ref(false);
+let isOpenSearchResult = ref(false);
+let searchResultData = ref<{ mainArticle: any; groupedArticles: any[]; groupId: number | null; searchedUrl: string } | null>(null);
 const reasons = [
   { name: "Bármilyen ok", id: -1 },
   { name: "Átvett", id: 2 },
@@ -338,6 +343,41 @@ function openNewUrl() {
   isOpen.value = true;
 }
 
+function openFindByUrl() {
+  isOpenFindByUrl.value = true;
+}
+
+async function handleFindArticleByUrl(url: string) {
+  isOpenFindByUrl.value = false;
+  
+  try {
+    const response = await $authFetch(baseUrl + "/api/article_by_url", {
+      method: "POST",
+      body: { url: url },
+    });
+
+    if (response.error) {
+      isOpenError.value = true;
+      errorText.value = response.error;
+      errorTitle.value = "Hiba";
+    } else {
+      // Store the search result and open the result modal
+      searchResultData.value = {
+        mainArticle: response.main_article,
+        groupedArticles: response.grouped_articles || [],
+        groupId: response.group_id,
+        searchedUrl: url
+      };
+      isOpenSearchResult.value = true;
+    }
+  } catch (error: any) {
+    console.error(error);
+    isOpenError.value = true;
+    errorText.value = error?.data?.error || "Hiba történt a keresés során!";
+    errorTitle.value = "Hiba";
+  }
+}
+
 // Per-article reasons are now selected on the cards; bulk action will apply them.
 
 async function deleteArticles() {
@@ -415,6 +455,10 @@ async function handleAddUrl(newUrl: string, selectedDomain: { id: number; name: 
         <a href="./stats"><Icon title="Statisztikák" name="mdi:chart-arc" size="30" style="color:rgb(34 197 94 / 1);"></Icon></a>
         <UContainer class="my-1 flex lg:px-0 px-2 sm:px-0 ml-auto mr-1 flex-wrap">
           <UButton class="mr-1 h-fit my-1" @click="openNewUrl">Új cikk</UButton>
+          <UButton class="mr-1 h-fit my-1" color="blue" variant="outline" @click="openFindByUrl">
+            <Icon name="mdi:magnify" class="mr-1" />
+            Keresés URL-lel
+          </UButton>
           <div class="flex my-auto px-1 my-1">
             <NewspaperSelectMenu :allDomains="allDomains" :selectedDomains="selectedDomains"
               @update:selectedDomains="updateSelectedDomains" @refresh="refresh" />
@@ -435,6 +479,27 @@ async function handleAddUrl(newUrl: string, selectedDomain: { id: number; name: 
 
       <AddArticleModal :isOpen="isOpen" :domains="allLabels ? allLabels['domains'] : []" @update:isOpen="isOpen = $event"
         @add-url="handleAddUrl" />
+
+      <FindArticleByUrlModal 
+        :isOpen="isOpenFindByUrl" 
+        @update:isOpen="isOpenFindByUrl = $event"
+        @find-article="handleFindArticleByUrl" 
+      />
+
+      <ArticleSearchResultModal
+        v-if="searchResultData"
+        :isOpen="isOpenSearchResult"
+        @update:isOpen="isOpenSearchResult = $event"
+        :mainArticle="searchResultData.mainArticle"
+        :groupedArticles="searchResultData.groupedArticles"
+        :groupId="searchResultData.groupId"
+        :searchedUrl="searchResultData.searchedUrl"
+        :allLabels="allLabels"
+        :keywordSynonyms="keywordSynonyms"
+        :allFiles="allFiles"
+        :refresh="refreshAll"
+        @filter-newspaper="filterNewspaper"
+      />
 
       <UModal v-model="isOpenError" :prevent-close="true">
         <div class="p-4">
