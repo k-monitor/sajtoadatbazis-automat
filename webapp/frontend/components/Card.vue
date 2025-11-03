@@ -117,9 +117,16 @@
           "Szerkesztésre küld" }}</UButton>
       </div>
       <div class="flex justify-between" v-else>
-        <UButton v-if="!(article.negative_reason == 1 && article.annotation_label == 0)" color="red" @click="toPool">
+
+        <div v-if="!(article.negative_reason == 1 && article.annotation_label == 0)">
+        <UButton v-if="!in_search_result" color="red" @click="toPool">
           Hasonló tartalom
         </UButton>
+        <div v-else class="flex items-center">
+            <UButton @click="annoteNegative(1)" color="red" :label="article.annotation_label == null ? 'Hasonló tartalom' : 'Mégis elutasít'" />
+        </div>
+        </div>
+
         <div class="flex items-center gap-2 ml-auto">
           <UBadge v-if="article.pending_negative_reason != null" color="red" variant="soft" class="flex items-center gap-1">
             {{ negativeReasonLabel(article.pending_negative_reason) }}
