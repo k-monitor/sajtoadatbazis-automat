@@ -272,11 +272,12 @@ class ClassificationProcessor(Processor):
                         label = 1
                     else:
                         label = 0
+                    logging.info(
+                        f"Google Gemini classification: {google_label}, token counts: {token_counts}"
+                    )
                 except Exception as e:
                     logging.error(f"Error in Google Gemini labeling: {e}")
-                logging.info(
-                    f"Google Gemini classification: {google_label}, token counts: {token_counts}"
-                )
+
             if label == 1:
                 article_text = prediction_text
             category = CATEGORY_MAP.get(
@@ -370,7 +371,9 @@ class ClassificationProcessor(Processor):
                 with db.connection_pool.get_connection() as connection:
                     db.skip_processing_error(connection, autokmdb_id)
 
-                logging.warning(f"Exception during Classification Processing: {autokmdb_id}")
+                logging.warning(
+                    f"Exception during Classification Processing: {autokmdb_id}"
+                )
                 logging.error(e)
                 logging.error(traceback.format_exc())
 
