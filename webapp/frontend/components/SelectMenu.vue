@@ -8,6 +8,7 @@
       <template #label>
         <span v-if="localPositiveList.length">{{
           localPositiveList
+            .slice(0, 10)
             .map((item) =>
               item.db_name != null && item.db_name
                 ? item.db_name
@@ -16,7 +17,7 @@
                   : item.label
             )
             .join(", ")
-        }}</span>
+        }}{{ localPositiveList.length > 10 ? ', ...' : '' }}</span>
         <span v-else>Válassz ki elemeket</span>
       </template>
       <template #option-create="{ option }">
