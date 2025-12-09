@@ -48,6 +48,7 @@ const reasons = [
 const page = ref(1);
 const statusId = ref(0);
 let q = ref("");
+let qInput = ref(""); // Local input value, only syncs to q on Enter
 let loadingDelete = ref(false);
 
 const config = useRuntimeConfig();
@@ -138,7 +139,10 @@ function updateFromURL() {
   }
   if (query.q) {
     const qQ = Array.isArray(query.q) ? query.q[0] : query.q;
-    if (typeof qQ === 'string') q.value = qQ;
+    if (typeof qQ === 'string') {
+      q.value = qQ;
+      qInput.value = qQ;
+    }
   }
   if (query.dateFrom && query.dateTo) {
     const df = Array.isArray(query.dateFrom) ? query.dateFrom[0] : query.dateFrom;
@@ -208,6 +212,11 @@ updateFromURL();
 watch(statusId, updateURL);
 watch(q, updateURL);
 watch(allDomains, updateURL);
+
+function submitSearch() {
+  q.value = qInput.value;
+  resetPageRefresh();
+}
 
 const {
   pending,
@@ -472,7 +481,7 @@ async function handleAddUrl(newUrl: string, selectedDomain: { id: number; name: 
           <SkipReasonSelectMenu v-if="statusId == 4" :reasons="reasons" @update:selectedReason="updateSelectedReason"
             @refresh="refresh" />
 
-          <UInput class="px-1 my-1" name="q" v-model="q" color="primary" variant="outline" placeholder="Keresés..." />
+          <UInput class="px-1 my-1" name="q" v-model="qInput" color="primary" variant="outline" placeholder="Keresés..." @keyup.enter="submitSearch" />
           <AnnoteMultiple :articles="articles" :loadingDelete="loadingDelete" @bulkDelete="deleteArticles" />
         </UContainer>
       </UContainer>
