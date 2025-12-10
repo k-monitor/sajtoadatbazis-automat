@@ -505,6 +505,7 @@ def get_retries_from(connection: PooledMySQLConnection, date: str) -> list[dict]
 def get_step_queue(
     connection: PooledMySQLConnection, step: int
 ) -> list[dict[str, Any]]:
+    process_old = int(os.environ.get("PROCESS_OLD", "0")) == 1
     fields: dict[int, str] = {
         0: "clean_url AS url, source, newspaper_id",
         1: "title, description, text, source, newspaper_name, clean_url",
@@ -513,7 +514,7 @@ def get_step_queue(
         4: "text",
     }
     query: str = f"""SELECT id, {fields[step]} FROM autokmdb_news
-               WHERE processing_step = {step} ORDER BY source DESC, article_date ASC, mod_time ASC LIMIT 50"""
+               WHERE processing_step = {step} {"AND user_id = -10" if process_old else ""} ORDER BY source DESC, article_date ASC, mod_time ASC LIMIT 50"""
     with connection.cursor(dictionary=True) as cursor:
         cursor.execute(query)
         return cursor.fetchall()
