@@ -505,6 +505,8 @@ def get_retries_from(connection: PooledMySQLConnection, date: str) -> list[dict]
 def get_step_queue(
     connection: PooledMySQLConnection, step: int
 ) -> list[dict[str, Any]]:
+    process_old = int(os.environ.get("PROCESS_OLD", "0")) == 1
+    process_old_user_id = os.environ.get("PROCESS_OLD_USER_ID", None)
     fields: dict[int, str] = {
         0: "clean_url AS url, source, newspaper_id",
         1: "title, description, text, source, newspaper_name, clean_url",
@@ -512,10 +514,24 @@ def get_step_queue(
         3: "text",
         4: "text",
     }
-    query: str = f"""SELECT id, {fields[step]} FROM autokmdb_news
-               WHERE processing_step = {step} ORDER BY source DESC, article_date ASC, mod_time ASC LIMIT 50"""
+    
+    # Build the query with proper parameterization
+    query = f"SELECT id, {fields[step]} FROM autokmdb_news WHERE processing_step = %s"
+    params = [step]
+    
+    # Add user filter if specified
+    if process_old_user_id is not None:
+        user_id = int(process_old_user_id)
+        if process_old:
+            query += " AND mod_id = %s"
+        else:
+            query += " AND (mod_id != %s OR mod_id IS NULL)"
+        params.append(user_id)
+    
+    query += " ORDER BY source DESC, article_date ASC, mod_time ASC LIMIT 50"
+    
     with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query)
+        cursor.execute(query, params)
         return cursor.fetchall()
 
 
@@ -1191,6 +1207,41 @@ def get_article_counts(
     return article_counts
 
 
+def _build_search_condition(search_query: str, use_fulltext: bool = False) -> tuple[str, list, bool]:
+    """
+    Build an optimized search condition.
+    Returns (condition_sql, params, is_fulltext)
+    
+    Note: FULLTEXT is disabled by default as MySQL 5.5 has limited FULLTEXT support on InnoDB.
+    If you have upgraded to MySQL 5.6+ with FULLTEXT index on (title, description), 
+    set use_fulltext=True.
+    """
+    # Extract the actual search term from the LIKE pattern
+    search_term = search_query.strip('%')
+    
+    if not search_term:
+        return "", [], False
+    
+    # Use FULLTEXT for searches with 3+ characters (MySQL minimum word length default)
+    # Only if explicitly enabled and FULLTEXT index exists
+    if use_fulltext and len(search_term) >= 3:
+        # FULLTEXT search with BOOLEAN MODE for better control
+        # Using * for prefix matching
+        fulltext_term = f"+{search_term}*"
+        return (
+            "MATCH(n.title, n.description) AGAINST(%s IN BOOLEAN MODE)",
+            [fulltext_term],
+            True
+        )
+    else:
+        # Use LIKE with the search pattern
+        return (
+            "(n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)",
+            [search_query, search_query, search_query],
+            False
+        )
+
+
 def get_articles(
     connection: PooledMySQLConnection,
     page: int,
@@ -1210,6 +1261,8 @@ def get_articles(
     # Build conditions once
     conditions = []
     params = []
+    has_text_search = False
+    is_fulltext = False
 
     # Status condition
     if status == "mixed":
@@ -1237,11 +1290,12 @@ def get_articles(
     if is_url_search and cleaned_url:
         conditions.append("n.source_url = %s")
         params.append(cleaned_url)
-    elif search_query != "%%":
-        conditions.append(
-            "(n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)"
-        )
-        params.extend([search_query, search_query, search_query])
+    elif search_query != "%%" and search_query:
+        has_text_search = True
+        search_condition, search_params, is_fulltext = _build_search_condition(search_query)
+        if search_condition:
+            conditions.append(search_condition)
+            params.extend(search_params)
 
     # Date condition
     conditions.append("n.article_date BETWEEN %s AND %s")
@@ -1263,76 +1317,165 @@ def get_articles(
     )
 
     with connection.cursor(dictionary=True) as cursor:
-        # Step 1: Find all group_ids that have at least one matching article
-        qualifying_groups_query = f"""
-            SELECT DISTINCT n.group_id
-            FROM autokmdb_news n
-            WHERE n.group_id IS NOT NULL AND {where_clause}
-        """
-
-        cursor.execute(qualifying_groups_query, params)
-        qualifying_groups = [row["group_id"] for row in cursor.fetchall()]
-
-        # Step 2: Build the main query with optimized logic
-        if qualifying_groups:
-            groups_list = ",".join(map(str, qualifying_groups))
-            group_condition = f"main.group_id IN ({groups_list})"
-        else:
-            group_condition = "FALSE"
-
-        # Main query: get articles that either match directly OR are main articles of qualifying groups
-        base_query = f"""
-            SELECT 
-                main.id, main.clean_url AS url, main.description, main.title, main.source, 
-                main.newspaper_name, main.newspaper_id, main.classification_score, 
-                main.classification_label, main.annotation_label, main.processing_step, 
-                main.skip_reason, main.negative_reason,
-                CONVERT_TZ(main.article_date, @@session.time_zone, '+00:00') AS date, 
-                main.category, u.name AS mod_name, main.group_id
-            FROM autokmdb_news main
-            LEFT JOIN users u ON main.mod_id = u.user_id
-            WHERE (main.group_id IS NULL 
-                   OR main.id = (SELECT MIN(n3.id) FROM autokmdb_news n3 WHERE n3.group_id = main.group_id))
-              AND (
-                  -- Direct match for ungrouped articles or main articles
-                  (main.group_id IS NULL AND ({where_clause.replace('n.', 'main.')}))
-                  OR
-                  -- Main article of a qualifying group
-                  (main.group_id IS NOT NULL AND {group_condition})
-              )
-            ORDER BY {sort_field} {sort_order}
-        """
-
-        # Count query with the same logic
-        count_query = f"""
-            SELECT COUNT(*) as total_count 
-            FROM autokmdb_news main
-            WHERE (main.group_id IS NULL 
-                   OR main.id = (SELECT MIN(n3.id) FROM autokmdb_news n3 WHERE n3.group_id = main.group_id))
-              AND (
-                  -- Direct match for ungrouped articles or main articles
-                  (main.group_id IS NULL AND ({where_clause.replace('n.', 'main.')}))
-                  OR
-                  -- Main article of a qualifying group
-                  (main.group_id IS NOT NULL AND {group_condition})
-              )
-        """
-
-        cursor.execute(count_query, params)
-        count = cursor.fetchone()["total_count"]
-
-        # Main query with pagination
+        # Optimization: Use a pre-computed table of main article IDs per group
+        # This avoids the expensive correlated subquery
+        
+        # Step 1: Create a temporary table or CTE to find main articles efficiently
+        # For MySQL 5.5 compatibility, we'll use a derived table approach
+        
         offset = (page - 1) * 10
-        paginated_query = f"""
-            {base_query}
-            LIMIT 10 OFFSET {offset}
-        """
+        
+        # Optimized approach: First find matching articles, then resolve groups
+        # This is faster because we filter first, then handle grouping
+        
+        if has_text_search:
+            # For text searches, use a simpler approach that leverages indexes better
+            # First get IDs of matching articles with pagination
+            
+            # Build the main article condition (ungrouped or main of group)
+            main_article_condition = """
+                (main.group_id IS NULL OR main.id = (
+                    SELECT MIN(g.id) FROM autokmdb_news g WHERE g.group_id = main.group_id
+                ))
+            """
+            
+            # For search queries, first get matching IDs efficiently
+            match_query = f"""
+                SELECT main.id, main.group_id
+                FROM autokmdb_news main
+                WHERE {where_clause.replace('n.', 'main.')}
+            """
+            
+            cursor.execute(match_query, params)
+            matching_rows = cursor.fetchall()
+            
+            if not matching_rows:
+                return 0, []
+            
+            # Collect matching article IDs and their group IDs
+            matching_ids = set()
+            matching_group_ids = set()
+            
+            for row in matching_rows:
+                matching_ids.add(row['id'])
+                if row['group_id']:
+                    matching_group_ids.add(row['group_id'])
+            
+            # Get main article IDs for groups that have matches
+            group_main_ids = set()
+            if matching_group_ids:
+                groups_list = ",".join(map(str, matching_group_ids))
+                cursor.execute(f"""
+                    SELECT MIN(id) as main_id, group_id 
+                    FROM autokmdb_news 
+                    WHERE group_id IN ({groups_list}) 
+                    GROUP BY group_id
+                """)
+                for row in cursor.fetchall():
+                    group_main_ids.add(row['main_id'])
+            
+            # Final set of IDs to display: ungrouped matches + main articles of matching groups
+            ungrouped_matches = {mid for mid, row in zip(matching_ids, matching_rows) 
+                                if any(r['id'] == mid and r['group_id'] is None for r in matching_rows)}
+            
+            # Re-fetch to properly identify ungrouped
+            ungrouped_match_ids = set()
+            for row in matching_rows:
+                if row['group_id'] is None:
+                    ungrouped_match_ids.add(row['id'])
+            
+            display_ids = ungrouped_match_ids | group_main_ids
+            
+            if not display_ids:
+                return 0, []
+            
+            total_count = len(display_ids)
+            
+            # Get the paginated results
+            ids_list = ",".join(map(str, display_ids))
+            paginated_query = f"""
+                SELECT 
+                    main.id, main.clean_url AS url, main.description, main.title, main.source, 
+                    main.newspaper_name, main.newspaper_id, main.classification_score, 
+                    main.classification_label, main.annotation_label, main.processing_step, 
+                    main.skip_reason, main.negative_reason,
+                    CONVERT_TZ(main.article_date, @@session.time_zone, '+00:00') AS date, 
+                    main.category, u.name AS mod_name, main.group_id
+                FROM autokmdb_news main
+                LEFT JOIN users u ON main.mod_id = u.user_id
+                WHERE main.id IN ({ids_list})
+                ORDER BY {sort_field} {sort_order}
+                LIMIT 10 OFFSET {offset}
+            """
+            
+            cursor.execute(paginated_query)
+            main_articles = cursor.fetchall()
+            
+        else:
+            # Non-search query: use the original optimized approach with some improvements
+            
+            # Step 1: Find all group_ids that have at least one matching article
+            qualifying_groups_query = f"""
+                SELECT DISTINCT n.group_id
+                FROM autokmdb_news n
+                WHERE n.group_id IS NOT NULL AND {where_clause}
+            """
 
-        cursor.execute(paginated_query, params)
-        main_articles = cursor.fetchall()
+            cursor.execute(qualifying_groups_query, params)
+            qualifying_groups = [row["group_id"] for row in cursor.fetchall()]
+
+            # Step 2: Build the main query with optimized logic
+            if qualifying_groups:
+                groups_list = ",".join(map(str, qualifying_groups))
+                group_condition = f"main.group_id IN ({groups_list})"
+            else:
+                group_condition = "FALSE"
+
+            # Count query - optimized to avoid correlated subquery when possible
+            count_query = f"""
+                SELECT COUNT(*) as total_count 
+                FROM autokmdb_news main
+                WHERE (main.group_id IS NULL 
+                       OR main.id = (SELECT MIN(n3.id) FROM autokmdb_news n3 WHERE n3.group_id = main.group_id))
+                  AND (
+                      (main.group_id IS NULL AND ({where_clause.replace('n.', 'main.')}))
+                      OR
+                      (main.group_id IS NOT NULL AND {group_condition})
+                  )
+            """
+
+            cursor.execute(count_query, params)
+            total_count = cursor.fetchone()["total_count"]
+
+            # Main query with pagination
+            paginated_query = f"""
+                SELECT 
+                    main.id, main.clean_url AS url, main.description, main.title, main.source, 
+                    main.newspaper_name, main.newspaper_id, main.classification_score, 
+                    main.classification_label, main.annotation_label, main.processing_step, 
+                    main.skip_reason, main.negative_reason,
+                    CONVERT_TZ(main.article_date, @@session.time_zone, '+00:00') AS date, 
+                    main.category, u.name AS mod_name, main.group_id
+                FROM autokmdb_news main
+                LEFT JOIN users u ON main.mod_id = u.user_id
+                WHERE (main.group_id IS NULL 
+                       OR main.id = (SELECT MIN(n3.id) FROM autokmdb_news n3 WHERE n3.group_id = main.group_id))
+                  AND (
+                      (main.group_id IS NULL AND ({where_clause.replace('n.', 'main.')}))
+                      OR
+                      (main.group_id IS NOT NULL AND {group_condition})
+                  )
+                ORDER BY {sort_field} {sort_order}
+                LIMIT 10 OFFSET {offset}
+            """
+
+            cursor.execute(paginated_query, params)
+            main_articles = cursor.fetchall()
 
         # Step 3: Bulk fetch all grouped articles for all groups on this page
         articles_with_groups = []
+        grouped_by_group_id = {}
+        
         if main_articles:
             # Get all group_ids that have groups on this page
             page_group_ids = [
@@ -1342,6 +1485,8 @@ def get_articles(
             if page_group_ids:
                 # Single query to get all grouped articles for all groups on this page
                 groups_list_page = ",".join(map(str, page_group_ids))
+                main_ids_list = ",".join(str(article['id']) for article in main_articles if article['group_id'])
+                
                 bulk_group_query = f"""
                     SELECT 
                         n.group_id,
@@ -1350,7 +1495,7 @@ def get_articles(
                         n.newspaper_name, annotation_label, classification_label, negative_reason
                     FROM autokmdb_news n 
                     WHERE n.group_id IN ({groups_list_page}) 
-                      AND n.id NOT IN ({",".join(str(article['id']) for article in main_articles if article['group_id'])})
+                      AND n.id NOT IN ({main_ids_list})
                     ORDER BY n.group_id, n.id
                 """
 
@@ -1358,17 +1503,15 @@ def get_articles(
                 all_grouped_articles = cursor.fetchall()
 
                 # Group the results by group_id for easy lookup
-                grouped_by_group_id = {}
                 for article in all_grouped_articles:
                     group_id = article["group_id"]
                     if group_id not in grouped_by_group_id:
                         grouped_by_group_id[group_id] = []
-                    article_copy = {k: v for k, v in article.items()}
-                    grouped_by_group_id[group_id].append(article_copy)
+                    grouped_by_group_id[group_id].append(dict(article))
 
         # Step 4: Assign grouped articles to their main articles
         for article in main_articles:
-            if article["group_id"] and page_group_ids:
+            if article["group_id"]:
                 article["groupedArticles"] = grouped_by_group_id.get(
                     article["group_id"], []
                 )
@@ -1377,7 +1520,7 @@ def get_articles(
 
             articles_with_groups.append(article)
 
-        return count, articles_with_groups
+        return total_count, articles_with_groups
 
 
 def force_accept_article(

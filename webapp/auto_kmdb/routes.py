@@ -8,6 +8,7 @@ from datetime import datetime
 import csv
 import io
 import re
+import os
 
 
 with db.connection_pool.get_connection() as connection:
@@ -379,11 +380,21 @@ def annote():
 
 @api.route("/add_url", methods=["POST"])
 def add_url():
-    session_id: Optional[str] = get_session_id(request)
-    with db.connection_pool.get_connection() as connection:
-        user_id = db.validate_session(connection, session_id)
-        if not user_id:
-            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+    # Check authorization: either API key or session
+    api_key = request.headers.get("X-API-Key")
+    expected_api_key = os.environ.get("API_KEY")
+
+    # Try API key first
+    if expected_api_key and api_key == expected_api_key:
+        # API key is valid, use a default user_id or skip user_id requirement
+        user_id = int(os.environ.get("PROCESS_OLD_USER_ID", 1))
+    else:
+        # Fall back to session validation
+        session_id: Optional[str] = get_session_id(request)
+        with db.connection_pool.get_connection() as connection:
+            user_id = db.validate_session(connection, session_id)
+            if not user_id:
+                return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
     content: Optional[dict] = request.json
 

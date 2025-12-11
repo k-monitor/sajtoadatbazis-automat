@@ -496,44 +496,44 @@ class DownloadProcessor(Processor):
         try:
             cookies_24 = login_24(os.environ["USER_24"], os.environ["PASS_24"])
         except Exception:
-            logging.error(traceback.format_exc())
-            logging.error("Failed to login to 24.hu")
+            logging.warning(traceback.format_exc())
+            logging.warning("Failed to login to 24.hu")
 
         try:
             cookies_444 = login_444(os.environ["USER_444"], os.environ["PASS_444"])
         except Exception:
-            logging.error(traceback.format_exc())
-            logging.error("Failed to login to 444.hu")
+            logging.warning(traceback.format_exc())
+            logging.warning("Failed to login to 444.hu")
 
         try:
             cookies_magyarnarancs = login_magyarnarancs(
                 os.environ["USER_MN"], os.environ["PASS_MN"]
             )
         except Exception:
-            logging.error(traceback.format_exc())
-            logging.error("Failed to login to magyarnarancs.hu")
+            logging.warning(traceback.format_exc())
+            logging.warning("Failed to login to magyarnarancs.hu")
 
         try:
             cookies_portfolio = login_portfolio(
                 os.environ["USER_PORTFOLIO"], os.environ["PASS_PORTFOLIO"]
             )
         except Exception:
-            logging.error(traceback.format_exc())
-            logging.error("Failed to login to portfolio.hu")
+            logging.warning(traceback.format_exc())
+            logging.warning("Failed to login to portfolio.hu")
 
         try:
             cookies_jelen = login_jelen(
                 os.environ["USER_JELEN"], os.environ["PASS_JELEN"]
             )
         except Exception:
-            logging.error(traceback.format_exc())
-            logging.error("Failed to login to jelen.media")
+            logging.warning(traceback.format_exc())
+            logging.warning("Failed to login to jelen.media")
 
         try:
             cookies_hang = login_hang(os.environ["USER_HANG"], os.environ["PASS_HANG"])
         except Exception:
-            logging.error(traceback.format_exc())
-            logging.error("Failed to login to hang.hu")
+            logging.warning(traceback.format_exc())
+            logging.warning("Failed to login to hang.hu")
 
         self.cookies: dict[str, dict[str, str]] = {
             "24.hu": cookies_24,
