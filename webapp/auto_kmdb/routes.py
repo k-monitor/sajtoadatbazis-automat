@@ -383,11 +383,11 @@ def add_url():
     # Check authorization: either API key or session
     api_key = request.headers.get("X-API-Key")
     expected_api_key = os.environ.get("API_KEY")
-    
+
     # Try API key first
     if expected_api_key and api_key == expected_api_key:
         # API key is valid, use a default user_id or skip user_id requirement
-        user_id = -10
+        user_id = int(os.environ.get("PROCESS_OLD_USER_ID", 1))
     else:
         # Fall back to session validation
         session_id: Optional[str] = get_session_id(request)
