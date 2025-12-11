@@ -506,6 +506,7 @@ def get_step_queue(
     connection: PooledMySQLConnection, step: int
 ) -> list[dict[str, Any]]:
     process_old = int(os.environ.get("PROCESS_OLD", "0")) == 1
+    process_old_user_id = os.environ.get("PROCESS_OLD_USER_ID", None)
     fields: dict[int, str] = {
         0: "clean_url AS url, source, newspaper_id",
         1: "title, description, text, source, newspaper_name, clean_url",
@@ -513,10 +514,24 @@ def get_step_queue(
         3: "text",
         4: "text",
     }
-    query: str = f"""SELECT id, {fields[step]} FROM autokmdb_news
-               WHERE processing_step = {step} {"AND user_id = "+str(int(os.environ.get("PROCESS_OLD_USER_ID", 1))) if process_old else ""} ORDER BY source DESC, article_date ASC, mod_time ASC LIMIT 50"""
+    
+    # Build the query with proper parameterization
+    query = f"SELECT id, {fields[step]} FROM autokmdb_news WHERE processing_step = %s"
+    params = [step]
+    
+    # Add user filter if specified
+    if process_old_user_id is not None:
+        user_id = int(process_old_user_id)
+        if process_old:
+            query += " AND mod_id = %s"
+        else:
+            query += " AND (mod_id != %s OR mod_id IS NULL)"
+        params.append(user_id)
+    
+    query += " ORDER BY source DESC, article_date ASC, mod_time ASC LIMIT 50"
+    
     with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query)
+        cursor.execute(query, params)
         return cursor.fetchall()
 
 
