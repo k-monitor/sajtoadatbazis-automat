@@ -116,7 +116,7 @@ def get_entities_freq(
 
     for col in db_entities.columns:
         assert (~db_entities[col].isna()).all(), (
-            type + " keyword " + col + " should not contain NaNs"
+            type + " keyword " + col + " should not contain nans"
         )
     assert db_entities.name.is_unique, "Keyword names should be unique"
     assert np.array(
@@ -281,7 +281,7 @@ def get_mapping(
     del detected_entities
     del keyword_list
     gc.collect()
-    return mapping.replace("", np.NAN)
+    return mapping.replace("", np.nan)
 
 
 def comb_mappings(
@@ -340,7 +340,7 @@ def comb_mappings(
 
     # combine first mapping suggestions
     mapping = mapping.reset_index().set_index("start")
-    mapping["combed_mapping"] = np.NaN
+    mapping["combed_mapping"] = np.nan
     for col in combine_columns:
         mapping["combed_mapping"] = mapping["combed_mapping"].combine_first(
             mapping[col]
@@ -358,8 +358,8 @@ def comb_mappings(
                 .index[0]
             )
         )
-        .replace("nan", np.NaN)
-        .replace("None", np.NaN)
+        .replace("nan", np.nan)
+        .replace("None", np.nan)
     )
 
     # map db keyword id to mapped keyword name
