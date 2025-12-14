@@ -407,7 +407,7 @@ def add_url():
             return jsonify({"error": "Cikk már létezik"}), 400
         db.init_news(
             connection,
-            "manual",
+            "manual" if not api_key else "api",
             url,
             url,
             content["newspaper_name"],

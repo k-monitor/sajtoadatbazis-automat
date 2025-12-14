@@ -224,6 +224,11 @@ def init_news(
     user_id: Optional[int],
     pub_time: Optional[str],
 ) -> None:
+    source_value = 0
+    if source == "manual":
+        source_value = 1
+    elif source == "api":
+        source_value = 2
     current_datetime: datetime = datetime.now()
     cre_time: str = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
     with connection.cursor(dictionary=True) as cursor:
@@ -233,7 +238,7 @@ def init_news(
         cursor.execute(
             query,
             (
-                0 if source == "rss" else 1,
+                source_value,
                 source_url,
                 clean_url,
                 0,
