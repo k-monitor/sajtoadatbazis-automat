@@ -317,7 +317,7 @@ class ClassificationProcessor(Processor):
                     next_row["clean_url"],
                 )
                 domain = ".".join(next_row["clean_url"].split("/")[2].split(".")[-2:])
-                if label == 1:
+                if label == 1 and next_row["source"] != 2: # Skip old articles
                     similar_result = find_similar_minhash(
                         full_text, domain, SIMILARITY_THRESHOLD
                     )
