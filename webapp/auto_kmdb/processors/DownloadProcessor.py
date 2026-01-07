@@ -185,7 +185,7 @@ def save_article(
     news_id: int,
 ):
     str_date: Optional[str] = None
-    if article_download.date is not None and source == 1:
+    if article_download.date is not None and source > 0:
         str_date = article_download.date.strftime("%Y-%m-%d %H:%M:%S")
     if (
         article_download.same_news_id
