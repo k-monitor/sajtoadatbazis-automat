@@ -13,7 +13,20 @@ def clear_url(url):
         str: The cleared URL.
     """
     u = urlparse(url)
-    return "https://" + u.netloc + "/" + u.path.replace("www.", "").strip("/")
+
+    # Normalize netloc: remove leading www.
+    netloc = u.netloc
+    if netloc.startswith("www."):
+        netloc = netloc[4:]
+
+    # Normalize path: drop any trailing slash, keep leading slash if present
+    path = (u.path or "").rstrip("/")
+
+    # Build final URL without query/fragment and without a trailing slash for root
+    if not path:
+        return f"https://{netloc}"
+    else:
+        return f"https://{netloc}{path}"
 
 
 def read_file(filename):
