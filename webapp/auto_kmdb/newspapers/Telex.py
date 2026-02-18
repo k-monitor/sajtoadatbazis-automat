@@ -21,7 +21,7 @@ class Telex(Newspaper):
 
         parsed_text: list[str] = []
         for p in paragraphs:
-            text: str = p.get_text(strip=True)
+            text: str = p.get_text().strip()
             if text:
                 parsed_text.append(text)
 
