@@ -134,7 +134,7 @@ def api_article_by_url():
     if not content or "url" not in content:
         return jsonify({"error": "URL mező hiányzik!"}), 400
     
-    source_url: str = content["url"].strip()
+    source_url: str = content["url"].strip().rstrip('/')
     
     if not source_url:
         return jsonify({"error": "Üres URL!"}), 400

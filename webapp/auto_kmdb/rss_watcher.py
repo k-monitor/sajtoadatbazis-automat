@@ -190,7 +190,7 @@ def get_new_from_rss(newspaper, newspapers, dont_convert: bool = False):
                 clean_url
             ) and not re.fullmatch(r'.*\/\d{4}\/\d{2}', clean_url):
                 article = {
-                    "url": url,
+                    "url": url.strip().rstrip('/'),
                     "clean_url": clean_url,
                     "newspaper": newspaper["name"],
                     "newspaper_id": newspaper["id"],
