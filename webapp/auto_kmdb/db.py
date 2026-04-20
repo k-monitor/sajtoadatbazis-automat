@@ -142,7 +142,7 @@ def get_all_freq(table: str, id_column: str, name_column: str) -> list[dict]:
     Returns:
         List of dicts, each dict containing the 'name', 'id' and 'count' occurrances of a given label.
     """
-    query = f'SELECT p.{id_column} AS id, p.{name_column} AS name, COUNT(npl.news_id) AS count FROM {table} p JOIN {table}_link npl ON p.{id_column} = npl.{id_column} WHERE status = "Y" GROUP BY p.{id_column};'
+    query = f'SELECT p.{id_column} AS id, p.{name_column} AS name, COUNT(npl.news_id) AS count FROM {table} p LEFT JOIN {table}_link npl ON p.{id_column} = npl.{id_column} WHERE p.status = "Y" GROUP BY p.{id_column};'
     with connection_pool.get_connection() as connection:
         with connection.cursor(dictionary=True) as cursor:
             cursor.execute(query)
