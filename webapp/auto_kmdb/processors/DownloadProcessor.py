@@ -461,8 +461,7 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
     new_date: datetime = current_date - timedelta(days=7)
     formatted_date: str = new_date.strftime("%Y-%m-%d")
 
-    with db.connection_pool.get_connection() as connection:
-        rows = db.get_retries_from(connection, formatted_date)
+    rows = db.get_retries_from(formatted_date)
     for row in rows:
         logging.info("retrying: " + row["url"])
         try:
@@ -548,8 +547,7 @@ class DownloadProcessor(Processor):
         logging.info("initialized download processor")
 
     def process_next(self) -> None:
-        with db.connection_pool.get_connection() as connection:
-            next_rows: list = db.get_download_queue(connection)
+        next_rows: list = db.get_download_queue()
         if type(next_rows) is not list:
             next_rows = [next_rows]
         for next_row in next_rows:
@@ -560,6 +558,14 @@ class DownloadProcessor(Processor):
             not (article.title or article.text or article.description)
             or len(article.title + article.text + article.description) < 100
         )
+
+    def download_url(self, url: str) -> Optional[ArticleDownload]:
+        domain: str = url.split("/")[2]
+        cookies = self.cookies.get(domain, {})
+        html: str = get_html(url, cookies if domain not in ["444.hu", "qubit.hu"] else {})
+        if cookies:
+            logging.info("using cookies for domain: " + domain)
+        return process_article(url, html, cookies)
 
     def process_row(self, next_row):
         if next_row is None:

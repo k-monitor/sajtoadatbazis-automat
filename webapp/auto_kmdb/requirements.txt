@@ -3,6 +3,7 @@ git+https://github.com/boapps/newspaper4k.git
 waitress==3.0.2
 jsonlines==4.0.0
 mysql-connector-python==9.3.0
+SQLAlchemy==2.0.36
 transformers==4.46.3
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.5.1

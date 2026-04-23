@@ -297,8 +297,7 @@ class ClassificationProcessor(Processor):
             )
 
     def process_next(self):
-        with db.connection_pool.get_connection() as connection:
-            next_rows = db.get_classification_queue(connection)
+        next_rows = db.get_classification_queue()
 
         for next_row in next_rows:
             if next_row is None:
@@ -339,10 +338,8 @@ class ClassificationProcessor(Processor):
                     # autokmdb_id: new article
                     # article_id: similar article
                     for article_id, distance in good_results:
+                        group_id = db.find_group_by_autokmdb_id(article_id)
                         with db.connection_pool.get_connection() as connection:
-                            group_id = db.find_group_by_autokmdb_id(
-                                connection, article_id
-                            )
                             if group_id:
                                 db.add_article_to_group(
                                     connection, autokmdb_id, group_id
@@ -353,7 +350,7 @@ class ClassificationProcessor(Processor):
                                 new_article_id = autokmdb_id
                                 db.add_article_group(connection, original_article_id)
                                 group_id = db.find_group_by_autokmdb_id(
-                                    connection, original_article_id
+                                    original_article_id
                                 )
                                 db.add_article_to_group(
                                     connection, new_article_id, group_id

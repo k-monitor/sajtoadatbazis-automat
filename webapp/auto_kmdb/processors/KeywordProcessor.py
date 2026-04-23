@@ -137,8 +137,7 @@ class KeywordProcessor(Processor):
         return self.files_classifier.predict(text)
 
     def process_next(self):
-        with db.connection_pool.get_connection() as connection:
-            next_rows: list = db.get_keyword_queue(connection)
+        next_rows: list = db.get_keyword_queue()
         for next_row in next_rows:
             if next_row is None:
                 sleep(30)

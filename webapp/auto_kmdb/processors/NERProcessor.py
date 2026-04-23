@@ -254,8 +254,7 @@ class NERProcessor(Processor):
             save_ner_step(connection, next_row["id"])
 
     def process_next(self):
-        with connection_pool.get_connection() as connection:
-            next_rows: list = get_ner_queue(connection)
+        next_rows: list = get_ner_queue()
         for next_row in next_rows:
             if next_row is None:
                 sleep(10)

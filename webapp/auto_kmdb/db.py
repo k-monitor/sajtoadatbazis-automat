@@ -36,6 +36,19 @@ def _fetch_all_dicts(query: str, params: Optional[dict] = None) -> list[dict]:
         result = conn.execute(text(query), params or {})
         return [dict(row) for row in result.mappings()]
 
+
+def _fetch_one_dict(query: str, params: Optional[dict] = None) -> Optional[dict]:
+    """Execute a SELECT and return the first row as a dict, or None."""
+    with engine.connect() as conn:
+        row = conn.execute(text(query), params or {}).mappings().first()
+        return dict(row) if row else None
+
+
+def _fetch_scalar(query: str, params: Optional[dict] = None) -> Any:
+    """Execute a SELECT and return the first column of the first row, or None."""
+    with engine.connect() as conn:
+        return conn.execute(text(query), params or {}).scalar()
+
 VERSION_NUMBER: int = 0
 
 
@@ -258,22 +271,18 @@ def init_news(
     connection.commit()
 
 
-def url_exists_in_kmdb(connection: PooledMySQLConnection, url: str) -> bool:
-    with connection.cursor() as cursor:
-        query = "SELECT news_id FROM news_news WHERE source_url LIKE %s"
-        cursor.execute(query, ("%" + url + "%",))
-        results: list[dict] = cursor.fetchall()
-
-        return len(results) != 0
+def url_exists_in_kmdb(url: str) -> bool:
+    return _fetch_scalar(
+        "SELECT 1 FROM news_news WHERE source_url LIKE :pat LIMIT 1",
+        {"pat": f"%{url}%"},
+    ) is not None
 
 
-def check_url_exists(connection: PooledMySQLConnection, url: str) -> bool:
-    with connection.cursor() as cursor:
-        query = "SELECT id FROM autokmdb_news WHERE clean_url = %s"
-        cursor.execute(query, (url,))
-        results: list[dict] = cursor.fetchall()
-
-        return len(results) != 0
+def check_url_exists(url: str) -> bool:
+    return _fetch_scalar(
+        "SELECT 1 FROM autokmdb_news WHERE clean_url = :url LIMIT 1",
+        {"url": url},
+    ) is not None
 
 
 def add_auto_person(
@@ -505,16 +514,12 @@ def save_classification_step(
     connection.commit()
 
 
-def get_retries_from(connection: PooledMySQLConnection, date: str) -> list[dict]:
-    query = """SELECT id, source_url AS url, source, newspaper_id FROM autokmdb_news WHERE skip_reason = 3 AND cre_time >= %s AND processing_step = 5 ORDER BY source DESC, mod_time DESC"""
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (date,))
-        return cursor.fetchall()
+def get_retries_from(date: str) -> list[dict]:
+    query = """SELECT id, source_url AS url, source, newspaper_id FROM autokmdb_news WHERE skip_reason = 3 AND cre_time >= :date AND processing_step = 5 ORDER BY source DESC, mod_time DESC"""
+    return _fetch_all_dicts(query, {"date": date})
 
 
-def get_step_queue(
-    connection: PooledMySQLConnection, step: int
-) -> list[dict[str, Any]]:
+def get_step_queue(step: int) -> list[dict[str, Any]]:
     process_old = int(os.environ.get("PROCESS_OLD", "0")) == 1
     process_old_user_id = os.environ.get("PROCESS_OLD_USER_ID", None)
     fields: dict[int, str] = {
@@ -524,99 +529,87 @@ def get_step_queue(
         3: "text",
         4: "text",
     }
-    
-    # Build the query with proper parameterization
-    query = f"SELECT id, {fields[step]} FROM autokmdb_news WHERE processing_step = %s"
-    params = [step]
-    
-    # Add user filter if specified
+
+    query = f"SELECT id, {fields[step]} FROM autokmdb_news WHERE processing_step = :step"
+    params: dict[str, Any] = {"step": step}
+
     if process_old_user_id is not None:
-        user_id = int(process_old_user_id)
+        params["user_id"] = int(process_old_user_id)
         if process_old:
-            query += " AND mod_id = %s"
+            query += " AND mod_id = :user_id"
         else:
-            query += " AND (mod_id != %s OR mod_id IS NULL)"
-        params.append(user_id)
-    
+            query += " AND (mod_id != :user_id OR mod_id IS NULL)"
+
     query += " ORDER BY source DESC, article_date ASC, mod_time ASC LIMIT 50"
-    
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, params)
-        return cursor.fetchall()
+    return _fetch_all_dicts(query, params)
 
 
-def get_download_queue(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
-    return get_step_queue(connection, 0)
+def get_download_queue() -> list[dict[str, Any]]:
+    return get_step_queue(0)
 
 
-def get_classification_queue(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
-    return get_step_queue(connection, 1)
+def get_classification_queue() -> list[dict[str, Any]]:
+    return get_step_queue(1)
 
 
-def get_ner_queue(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
-    return get_step_queue(connection, 2)
+def get_ner_queue() -> list[dict[str, Any]]:
+    return get_step_queue(2)
 
 
-def get_keyword_queue(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
-    return get_step_queue(connection, 3)
+def get_keyword_queue() -> list[dict[str, Any]]:
+    return get_step_queue(3)
 
 
-def get_human_queue(connection: PooledMySQLConnection) -> list[dict[str, Any]]:
-    return get_step_queue(connection, 4)
+def get_human_queue() -> list[dict[str, Any]]:
+    return get_step_queue(4)
 
 
 @cached(cache=TTLCache(maxsize=32, ttl=3600))
 def get_articles_by_day(
     newspaper_id: Optional[int] = None
 ) -> list[dict]:
-    newspaper_condition = "WHERE newspaper_id = %s" if newspaper_id else ""
-    params = [newspaper_id] if newspaper_id else []
-    
-    with connection_pool.get_connection() as connection:
-        with connection.cursor(dictionary=True) as cursor:
-            # Single optimized query using conditional aggregation
-            query = f"""
-                SELECT 
-                    DATE(article_date) AS date,
-                    COUNT(*) AS total_count,
-                    SUM(CASE WHEN processing_step = 5 AND annotation_label = 1 THEN 1 ELSE 0 END) AS count_positive,
-                    SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 0 THEN 1 ELSE 0 END) AS count_negative_0,
-                    SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 1 THEN 1 ELSE 0 END) AS count_negative_1,
-                    SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 2 THEN 1 ELSE 0 END) AS count_negative_2,
-                    SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 3 THEN 1 ELSE 0 END) AS count_negative_3,
-                    SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 100 THEN 1 ELSE 0 END) AS count_negative_100,
-                    SUM(CASE WHEN classification_label = 1 AND processing_step = 4 
-                             AND annotation_label IS NULL AND COALESCE(skip_reason, 0) = 0 THEN 1 ELSE 0 END) AS count_todo
-                FROM autokmdb_news 
-                {newspaper_condition}
-                GROUP BY DATE(article_date)
-                ORDER BY date
-            """
-            
-            cursor.execute(query, params)
-            results = cursor.fetchall()
-            
-            # Calculate derived fields
-            final_results = []
-            for row in results:
-                count_negative = (row["count_negative_0"] + row["count_negative_1"] + 
-                                row["count_negative_2"] + row["count_negative_3"] + 
-                                row["count_negative_100"])
-                
-                final_results.append({
-                    "date": row["date"],
-                    "total_count": row["count_positive"] + count_negative + row["count_todo"],
-                    "count_positive": row["count_positive"],
-                    "count_negative": count_negative,
-                    "count_negative_0": row["count_negative_0"],  # nem releváns
-                    "count_negative_1": row["count_negative_1"],  # átvett
-                    "count_negative_2": row["count_negative_2"],  # külföldi
-                    "count_negative_3": row["count_negative_3"],  # már szerepel
-                    "count_negative_100": row["count_negative_100"],  # egyéb
-                    "count_todo": row["count_todo"]
-                })
-            
-            return final_results
+    newspaper_condition = "WHERE newspaper_id = :newspaper_id" if newspaper_id else ""
+    params = {"newspaper_id": newspaper_id} if newspaper_id else {}
+
+    query = f"""
+        SELECT
+            DATE(article_date) AS date,
+            COUNT(*) AS total_count,
+            SUM(CASE WHEN processing_step = 5 AND annotation_label = 1 THEN 1 ELSE 0 END) AS count_positive,
+            SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 0 THEN 1 ELSE 0 END) AS count_negative_0,
+            SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 1 THEN 1 ELSE 0 END) AS count_negative_1,
+            SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 2 THEN 1 ELSE 0 END) AS count_negative_2,
+            SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 3 THEN 1 ELSE 0 END) AS count_negative_3,
+            SUM(CASE WHEN processing_step = 5 AND annotation_label = 0 AND negative_reason = 100 THEN 1 ELSE 0 END) AS count_negative_100,
+            SUM(CASE WHEN classification_label = 1 AND processing_step = 4
+                     AND annotation_label IS NULL AND COALESCE(skip_reason, 0) = 0 THEN 1 ELSE 0 END) AS count_todo
+        FROM autokmdb_news
+        {newspaper_condition}
+        GROUP BY DATE(article_date)
+        ORDER BY date
+    """
+    rows = _fetch_all_dicts(query, params)
+
+    final_results = []
+    for row in rows:
+        count_negative = (
+            row["count_negative_0"] + row["count_negative_1"]
+            + row["count_negative_2"] + row["count_negative_3"]
+            + row["count_negative_100"]
+        )
+        final_results.append({
+            "date": row["date"],
+            "total_count": row["count_positive"] + count_negative + row["count_todo"],
+            "count_positive": row["count_positive"],
+            "count_negative": count_negative,
+            "count_negative_0": row["count_negative_0"],  # nem releváns
+            "count_negative_1": row["count_negative_1"],  # átvett
+            "count_negative_2": row["count_negative_2"],  # külföldi
+            "count_negative_3": row["count_negative_3"],  # már szerepel
+            "count_negative_100": row["count_negative_100"],  # egyéb
+            "count_todo": row["count_todo"],
+        })
+    return final_results
 
 # Add these indexes to your database for optimal performance:
 # CREATE INDEX idx_autokmdb_news_article_date ON autokmdb_news (article_date);
@@ -626,18 +619,11 @@ def get_articles_by_day(
 # CREATE INDEX idx_autokmdb_news_compound ON autokmdb_news (article_date, newspaper_id, processing_step, annotation_label, classification_label);
 
 
-def find_group_by_autokmdb_id(connection, autokmdb_id):
-    query = """
-SELECT group_id
-FROM autokmdb_news_groups
-WHERE autokmdb_news_id = %s;
-"""
-    with connection.cursor() as cursor:
-        cursor.execute(query, (autokmdb_id,))
-        result = cursor.fetchone()
-        if result:
-            return result[0]
-    return None
+def find_group_by_autokmdb_id(autokmdb_id):
+    return _fetch_scalar(
+        "SELECT group_id FROM autokmdb_news_groups WHERE autokmdb_news_id = :id",
+        {"id": autokmdb_id},
+    )
 
 
 def add_article_group(connection, autokmdb_id) -> int:
@@ -655,7 +641,7 @@ VALUES (
         rowid = cursor.lastrowid
     connection.commit()
 
-    group_id = find_group_by_autokmdb_id(connection, autokmdb_id)
+    group_id = find_group_by_autokmdb_id(autokmdb_id)
 
     query_set_group_id = """
 UPDATE autokmdb_news SET group_id = %s WHERE id = %s;
@@ -1633,11 +1619,11 @@ def create_institution(
     return db_id
 
 
-def get_article_annotation(connection: PooledMySQLConnection, news_id):
-    get_annotation = """SELECT annotation_label FROM autokmdb_news WHERE id = %s;"""
-    with connection.cursor() as cursor:
-        cursor.execute(get_annotation, (news_id,))
-        return cursor.fetchone()[0]
+def get_article_annotation(news_id):
+    return _fetch_scalar(
+        "SELECT annotation_label FROM autokmdb_news WHERE id = :id",
+        {"id": news_id},
+    )
 
 
 def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
@@ -2025,19 +2011,17 @@ def save_keyword_step(connection: PooledMySQLConnection, id):
     connection.commit()
 
 
-def get_rss_urls(connection: PooledMySQLConnection):
-    query = """SELECT newspaper_id as id, name, rss_url FROM news_newspapers WHERE status = "Y";"""
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query)
-        return cursor.fetchall()
+def get_rss_urls() -> list[dict]:
+    return _fetch_all_dicts(
+        'SELECT newspaper_id as id, name, rss_url FROM news_newspapers WHERE status = "Y"'
+    )
 
 
 @cache
-def get_keyword_synonyms(connection: PooledMySQLConnection) -> list[dict]:
-    query = """SELECT synonym, name, db_id FROM autokmdb_keyword_synonyms"""
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query)
-        return cursor.fetchall()
+def get_keyword_synonyms() -> list[dict]:
+    return _fetch_all_dicts(
+        "SELECT synonym, name, db_id FROM autokmdb_keyword_synonyms"
+    )
 
 
 def update_session(

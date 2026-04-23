@@ -11,8 +11,7 @@ import re
 import os
 
 
-with db.connection_pool.get_connection() as connection:
-    keyword_synonyms: list[dict] = db.get_keyword_synonyms(connection)
+keyword_synonyms: list[dict] = db.get_keyword_synonyms()
 
 api = Blueprint("api", __name__, url_prefix="/api")
 all_domains: list[dict] = db.get_all_newspapers()
@@ -43,20 +42,19 @@ def get_articles_by_day():
     start: str = content.get("from", "2000-01-01")
     end: str = content.get("to", "2050-01-01")
     newspaper_id: Optional[int] = content.get("newspaper_id", None)
-    with db.connection_pool.get_connection() as connection:
-        articles_by_day: list[dict] = db.get_articles_by_day(newspaper_id)
+    articles_by_day: list[dict] = db.get_articles_by_day(newspaper_id)
 
-        output = io.StringIO()
-        writer = csv.DictWriter(output, fieldnames=articles_by_day[0].keys())
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=articles_by_day[0].keys())
 
-        writer.writeheader()
-        writer.writerows(articles_by_day)
+    writer.writeheader()
+    writer.writerows(articles_by_day)
 
-        output.seek(0)
-        response = Response(output, mimetype="text/csv")
-        response.headers["Content-Disposition"] = "attachment; filename=data.csv"
+    output.seek(0)
+    response = Response(output, mimetype="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=data.csv"
 
-        return response
+    return response
 
 
 @api.route("/articles_by_day", methods=["GET"])
@@ -65,12 +63,11 @@ def get_articles_by_day_json():
     start: str = content.get("from", "2000-01-01")
     end: str = content.get("to", "2050-01-01")
     newspaper_id: Optional[int] = content.get("newspaper_id", None)
-    with db.connection_pool.get_connection() as connection:
-        articles_by_day: list[dict] = db.get_articles_by_day(newspaper_id)
-        for article in articles_by_day:
-            if "date" in article and type(article["date"]) == datetime:
-                article["date"] = article["date"].strftime("%Y-%m-%d")
-        return jsonify(articles_by_day), 200
+    articles_by_day: list[dict] = db.get_articles_by_day(newspaper_id)
+    for article in articles_by_day:
+        if "date" in article and type(article["date"]) == datetime:
+            article["date"] = article["date"].strftime("%Y-%m-%d")
+    return jsonify(articles_by_day), 200
 
 
 @api.route("/article_counts", methods=["POST"])
@@ -303,8 +300,7 @@ def annote():
         1: "/api/edit/positive",
         0: "/api/change/positive",
     }
-    with db.connection_pool.get_connection() as connection:
-        annotation_label: Optional[int] = db.get_article_annotation(connection, id)
+    annotation_label: Optional[int] = db.get_article_annotation(id)
     if request.path != correct_annotations[annotation_label]:
         return (
             jsonify(
@@ -340,19 +336,18 @@ def annote():
     if "file_ids" in content:
         file_ids: list[int] = content["file_ids"]
 
-    with db.connection_pool.get_connection() as connection:
-        if (
-            db.url_exists_in_kmdb(connection, url)
-            and request.path == "/api/annote/positive"
-        ):
-            return (
-                jsonify(
-                    {
-                        "error": "Ez a cikk url alapján már szerepel az adatbázisban. Valószínűleg az autokmdb-n kívülről lett hozzáadva."
-                    }
-                ),
-                409,
-            )
+    if (
+        db.url_exists_in_kmdb(url)
+        and request.path == "/api/annote/positive"
+    ):
+        return (
+            jsonify(
+                {
+                    "error": "Ez a cikk url alapján már szerepel az adatbázisban. Valószínűleg az autokmdb-n kívülről lett hozzáadva."
+                }
+            ),
+            409,
+        )
 
     with db.connection_pool.get_connection() as connection:
         db.annote_positive(
@@ -401,10 +396,10 @@ def add_url():
     if not content:
         return jsonify({}), 400
 
+    url: str = content["url"]
+    if db.check_url_exists(url):
+        return jsonify({"error": "Cikk már létezik"}), 400
     with db.connection_pool.get_connection() as connection:
-        url: str = content["url"]
-        if db.check_url_exists(connection, url):
-            return jsonify({"error": "Cikk már létezik"}), 400
         db.init_news(
             connection,
             "manual" if not api_key else "api",

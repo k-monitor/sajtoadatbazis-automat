@@ -36,8 +36,7 @@ skip_url_patterns = load_json_from_file("data/skip_url_patterns.json")
 def rss_watcher(app_context):
     logging.info("Started RSS watcher")
     app_context.push()
-    with db.connection_pool.get_connection() as connection:
-        newspapers: list[dict] = db.get_rss_urls(connection)
+    newspapers: list[dict] = db.get_rss_urls()
     while True:
         articles = []
         for newspaper in newspapers:
@@ -53,13 +52,12 @@ def rss_watcher(app_context):
                     logging.error("Error for " + newspaper["name"] + ": " + str(e))
 
         articles.sort(key=lambda x: x["release_date"] or "")
-        print([a["release_date"] for a in articles])
         for article in articles:
             logging.info(article)
-            with db.connection_pool.get_connection() as connection:
-                if not db.check_url_exists(connection, article["clean_url"]) and not skip_url(
-                    article["clean_url"]
-                ) and not re.fullmatch(r'.*\/\d{4}\/\d{2}', article["clean_url"]):
+            if not db.check_url_exists(article["clean_url"]) and not skip_url(
+                article["clean_url"]
+            ) and not re.fullmatch(r'.*\/\d{4}\/\d{2}', article["clean_url"]):
+                with db.connection_pool.get_connection() as connection:
                     db.init_news(
                         connection,
                         "rss",
@@ -185,19 +183,18 @@ def get_new_from_rss(newspaper, newspapers, dont_convert: bool = False):
         # parsed_date = datetime.strptime(release_date, '%Y-%m-%dT%H:%M:%S.%f%z')
         # pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
         clean_url: str = clear_url(url)
-        with db.connection_pool.get_connection() as connection:
-            if not db.check_url_exists(connection, clean_url) and not skip_url(
-                clean_url
-            ) and not re.fullmatch(r'.*\/\d{4}\/\d{2}', clean_url):
-                article = {
-                    "url": url.strip().rstrip('/'),
-                    "clean_url": clean_url,
-                    "newspaper": newspaper["name"],
-                    "newspaper_id": newspaper["id"],
-                    "release_date": release_date.isoformat() if release_date else None
-                }
-                articles.append(article)
-                articles_found += 1
+        if not db.check_url_exists(clean_url) and not skip_url(
+            clean_url
+        ) and not re.fullmatch(r'.*\/\d{4}\/\d{2}', clean_url):
+            article = {
+                "url": url.strip().rstrip('/'),
+                "clean_url": clean_url,
+                "newspaper": newspaper["name"],
+                "newspaper_id": newspaper["id"],
+                "release_date": release_date.isoformat() if release_date else None
+            }
+            articles.append(article)
+            articles_found += 1
 
     if articles_found > 0:
         logging.info(newspaper["name"] + " found " + str(articles_found) + " articles")
