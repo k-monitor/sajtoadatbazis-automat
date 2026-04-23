@@ -7,6 +7,9 @@ import logging
 from datetime import datetime, timedelta
 from collections import defaultdict
 from cachetools import cached, LRUCache, TTLCache
+from sqlalchemy import create_engine, text
+from sqlalchemy.engine import Engine
+from sqlalchemy.pool import NullPool
 
 connection_pool: MySQLConnectionPool = MySQLConnectionPool(
     pool_name="cnx_pool",
@@ -19,6 +22,19 @@ connection_pool: MySQLConnectionPool = MySQLConnectionPool(
     database=os.environ["MYSQL_DB"],
     use_pure=True,
 )
+
+engine: Engine = create_engine(
+    "mysql+mysqlconnector://",
+    creator=lambda: connection_pool.get_connection(),
+    poolclass=NullPool,
+)
+
+
+def _fetch_all_dicts(query: str, params: Optional[dict] = None) -> list[dict]:
+    """Execute a SELECT and return rows as a list of dicts."""
+    with engine.connect() as conn:
+        result = conn.execute(text(query), params or {})
+        return [dict(row) for row in result.mappings()]
 
 VERSION_NUMBER: int = 0
 
@@ -37,10 +53,7 @@ def get_all(table: str, id_column: str, name_column: str) -> list[dict]:
         List of dicts, each dict containing the 'name' and 'id' of a given label.
     """
     query = f'SELECT {id_column} AS id, {name_column} AS name FROM {table} WHERE status = "Y";'
-    with connection_pool.get_connection() as connection:
-        with connection.cursor(dictionary=True) as cursor:
-            cursor.execute(query)
-            return list(cursor.fetchall())
+    return _fetch_all_dicts(query)
 
 
 def get_all_persons() -> list[dict]:
@@ -98,34 +111,31 @@ def get_all_newspapers() -> list[dict[str, Any]]:
     query = """SELECT n.newspaper_id AS id, n.name AS name, n.rss_url AS rss_url, COUNT(a.newspaper_id) AS article_count FROM news_newspapers n
     LEFT JOIN autokmdb_news a ON n.newspaper_id = a.newspaper_id WHERE n.status = "Y"
     GROUP BY n.newspaper_id, n.name, n.rss_url;"""
-    with connection_pool.get_connection() as connection:
-        with connection.cursor(dictionary=True) as cursor:
-            cursor.execute(query)
-            l = [
-                {
-                    "id": r["id"],
-                    "name": r["name"],
-                    "has_rss": bool(r["rss_url"]),
-                    "article_count": r["article_count"],
-                }
-                for r in cursor.fetchall()
-            ]
-            l.sort(key=lambda r: r["article_count"], reverse=True)
-            return l
+    rows = _fetch_all_dicts(query)
+    papers = [
+        {
+            "id": r["id"],
+            "name": r["name"],
+            "has_rss": bool(r["rss_url"]),
+            "article_count": r["article_count"],
+        }
+        for r in rows
+    ]
+    papers.sort(key=lambda r: r["article_count"], reverse=True)
+    return papers
 
 
-with connection_pool.get_connection() as connection:
-    all_newspapers = get_all_newspapers()
-    all_persons = get_all_persons()
-    all_institutions = get_all_institutions()
-    all_places = get_all_places()
-    all_others = get_all_others()
-    all_persons_by_id = {person["id"]: person["name"] for person in all_persons}
-    all_institutions_by_id = {
-        institution["id"]: institution["name"] for institution in all_institutions
-    }
-    all_places_by_id = {place["id"]: place["name"] for place in all_places}
-    all_others_by_id = {other["id"]: other["name"] for other in all_others}
+all_newspapers = get_all_newspapers()
+all_persons = get_all_persons()
+all_institutions = get_all_institutions()
+all_places = get_all_places()
+all_others = get_all_others()
+all_persons_by_id = {person["id"]: person["name"] for person in all_persons}
+all_institutions_by_id = {
+    institution["id"]: institution["name"] for institution in all_institutions
+}
+all_places_by_id = {place["id"]: place["name"] for place in all_places}
+all_others_by_id = {other["id"]: other["name"] for other in all_others}
 
 
 @cached(cache=TTLCache(maxsize=256, ttl=3600))
@@ -143,10 +153,7 @@ def get_all_freq(table: str, id_column: str, name_column: str) -> list[dict]:
         List of dicts, each dict containing the 'name', 'id' and 'count' occurrances of a given label.
     """
     query = f'SELECT p.{id_column} AS id, p.{name_column} AS name, COUNT(npl.news_id) AS count FROM {table} p LEFT JOIN {table}_link npl ON p.{id_column} = npl.{id_column} WHERE p.status = "Y" GROUP BY p.{id_column};'
-    with connection_pool.get_connection() as connection:
-        with connection.cursor(dictionary=True) as cursor:
-            cursor.execute(query)
-            return list(cursor.fetchall())
+    return _fetch_all_dicts(query)
 
 
 def get_all_persons_freq() -> list[dict]:
@@ -189,7 +196,7 @@ def get_all_others_freq() -> list[dict]:
     return get_all_freq("news_others", "other_id", "name_hu")
 
 
-def get_places_alias(connection: PooledMySQLConnection):
+def get_places_alias() -> list[dict]:
     query = """
     SELECT
         np.name_hu AS place_name,
@@ -198,9 +205,7 @@ def get_places_alias(connection: PooledMySQLConnection):
         news_places np
         JOIN autokmdb_alias_place ap ON np.place_id = ap.place_id;
     """
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query)
-        return list(cursor.fetchall())
+    return _fetch_all_dicts(query)
 
 
 def process_and_accept_article(
