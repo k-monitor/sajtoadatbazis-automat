@@ -1,13 +1,13 @@
 from functools import cache
 from typing import Literal, Any, Optional
-from mysql.connector.pooling import MySQLConnectionPool, PooledMySQLConnection
+from mysql.connector.pooling import MySQLConnectionPool
 import os
 from slugify import slugify
 import logging
 from datetime import datetime, timedelta
 from collections import defaultdict
 from cachetools import cached, LRUCache, TTLCache
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, text, bindparam
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
 
@@ -48,6 +48,13 @@ def _fetch_scalar(query: str, params: Optional[dict] = None) -> Any:
     """Execute a SELECT and return the first column of the first row, or None."""
     with engine.connect() as conn:
         return conn.execute(text(query), params or {}).scalar()
+
+
+def _execute(query: str, params: Optional[dict] = None) -> Optional[int]:
+    """Execute an INSERT/UPDATE/DELETE in a transaction and return lastrowid."""
+    with engine.begin() as conn:
+        result = conn.execute(text(query), params or {})
+        return result.lastrowid
 
 VERSION_NUMBER: int = 0
 
@@ -221,19 +228,15 @@ def get_places_alias() -> list[dict]:
     return _fetch_all_dicts(query)
 
 
-def process_and_accept_article(
-    connection: PooledMySQLConnection,
-    id: int,
-    user_id: int,
-) -> None:
-    query = """UPDATE autokmdb_news SET processing_step = 2, skip_reason = NULL, mod_id = %s, source = 1, classification_label = 1 WHERE id = %s;"""
-    with connection.cursor() as cursor:
-        cursor.execute(query, (user_id, id))
-    connection.commit()
+def process_and_accept_article(id: int, user_id: int) -> None:
+    _execute(
+        """UPDATE autokmdb_news SET processing_step = 2, skip_reason = NULL,
+           mod_id = :user_id, source = 1, classification_label = 1 WHERE id = :id""",
+        {"user_id": user_id, "id": id},
+    )
 
 
 def init_news(
-    connection: PooledMySQLConnection,
     source: str,
     source_url: str,
     clean_url: str,
@@ -247,28 +250,25 @@ def init_news(
         source_value = 1
     elif source == "api":
         source_value = 2
-    current_datetime: datetime = datetime.now()
-    cre_time: str = current_datetime.strftime("%Y-%m-%d %H:%M:%S")
-    with connection.cursor(dictionary=True) as cursor:
-        query = """INSERT INTO autokmdb_news
-                (source, source_url, clean_url, processing_step, cre_time, article_date, newspaper_name, newspaper_id, version_number, mod_id)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-        cursor.execute(
-            query,
-            (
-                source_value,
-                source_url,
-                clean_url,
-                0,
-                cre_time,
-                pub_time,
-                newspaper_name,
-                newspaper_id,
-                VERSION_NUMBER,
-                user_id,
-            ),
-        )
-    connection.commit()
+    cre_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    _execute(
+        """INSERT INTO autokmdb_news
+           (source, source_url, clean_url, processing_step, cre_time, article_date,
+            newspaper_name, newspaper_id, version_number, mod_id)
+           VALUES (:source, :source_url, :clean_url, 0, :cre_time, :pub_time,
+                   :newspaper_name, :newspaper_id, :version, :user_id)""",
+        {
+            "source": source_value,
+            "source_url": source_url,
+            "clean_url": clean_url,
+            "cre_time": cre_time,
+            "pub_time": pub_time,
+            "newspaper_name": newspaper_name,
+            "newspaper_id": newspaper_id,
+            "version": VERSION_NUMBER,
+            "user_id": user_id,
+        },
+    )
 
 
 def url_exists_in_kmdb(url: str) -> bool:
@@ -285,8 +285,38 @@ def check_url_exists(url: str) -> bool:
     ) is not None
 
 
+def _add_auto_entity(
+    table: str,
+    name_col: str,
+    id_col: str,
+    autokmdb_news_id: int,
+    entity_name: str,
+    entity_id: int,
+    found_name: str,
+    found_position: int,
+    name: str,
+    classification_score: float,
+    classification_label: int,
+) -> None:
+    query = f"""INSERT INTO {table}
+            (autokmdb_news_id, {name_col}, {id_col}, found_name, found_position, name,
+             classification_score, classification_label, version_number)
+            VALUES (:news_id, :entity_name, :entity_id, :found_name, :found_position,
+                    :name, :score, :label, :version)"""
+    _execute(query, {
+        "news_id": autokmdb_news_id,
+        "entity_name": entity_name,
+        "entity_id": entity_id,
+        "found_name": found_name,
+        "found_position": found_position,
+        "name": name,
+        "score": classification_score,
+        "label": classification_label,
+        "version": VERSION_NUMBER,
+    })
+
+
 def add_auto_person(
-    connection: PooledMySQLConnection,
     autokmdb_news_id: int,
     person_name: str,
     person_id: int,
@@ -296,29 +326,14 @@ def add_auto_person(
     classification_score: float,
     classification_label: int,
 ) -> None:
-    with connection.cursor() as cursor:
-        query = """INSERT INTO autokmdb_persons
-                (autokmdb_news_id, person_name, person_id, found_name, found_position, name, classification_score, classification_label, version_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-        cursor.execute(
-            query,
-            (
-                autokmdb_news_id,
-                person_name,
-                person_id,
-                found_name,
-                found_position,
-                name,
-                classification_score,
-                classification_label,
-                VERSION_NUMBER,
-            ),
-        )
-    connection.commit()
+    _add_auto_entity(
+        "autokmdb_persons", "person_name", "person_id",
+        autokmdb_news_id, person_name, person_id, found_name, found_position,
+        name, classification_score, classification_label,
+    )
 
 
 def add_auto_institution(
-    connection: PooledMySQLConnection,
     autokmdb_news_id: int,
     institution_name: str,
     institution_id: int,
@@ -328,29 +343,14 @@ def add_auto_institution(
     classification_score: float,
     classification_label: int,
 ) -> None:
-    with connection.cursor() as cursor:
-        query = """INSERT INTO autokmdb_institutions
-                (autokmdb_news_id, institution_name, institution_id, found_name, found_position, name, classification_score, classification_label, version_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-        cursor.execute(
-            query,
-            (
-                autokmdb_news_id,
-                institution_name,
-                institution_id,
-                found_name,
-                found_position,
-                name,
-                classification_score,
-                classification_label,
-                VERSION_NUMBER,
-            ),
-        )
-    connection.commit()
+    _add_auto_entity(
+        "autokmdb_institutions", "institution_name", "institution_id",
+        autokmdb_news_id, institution_name, institution_id, found_name, found_position,
+        name, classification_score, classification_label,
+    )
 
 
 def add_auto_place(
-    connection: PooledMySQLConnection,
     autokmdb_news_id: int,
     place_name: str,
     place_id: int,
@@ -360,81 +360,58 @@ def add_auto_place(
     classification_score: float,
     classification_label: int,
 ) -> None:
-    with connection.cursor() as cursor:
-        query = """INSERT INTO autokmdb_places
-                (autokmdb_news_id, place_name, place_id, found_name, found_position, name, classification_score, classification_label, version_number)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)"""
-        cursor.execute(
-            query,
-            (
-                autokmdb_news_id,
-                place_name,
-                place_id,
-                found_name,
-                found_position,
-                name,
-                classification_score,
-                classification_label,
-                VERSION_NUMBER,
-            ),
-        )
-    connection.commit()
+    _add_auto_entity(
+        "autokmdb_places", "place_name", "place_id",
+        autokmdb_news_id, place_name, place_id, found_name, found_position,
+        name, classification_score, classification_label,
+    )
 
 
 def add_auto_other(
-    connection: PooledMySQLConnection,
     autokmdb_news_id: int,
     other_id: int,
     name: str,
     classification_score: float,
     classification_label: int,
 ) -> None:
-    with connection.cursor() as cursor:
-        query = """INSERT INTO autokmdb_others
-                (autokmdb_news_id, other_id, name, classification_score, classification_label, version_number)
-                VALUES (%s, %s, %s, %s, %s, %s)"""
-        cursor.execute(
-            query,
-            (
-                autokmdb_news_id,
-                other_id,
-                name,
-                classification_score,
-                classification_label,
-                VERSION_NUMBER,
-            ),
-        )
-    connection.commit()
+    _execute(
+        """INSERT INTO autokmdb_others
+           (autokmdb_news_id, other_id, name, classification_score, classification_label, version_number)
+           VALUES (:news_id, :other_id, :name, :score, :label, :version)""",
+        {
+            "news_id": autokmdb_news_id,
+            "other_id": other_id,
+            "name": name,
+            "score": classification_score,
+            "label": classification_label,
+            "version": VERSION_NUMBER,
+        },
+    )
 
 
 def add_auto_files(
-    connection: PooledMySQLConnection,
     autokmdb_news_id: int,
     files_id: int,
     name: str,
     classification_score: float,
     classification_label: int,
 ) -> None:
-    with connection.cursor() as cursor:
-        query = """INSERT INTO autokmdb_files
-                (autokmdb_news_id, files_id, name, classification_score, classification_label, version_number)
-                VALUES (%s, %s, %s, %s, %s, %s)"""
-        cursor.execute(
-            query,
-            (
-                autokmdb_news_id,
-                files_id,
-                name,
-                classification_score,
-                classification_label,
-                VERSION_NUMBER,
-            ),
-        )
-    connection.commit()
+    _execute(
+        """INSERT INTO autokmdb_files
+           (autokmdb_news_id, files_id, name, classification_score, classification_label, version_number)
+           VALUES (:news_id, :files_id, :name, :score, :label, :version)""",
+        {
+            "news_id": autokmdb_news_id,
+            "files_id": files_id,
+            "name": name,
+            "score": classification_score,
+            "label": classification_label,
+            "version": VERSION_NUMBER,
+        },
+    )
 
 
 def save_download_step(
-    connection: PooledMySQLConnection,
     id: int,
     text: str,
     title: str,
@@ -443,25 +420,25 @@ def save_download_step(
     date: Optional[str],
     is_paywalled: int,
 ) -> None:
-    query = """UPDATE autokmdb_news 
-            SET text = %s, 
-                title = %s, 
-                description = %s, 
-                processing_step = 1, 
-                skip_reason = NULL, 
-                author = %s, 
-                article_date = COALESCE(%s, article_date),
-                is_paywalled = %s
-            WHERE id = %s;"""
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(
-            query, (text, title, description, authors, date, is_paywalled, id)
-        )
-    connection.commit()
+    _execute(
+        """UPDATE autokmdb_news
+           SET text = :text,
+               title = :title,
+               description = :description,
+               processing_step = 1,
+               skip_reason = NULL,
+               author = :authors,
+               article_date = COALESCE(:date, article_date),
+               is_paywalled = :is_paywalled
+           WHERE id = :id""",
+        {
+            "text": text, "title": title, "description": description,
+            "authors": authors, "date": date, "is_paywalled": is_paywalled, "id": id,
+        },
+    )
 
 
 def skip_same_news(
-    connection: PooledMySQLConnection,
     id: int,
     text: str,
     title: str,
@@ -470,48 +447,48 @@ def skip_same_news(
     date: Optional[str],
     is_paywalled: int,
 ) -> None:
-    query = """UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5, text = %s, title = %s, description = %s, processing_step = 1, author = %s, article_date = COALESCE(%s, article_date), is_paywalled = %s
-               WHERE id = %s"""
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(
-            query, (text, title, description, authors, date, is_paywalled, id)
-        )
-    connection.commit()
+    _execute(
+        """UPDATE autokmdb_news SET skip_reason = 2, processing_step = 5, text = :text,
+           title = :title, description = :description, processing_step = 1, author = :authors,
+           article_date = COALESCE(:date, article_date), is_paywalled = :is_paywalled
+           WHERE id = :id""",
+        {
+            "text": text, "title": title, "description": description,
+            "authors": authors, "date": date, "is_paywalled": is_paywalled, "id": id,
+        },
+    )
 
 
-def skip_download_error(connection: PooledMySQLConnection, id: int) -> None:
-    query = """UPDATE autokmdb_news SET skip_reason = 3, processing_step = 5
-               WHERE id = %s"""
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (id,))
-    connection.commit()
+def skip_download_error(id: int) -> None:
+    _execute(
+        "UPDATE autokmdb_news SET skip_reason = 3, processing_step = 5 WHERE id = :id",
+        {"id": id},
+    )
 
 
-def skip_processing_error(connection: PooledMySQLConnection, id: int) -> None:
-    query = """UPDATE autokmdb_news SET skip_reason = 4, processing_step = 5
-               WHERE id = %s"""
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (id,))
-    connection.commit()
+def skip_processing_error(id: int) -> None:
+    _execute(
+        "UPDATE autokmdb_news SET skip_reason = 4, processing_step = 5 WHERE id = :id",
+        {"id": id},
+    )
 
 
 def save_classification_step(
-    connection: PooledMySQLConnection,
     id: int,
     classification_label: int,
     classification_score: float,
     category: int,
 ) -> None:
-    new_step = 2
-    if classification_label == 0:
-        new_step = 5
-    query = """UPDATE autokmdb_news SET classification_label = %s,
-               classification_score = %s, processing_step = %s, category = %s WHERE id = %s"""
-    with connection.cursor() as cursor:
-        cursor.execute(
-            query, (classification_label, classification_score, new_step, category, id)
-        )
-    connection.commit()
+    new_step = 5 if classification_label == 0 else 2
+    _execute(
+        """UPDATE autokmdb_news SET classification_label = :label,
+           classification_score = :score, processing_step = :step, category = :category
+           WHERE id = :id""",
+        {
+            "label": classification_label, "score": classification_score,
+            "step": new_step, "category": category, "id": id,
+        },
+    )
 
 
 def get_retries_from(date: str) -> list[dict]:
@@ -626,178 +603,140 @@ def find_group_by_autokmdb_id(autokmdb_id):
     )
 
 
-def add_article_group(connection, autokmdb_id) -> int:
-    query = """
-INSERT INTO autokmdb_news_groups (group_id, autokmdb_news_id, is_main)
-VALUES (
-    (SELECT new_group_id FROM (SELECT COALESCE(MAX(group_id) + 1, 1) AS new_group_id FROM autokmdb_news_groups) AS temp), -- Generate a new group_id using a derived table
-    %s,
-    TRUE
-);
-"""
-    rowid = None
-    with connection.cursor() as cursor:
-        cursor.execute(query, (autokmdb_id,))
-        rowid = cursor.lastrowid
-    connection.commit()
-
+def add_article_group(autokmdb_id) -> int:
+    rowid = _execute(
+        """INSERT INTO autokmdb_news_groups (group_id, autokmdb_news_id, is_main)
+           VALUES (
+               (SELECT new_group_id FROM
+                   (SELECT COALESCE(MAX(group_id) + 1, 1) AS new_group_id FROM autokmdb_news_groups) AS temp),
+               :autokmdb_id,
+               TRUE
+           )""",
+        {"autokmdb_id": autokmdb_id},
+    )
     group_id = find_group_by_autokmdb_id(autokmdb_id)
-
-    query_set_group_id = """
-UPDATE autokmdb_news SET group_id = %s WHERE id = %s;
-"""
-    with connection.cursor() as cursor:
-        cursor.execute(query_set_group_id, (group_id, autokmdb_id))
-    connection.commit()
-
+    _execute(
+        "UPDATE autokmdb_news SET group_id = :group_id WHERE id = :id",
+        {"group_id": group_id, "id": autokmdb_id},
+    )
     return rowid
 
 
-def add_article_to_group(connection, autokmdb_id, group_id):
-    query = """
-INSERT INTO autokmdb_news_groups (group_id, autokmdb_news_id, is_main)
-VALUES (%s, %s, FALSE);
+def add_article_to_group(autokmdb_id, group_id):
+    with engine.begin() as conn:
+        conn.execute(
+            text("""INSERT INTO autokmdb_news_groups (group_id, autokmdb_news_id, is_main)
+                    VALUES (:group_id, :autokmdb_id, FALSE)"""),
+            {"group_id": group_id, "autokmdb_id": autokmdb_id},
+        )
+        conn.execute(
+            text("UPDATE autokmdb_news SET group_id = :group_id WHERE id = :id"),
+            {"group_id": group_id, "id": autokmdb_id},
+        )
+
+
+def pick_out_article(autokmdb_id, user_id):
+    with engine.begin() as conn:
+        conn.execute(
+            text("UPDATE autokmdb_news SET source = 1, group_id = NULL, mod_id = :user_id WHERE id = :id"),
+            {"user_id": user_id, "id": autokmdb_id},
+        )
+        conn.execute(
+            text("DELETE FROM autokmdb_news_groups WHERE autokmdb_news_id = :id"),
+            {"id": autokmdb_id},
+        )
+
+
+_ARTICLE_BASE_COLUMNS = """
+    n.id,
+    n.group_id,
+    n.news_id,
+    n.source_url,
+    n.clean_url AS url,
+    n.description,
+    n.title,
+    n.source,
+    n.newspaper_name,
+    n.newspaper_id,
+    n.classification_score,
+    n.classification_label,
+    n.annotation_label,
+    n.processing_step,
+    n.skip_reason,
+    n.text,
+    CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date,
+    n.category,
+    CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS article_date,
+    u.name AS mod_name,
+    n.is_paywalled
 """
-    with connection.cursor() as cursor:
-        cursor.execute(query, (group_id, autokmdb_id))
-
-    query_set_group_id = """
-UPDATE autokmdb_news SET group_id = %s WHERE id = %s;
-"""
-    with connection.cursor() as cursor:
-        cursor.execute(query_set_group_id, (group_id, autokmdb_id))
-    connection.commit()
 
 
-def pick_out_article(connetion, autokmdb_id, user_id):
-    query = """
-UPDATE autokmdb_news SET source = 1, group_id = NULL, mod_id = %s WHERE id = %s;
-"""
-    query_remove_from_group = """
-DELETE FROM autokmdb_news_groups WHERE autokmdb_news_id = %s;
-    """
-    with connetion.cursor() as cursor:
-        cursor.execute(query, (user_id, autokmdb_id))
-        cursor.execute(query_remove_from_group, (autokmdb_id,))
-    connetion.commit()
+def _attach_article_entities(conn, article: dict) -> None:
+    aid = article["id"]
+    article["persons"] = map_entities(_fetch_article_persons(conn, aid))
+    article["institutions"] = map_entities(_fetch_article_institutions(conn, aid))
+    article["places"] = map_entities(_fetch_article_places(conn, aid))
+    article["tags"] = map_entities(get_article_others(conn, aid))
+    article["files"] = map_entities(get_article_files(conn, aid))
 
 
-def find_article_by_url_with_group(
-    connection: PooledMySQLConnection, source_url: str
-) -> Optional[dict[str, Any]]:
+def find_article_by_url_with_group(source_url: str) -> Optional[dict[str, Any]]:
     """
     Find an article by its source_url and return it along with all articles in its group.
-    Optimized query that:
-    1. Finds the article by source_url
-    2. Gets its group_id
-    3. Fetches all articles in that group
-    
+
     Returns:
         Dict with 'main_article' and 'grouped_articles' list, or None if not found
     """
-    with connection.cursor(dictionary=True) as cursor:
-        # First, find the article and its group_id
-        find_query = """
-            SELECT 
-                n.id,
-                n.group_id,
-                n.news_id,
-                n.source_url,
-                n.clean_url AS url,
-                n.description,
-                n.title,
-                n.source,
-                n.newspaper_name,
-                n.newspaper_id,
-                n.classification_score,
-                n.classification_label,
-                n.annotation_label,
-                n.processing_step,
-                n.skip_reason,
-                n.text,
-                CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date,
-                n.category,
-                CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS article_date,
-                u.name AS mod_name,
-                n.is_paywalled
-            FROM autokmdb_news n
-            LEFT JOIN users u ON n.mod_id = u.user_id
-            WHERE n.source_url = %s
-            LIMIT 1
-        """
-        cursor.execute(find_query, (source_url,))
-        main_article = cursor.fetchone()
-        
-        if not main_article:
+    find_query = f"""
+        SELECT {_ARTICLE_BASE_COLUMNS}
+        FROM autokmdb_news n
+        LEFT JOIN users u ON n.mod_id = u.user_id
+        WHERE n.source_url = :source_url
+        LIMIT 1
+    """
+    group_query = f"""
+        SELECT {_ARTICLE_BASE_COLUMNS}, ang.is_main
+        FROM autokmdb_news n
+        LEFT JOIN users u ON n.mod_id = u.user_id
+        LEFT JOIN autokmdb_news_groups ang ON n.id = ang.autokmdb_news_id
+        WHERE n.group_id = :group_id AND n.id != :main_id
+        ORDER BY ang.is_main DESC, n.article_date DESC
+    """
+
+    with engine.connect() as conn:
+        main_row = conn.execute(
+            text(find_query), {"source_url": source_url}
+        ).mappings().first()
+        if not main_row:
             return None
-        
-        main_article = dict(main_article)
+
+        main_article = dict(main_row)
         group_id = main_article.get("group_id")
-        
-        # Fetch entities for the main article
-        main_article["persons"] = map_entities(_fetch_article_persons(cursor, main_article["id"]))
-        main_article["institutions"] = map_entities(_fetch_article_institutions(cursor, main_article["id"]))
-        main_article["places"] = map_entities(_fetch_article_places(cursor, main_article["id"]))
-        main_article["tags"] = map_entities(get_article_others(cursor, main_article["id"]))
-        main_article["files"] = map_entities(get_article_files(cursor, main_article["id"]))
-        
-        # If article has a group, fetch all other articles in the group
-        grouped_articles = []
+        _attach_article_entities(conn, main_article)
+
+        grouped_articles: list[dict] = []
         if group_id is not None:
-            group_query = """
-                SELECT 
-                    n.id,
-                    n.group_id,
-                    n.news_id,
-                    n.source_url,
-                    n.clean_url AS url,
-                    n.description,
-                    n.title,
-                    n.source,
-                    n.newspaper_name,
-                    n.newspaper_id,
-                    n.classification_score,
-                    n.classification_label,
-                    n.annotation_label,
-                    n.processing_step,
-                    n.skip_reason,
-                    n.text,
-                    CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date,
-                    n.category,
-                    CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS article_date,
-                    u.name AS mod_name,
-                    n.is_paywalled,
-                    ang.is_main
-                FROM autokmdb_news n
-                LEFT JOIN users u ON n.mod_id = u.user_id
-                LEFT JOIN autokmdb_news_groups ang ON n.id = ang.autokmdb_news_id
-                WHERE n.group_id = %s AND n.id != %s
-                ORDER BY ang.is_main DESC, n.article_date DESC
-            """
-            cursor.execute(group_query, (group_id, main_article["id"]))
-            group_rows = cursor.fetchall()
-            
-            for row in group_rows:
+            rows = conn.execute(
+                text(group_query),
+                {"group_id": group_id, "main_id": main_article["id"]},
+            ).mappings()
+            for row in rows:
                 article = dict(row)
-                # Fetch entities for each grouped article
-                article["persons"] = map_entities(_fetch_article_persons(cursor, article["id"]))
-                article["institutions"] = map_entities(_fetch_article_institutions(cursor, article["id"]))
-                article["places"] = map_entities(_fetch_article_places(cursor, article["id"]))
-                article["tags"] = map_entities(get_article_others(cursor, article["id"]))
-                article["files"] = map_entities(get_article_files(cursor, article["id"]))
+                _attach_article_entities(conn, article)
                 grouped_articles.append(article)
-        
+
         return {
             "main_article": main_article,
             "grouped_articles": grouped_articles,
-            "group_id": group_id
+            "group_id": group_id,
         }
 
 
-def _fetch_article_persons(cursor, article_id: int) -> list[dict]:
+def _fetch_article_persons(conn, article_id: int) -> list[dict]:
     """Helper function to fetch person entities for an article"""
     query = """
-        SELECT 
+        SELECT
             id,
             name,
             person_id AS db_id,
@@ -808,17 +747,16 @@ def _fetch_article_persons(cursor, article_id: int) -> list[dict]:
             found_name,
             found_position
         FROM autokmdb_persons
-        WHERE autokmdb_news_id = %s
+        WHERE autokmdb_news_id = :id
         ORDER BY id
     """
-    cursor.execute(query, (article_id,))
-    return list(cursor.fetchall())
+    return [dict(r) for r in conn.execute(text(query), {"id": article_id}).mappings()]
 
 
-def _fetch_article_institutions(cursor, article_id: int) -> list[dict]:
+def _fetch_article_institutions(conn, article_id: int) -> list[dict]:
     """Helper function to fetch institution entities for an article"""
     query = """
-        SELECT 
+        SELECT
             id,
             name,
             institution_id AS db_id,
@@ -829,17 +767,16 @@ def _fetch_article_institutions(cursor, article_id: int) -> list[dict]:
             found_name,
             found_position
         FROM autokmdb_institutions
-        WHERE autokmdb_news_id = %s
+        WHERE autokmdb_news_id = :id
         ORDER BY id
     """
-    cursor.execute(query, (article_id,))
-    return list(cursor.fetchall())
+    return [dict(r) for r in conn.execute(text(query), {"id": article_id}).mappings()]
 
 
-def _fetch_article_places(cursor, article_id: int) -> list[dict]:
+def _fetch_article_places(conn, article_id: int) -> list[dict]:
     """Helper function to fetch place entities for an article"""
     query = """
-        SELECT 
+        SELECT
             id,
             name,
             place_id AS db_id,
@@ -850,23 +787,20 @@ def _fetch_article_places(cursor, article_id: int) -> list[dict]:
             found_name,
             found_position
         FROM autokmdb_places
-        WHERE autokmdb_news_id = %s
+        WHERE autokmdb_news_id = :id
         ORDER BY id
     """
-    cursor.execute(query, (article_id,))
-    return list(cursor.fetchall())
+    return [dict(r) for r in conn.execute(text(query), {"id": article_id}).mappings()]
 
 
-def get_article_others(cursor, id) -> list[dict]:
-    query = """SELECT name, id, other_id AS db_id, name AS db_name, classification_score, classification_label, annotation_label FROM autokmdb_others WHERE autokmdb_news_id = %s"""
-    cursor.execute(query, (id,))
-    return cursor.fetchall()
+def get_article_others(conn, id) -> list[dict]:
+    query = """SELECT name, id, other_id AS db_id, name AS db_name, classification_score, classification_label, annotation_label FROM autokmdb_others WHERE autokmdb_news_id = :id"""
+    return [dict(r) for r in conn.execute(text(query), {"id": id}).mappings()]
 
 
-def get_article_files(cursor, id) -> list[dict]:
-    query = """SELECT name, id, files_id AS db_id, name AS db_name, classification_score, classification_label, annotation_label FROM autokmdb_files WHERE autokmdb_news_id = %s"""
-    cursor.execute(query, (id,))
-    return cursor.fetchall()
+def get_article_files(conn, id) -> list[dict]:
+    query = """SELECT name, id, files_id AS db_id, name AS db_name, classification_score, classification_label, annotation_label FROM autokmdb_files WHERE autokmdb_news_id = :id"""
+    return [dict(r) for r in conn.execute(text(query), {"id": id}).mappings()]
 
 
 def group_dicts_by_name(dict_list):
@@ -957,130 +891,64 @@ def map_entities(entities: list[dict]):
     return entity_list
 
 
-def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
+def get_article(id: int) -> dict[str, Any]:
     """
     Fetch a single article and its entities without causing a cartesian product explosion.
     """
-    with connection.cursor(dictionary=True) as cursor:
-        # 1) Fetch the base article row
-        article_query = """
-            SELECT 
-                n.id AS id,
-                n.news_id,
-                n.clean_url AS url,
-                n.description,
-                n.title,
-                n.source,
-                n.newspaper_name,
-                n.newspaper_id,
-                n.classification_score,
-                n.classification_label,
-                n.annotation_label,
-                n.processing_step,
-                n.skip_reason,
-                n.text,
-                CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date,
-                n.category,
-                CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS article_date,
-                u.name AS mod_name,
-                n.is_paywalled
-            FROM autokmdb_news n
-            LEFT JOIN users u ON n.mod_id = u.user_id
-            WHERE n.id = %s
-        """
-        cursor.execute(article_query, (id,))
-        article_row = cursor.fetchone()
-        if not article_row:
+    article_query = """
+        SELECT
+            n.id AS id,
+            n.news_id,
+            n.clean_url AS url,
+            n.description,
+            n.title,
+            n.source,
+            n.newspaper_name,
+            n.newspaper_id,
+            n.classification_score,
+            n.classification_label,
+            n.annotation_label,
+            n.processing_step,
+            n.skip_reason,
+            n.text,
+            CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date,
+            n.category,
+            CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS article_date,
+            u.name AS mod_name,
+            n.is_paywalled
+        FROM autokmdb_news n
+        LEFT JOIN users u ON n.mod_id = u.user_id
+        WHERE n.id = :id
+    """
+    kmdb_query = """
+        SELECT 'person' AS entity_type, pl.person_id AS entity_id
+        FROM news_persons_link pl WHERE pl.news_id = :news_id
+        UNION ALL
+        SELECT 'institution' AS entity_type, il.institution_id AS entity_id
+        FROM news_institutions_link il WHERE il.news_id = :news_id
+        UNION ALL
+        SELECT 'place' AS entity_type, pll.place_id AS entity_id
+        FROM news_places_link pll WHERE pll.news_id = :news_id
+        UNION ALL
+        SELECT 'other' AS entity_type, ol.other_id AS entity_id
+        FROM news_others_link ol WHERE ol.news_id = :news_id
+    """
+
+    with engine.connect() as conn:
+        row = conn.execute(text(article_query), {"id": id}).mappings().first()
+        if not row:
             return {}
+        article = dict(row)
 
-        article = dict(article_row)
+        persons = _fetch_article_persons(conn, id)
+        institutions = _fetch_article_institutions(conn, id)
+        places = _fetch_article_places(conn, id)
+        others = get_article_others(conn, id)
+        files = get_article_files(conn, id)
 
-        # 2) Fetch entities with separate queries (no cross-product)
-        persons_query = """
-            SELECT 
-                id,
-                name,
-                person_id AS db_id,
-                person_name AS db_name,
-                classification_score,
-                classification_label,
-                annotation_label,
-                found_name,
-                found_position
-            FROM autokmdb_persons
-            WHERE autokmdb_news_id = %s
-            ORDER BY id
-        """
-        institutions_query = """
-            SELECT 
-                id,
-                name,
-                institution_id AS db_id,
-                institution_name AS db_name,
-                classification_score,
-                classification_label,
-                annotation_label,
-                found_name,
-                found_position
-            FROM autokmdb_institutions
-            WHERE autokmdb_news_id = %s
-            ORDER BY id
-        """
-        places_query = """
-            SELECT 
-                id,
-                name,
-                place_id AS db_id,
-                place_name AS db_name,
-                classification_score,
-                classification_label,
-                annotation_label,
-                found_name,
-                found_position
-            FROM autokmdb_places
-            WHERE autokmdb_news_id = %s
-            ORDER BY id
-        """
-
-        cursor.execute(persons_query, (id,))
-        persons = list(cursor.fetchall())
-
-        cursor.execute(institutions_query, (id,))
-        institutions = list(cursor.fetchall())
-
-        cursor.execute(places_query, (id,))
-        places = list(cursor.fetchall())
-
-        # Existing helpers for others/files
-        others = get_article_others(cursor, id)
-        files = get_article_files(cursor, id)
-
-        # 3) Merge in KMDB entities (positive annotations) if present
         news_id = article.get("news_id")
         if news_id:
-            kmdb_query = """
-                SELECT 
-                    'person' AS entity_type, pl.person_id AS entity_id
-                FROM news_persons_link pl
-                WHERE pl.news_id = %s
-                UNION ALL
-                SELECT 
-                    'institution' AS entity_type, il.institution_id AS entity_id
-                FROM news_institutions_link il
-                WHERE il.news_id = %s
-                UNION ALL
-                SELECT 
-                    'place' AS entity_type, pll.place_id AS entity_id
-                FROM news_places_link pll
-                WHERE pll.news_id = %s
-                UNION ALL
-                SELECT 
-                    'other' AS entity_type, ol.other_id AS entity_id
-                FROM news_others_link ol
-                WHERE ol.news_id = %s
-            """
-            cursor.execute(kmdb_query, (news_id, news_id, news_id, news_id))
-            for entity in cursor.fetchall():
+            for entity in conn.execute(text(kmdb_query), {"news_id": news_id}).mappings():
                 etype = entity["entity_type"]
                 eid = entity["entity_id"]
                 if etype == "person" and eid in all_persons_by_id:
@@ -1112,14 +980,13 @@ def get_article(connection: PooledMySQLConnection, id: int) -> dict[str, Any]:
                         "db_name": all_others_by_id[eid],
                     })
 
-        # 4) Map entities
-        article["mapped_persons"] = map_entities(persons)
-        article["mapped_institutions"] = map_entities(institutions)
-        article["mapped_places"] = map_entities(places)
-        article["others"] = others
-        article["files"] = files
+    article["mapped_persons"] = map_entities(persons)
+    article["mapped_institutions"] = map_entities(institutions)
+    article["mapped_places"] = map_entities(places)
+    article["others"] = others
+    article["files"] = files
 
-        return article
+    return article
 
 
 def group_articles(articles):
@@ -1131,7 +998,6 @@ def group_articles(articles):
 
 
 def get_article_counts(
-    connection: PooledMySQLConnection,
     domains: list[int],
     search_query="",
     start="2000-01-01",
@@ -1140,39 +1006,32 @@ def get_article_counts(
     is_url_search: bool = False,
     cleaned_url: str = "",
 ) -> dict[str, int]:
-    article_counts: dict[str, int] = {}
-    start = start + " 00:00:00"
-    end = end + " 23:59:59"
+    params: dict[str, Any] = {
+        "start": start + " 00:00:00",
+        "end": end + " 23:59:59",
+    }
 
     domain_condition = ""
     if domains and domains[0] != -1 and isinstance(domains, list):
-        domain_list: str = ",".join([str(domain) for domain in domains])
+        domain_list = ",".join([str(domain) for domain in domains])
         domain_condition = f" AND n.newspaper_id IN ({domain_list})"
 
-    # Use different search condition based on whether it's a URL search
+    search_condition = ""
     if is_url_search and cleaned_url:
-        search_condition = """
-        AND n.source_url = %s
-    """
-        search_tuple = (cleaned_url,)
-    else:
-        search_condition = """
-        AND (n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)
-    """
-        search_tuple = (
-            (search_query, search_query, search_query) if search_query != "%%" else ()
-        )
-
-    date_condition = " AND n.article_date BETWEEN %s AND %s"
+        search_condition = " AND n.source_url = :cleaned_url"
+        params["cleaned_url"] = cleaned_url
+    elif search_query != "%%":
+        search_condition = " AND (n.title LIKE :q OR n.description LIKE :q OR n.source_url LIKE :q)"
+        params["q"] = search_query
 
     skip_condition = ""
     if skip_reason != -1:
         skip_condition = " AND n.skip_reason = " + str(int(skip_reason))
 
     query = f"""
-        SELECT 
-            COUNT(CASE WHEN n.classification_label = 1 AND processing_step = 4 
-                            AND n.annotation_label IS NULL 
+        SELECT
+            COUNT(CASE WHEN n.classification_label = 1 AND processing_step = 4
+                            AND n.annotation_label IS NULL
                             AND (n.skip_reason = 0 OR n.skip_reason IS NULL) THEN id END) AS mixed,
             COUNT(CASE WHEN processing_step = 5 AND n.annotation_label = 1 THEN id END) AS positive,
             COUNT(CASE WHEN processing_step = 5 AND n.annotation_label = 0 THEN id END) AS negative,
@@ -1181,65 +1040,51 @@ def get_article_counts(
         FROM autokmdb_news n
         WHERE 1=1
         {domain_condition}
-        {search_condition if (search_query != "%%" or is_url_search) else ""}
-        {date_condition}
+        {search_condition}
+        AND n.article_date BETWEEN :start AND :end
     """
 
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(
-            query,
-            search_tuple + (start, end),
-        )
-        result = cursor.fetchone()
-        if result:
-            article_counts = {
-                "mixed": result["mixed"],
-                "positive": result["positive"],
-                "negative": result["negative"],
-                "processing": result["processing"],
-                "all": result["all_status"],
-            }
-
-    return article_counts
+    result = _fetch_one_dict(query, params)
+    if not result:
+        return {}
+    return {
+        "mixed": result["mixed"],
+        "positive": result["positive"],
+        "negative": result["negative"],
+        "processing": result["processing"],
+        "all": result["all_status"],
+    }
 
 
-def _build_search_condition(search_query: str, use_fulltext: bool = False) -> tuple[str, list, bool]:
+def _build_search_condition(
+    search_query: str, use_fulltext: bool = False
+) -> tuple[str, dict, bool]:
     """
     Build an optimized search condition.
-    Returns (condition_sql, params, is_fulltext)
-    
+    Returns (condition_sql, params_dict, is_fulltext)
+
     Note: FULLTEXT is disabled by default as MySQL 5.5 has limited FULLTEXT support on InnoDB.
-    If you have upgraded to MySQL 5.6+ with FULLTEXT index on (title, description), 
+    If you have upgraded to MySQL 5.6+ with FULLTEXT index on (title, description),
     set use_fulltext=True.
     """
-    # Extract the actual search term from the LIKE pattern
     search_term = search_query.strip('%')
-    
     if not search_term:
-        return "", [], False
-    
-    # Use FULLTEXT for searches with 3+ characters (MySQL minimum word length default)
-    # Only if explicitly enabled and FULLTEXT index exists
+        return "", {}, False
+
     if use_fulltext and len(search_term) >= 3:
-        # FULLTEXT search with BOOLEAN MODE for better control
-        # Using * for prefix matching
-        fulltext_term = f"+{search_term}*"
         return (
-            "MATCH(n.title, n.description) AGAINST(%s IN BOOLEAN MODE)",
-            [fulltext_term],
-            True
+            "MATCH(n.title, n.description) AGAINST(:ft_term IN BOOLEAN MODE)",
+            {"ft_term": f"+{search_term}*"},
+            True,
         )
-    else:
-        # Use LIKE with the search pattern
-        return (
-            "(n.title LIKE %s OR n.description LIKE %s OR n.source_url LIKE %s)",
-            [search_query, search_query, search_query],
-            False
-        )
+    return (
+        "(n.title LIKE :q OR n.description LIKE :q OR n.source_url LIKE :q)",
+        {"q": search_query},
+        False,
+    )
 
 
 def get_articles(
-    connection: PooledMySQLConnection,
     page: int,
     status: str,
     domains: list[int],
@@ -1251,14 +1096,12 @@ def get_articles(
     is_url_search: bool = False,
     cleaned_url: str = "",
 ) -> Optional[tuple[int, list[dict[str, Any]]]]:
-    start = start + " 00:00:00"
-    end = end + " 23:59:59"
-
-    # Build conditions once
-    conditions = []
-    params = []
+    conditions: list[str] = []
+    params: dict[str, Any] = {
+        "start": start + " 00:00:00",
+        "end": end + " 23:59:59",
+    }
     has_text_search = False
-    is_fulltext = False
 
     # Status condition
     if status == "mixed":
@@ -1282,27 +1125,27 @@ def get_articles(
         domain_list = ",".join([str(domain) for domain in domains])
         conditions.append(f"n.newspaper_id IN ({domain_list})")
 
-    # Search condition - use different logic for URL searches
+    # Search condition
     if is_url_search and cleaned_url:
-        conditions.append("n.source_url = %s")
-        params.append(cleaned_url)
+        conditions.append("n.source_url = :cleaned_url")
+        params["cleaned_url"] = cleaned_url
     elif search_query != "%%" and search_query:
         has_text_search = True
-        search_condition, search_params, is_fulltext = _build_search_condition(search_query)
+        search_condition, search_params, _is_fulltext = _build_search_condition(search_query)
         if search_condition:
             conditions.append(search_condition)
-            params.extend(search_params)
+            params.update(search_params)
 
     # Date condition
-    conditions.append("n.article_date BETWEEN %s AND %s")
-    params.extend([start, end])
+    conditions.append("n.article_date BETWEEN :start AND :end")
 
     # Skip reason condition
     if skip_reason != -1:
-        conditions.append("n.skip_reason = %s")
-        params.append(skip_reason)
+        conditions.append("n.skip_reason = :skip_reason")
+        params["skip_reason"] = skip_reason
 
     where_clause = " AND ".join(conditions)
+    where_main = where_clause.replace("n.", "main.")
 
     # Sort configuration
     sort_order = "ASC" if reverse else "DESC"
@@ -1311,312 +1154,213 @@ def get_articles(
         if status != "positive"
         else "main.article_date"
     )
+    offset = (page - 1) * 10
 
-    with connection.cursor(dictionary=True) as cursor:
-        # Optimization: Use a pre-computed table of main article IDs per group
-        # This avoids the expensive correlated subquery
-        
-        # Step 1: Create a temporary table or CTE to find main articles efficiently
-        # For MySQL 5.5 compatibility, we'll use a derived table approach
-        
-        offset = (page - 1) * 10
-        
-        # Optimized approach: First find matching articles, then resolve groups
-        # This is faster because we filter first, then handle grouping
-        
+    main_article_cols = """
+        main.id, main.clean_url AS url, main.description, main.title, main.source,
+        main.newspaper_name, main.newspaper_id, main.classification_score,
+        main.classification_label, main.annotation_label, main.processing_step,
+        main.skip_reason, main.negative_reason,
+        CONVERT_TZ(main.article_date, @@session.time_zone, '+00:00') AS date,
+        main.category, u.name AS mod_name, main.group_id
+    """
+
+    with engine.connect() as conn:
         if has_text_search:
-            # For text searches, use a simpler approach that leverages indexes better
-            # First get IDs of matching articles with pagination
-            
-            # Build the main article condition (ungrouped or main of group)
-            main_article_condition = """
-                (main.group_id IS NULL OR main.id = (
-                    SELECT MIN(g.id) FROM autokmdb_news g WHERE g.group_id = main.group_id
-                ))
-            """
-            
-            # For search queries, first get matching IDs efficiently
+            # For text searches, first get matching IDs efficiently
             match_query = f"""
                 SELECT main.id, main.group_id
                 FROM autokmdb_news main
-                WHERE {where_clause.replace('n.', 'main.')}
+                WHERE {where_main}
             """
-            
-            cursor.execute(match_query, params)
-            matching_rows = cursor.fetchall()
-            
+            matching_rows = [
+                dict(r) for r in conn.execute(text(match_query), params).mappings()
+            ]
             if not matching_rows:
                 return 0, []
-            
-            # Collect matching article IDs and their group IDs
-            matching_ids = set()
-            matching_group_ids = set()
-            
-            for row in matching_rows:
-                matching_ids.add(row['id'])
-                if row['group_id']:
-                    matching_group_ids.add(row['group_id'])
-            
-            # Get main article IDs for groups that have matches
-            group_main_ids = set()
+
+            matching_group_ids = {r["group_id"] for r in matching_rows if r["group_id"]}
+
+            group_main_ids: set = set()
             if matching_group_ids:
                 groups_list = ",".join(map(str, matching_group_ids))
-                cursor.execute(f"""
-                    SELECT MIN(id) as main_id, group_id 
-                    FROM autokmdb_news 
-                    WHERE group_id IN ({groups_list}) 
+                rows = conn.execute(text(f"""
+                    SELECT MIN(id) as main_id, group_id
+                    FROM autokmdb_news
+                    WHERE group_id IN ({groups_list})
                     GROUP BY group_id
-                """)
-                for row in cursor.fetchall():
-                    group_main_ids.add(row['main_id'])
-            
-            # Final set of IDs to display: ungrouped matches + main articles of matching groups
-            ungrouped_matches = {mid for mid, row in zip(matching_ids, matching_rows) 
-                                if any(r['id'] == mid and r['group_id'] is None for r in matching_rows)}
-            
-            # Re-fetch to properly identify ungrouped
-            ungrouped_match_ids = set()
-            for row in matching_rows:
-                if row['group_id'] is None:
-                    ungrouped_match_ids.add(row['id'])
-            
+                """)).mappings()
+                for row in rows:
+                    group_main_ids.add(row["main_id"])
+
+            ungrouped_match_ids = {
+                r["id"] for r in matching_rows if r["group_id"] is None
+            }
             display_ids = ungrouped_match_ids | group_main_ids
-            
             if not display_ids:
                 return 0, []
-            
+
             total_count = len(display_ids)
-            
-            # Get the paginated results
             ids_list = ",".join(map(str, display_ids))
             paginated_query = f"""
-                SELECT 
-                    main.id, main.clean_url AS url, main.description, main.title, main.source, 
-                    main.newspaper_name, main.newspaper_id, main.classification_score, 
-                    main.classification_label, main.annotation_label, main.processing_step, 
-                    main.skip_reason, main.negative_reason,
-                    CONVERT_TZ(main.article_date, @@session.time_zone, '+00:00') AS date, 
-                    main.category, u.name AS mod_name, main.group_id
+                SELECT {main_article_cols}
                 FROM autokmdb_news main
                 LEFT JOIN users u ON main.mod_id = u.user_id
                 WHERE main.id IN ({ids_list})
                 ORDER BY {sort_field} {sort_order}
                 LIMIT 10 OFFSET {offset}
             """
-            
-            cursor.execute(paginated_query)
-            main_articles = cursor.fetchall()
-            
+            main_articles = [
+                dict(r) for r in conn.execute(text(paginated_query)).mappings()
+            ]
         else:
-            # Non-search query: use the original optimized approach with some improvements
-            
-            # Step 1: Find all group_ids that have at least one matching article
+            # Non-search query: find qualifying groups first
             qualifying_groups_query = f"""
                 SELECT DISTINCT n.group_id
                 FROM autokmdb_news n
                 WHERE n.group_id IS NOT NULL AND {where_clause}
             """
+            qualifying_groups = [
+                row["group_id"] for row in
+                conn.execute(text(qualifying_groups_query), params).mappings()
+            ]
 
-            cursor.execute(qualifying_groups_query, params)
-            qualifying_groups = [row["group_id"] for row in cursor.fetchall()]
-
-            # Step 2: Build the main query with optimized logic
             if qualifying_groups:
                 groups_list = ",".join(map(str, qualifying_groups))
                 group_condition = f"main.group_id IN ({groups_list})"
             else:
                 group_condition = "FALSE"
 
-            # Count query - optimized to avoid correlated subquery when possible
             count_query = f"""
-                SELECT COUNT(*) as total_count 
+                SELECT COUNT(*) as total_count
                 FROM autokmdb_news main
-                WHERE (main.group_id IS NULL 
+                WHERE (main.group_id IS NULL
                        OR main.id = (SELECT MIN(n3.id) FROM autokmdb_news n3 WHERE n3.group_id = main.group_id))
                   AND (
-                      (main.group_id IS NULL AND ({where_clause.replace('n.', 'main.')}))
+                      (main.group_id IS NULL AND ({where_main}))
                       OR
                       (main.group_id IS NOT NULL AND {group_condition})
                   )
             """
+            total_count = conn.execute(text(count_query), params).scalar()
 
-            cursor.execute(count_query, params)
-            total_count = cursor.fetchone()["total_count"]
-
-            # Main query with pagination
             paginated_query = f"""
-                SELECT 
-                    main.id, main.clean_url AS url, main.description, main.title, main.source, 
-                    main.newspaper_name, main.newspaper_id, main.classification_score, 
-                    main.classification_label, main.annotation_label, main.processing_step, 
-                    main.skip_reason, main.negative_reason,
-                    CONVERT_TZ(main.article_date, @@session.time_zone, '+00:00') AS date, 
-                    main.category, u.name AS mod_name, main.group_id
+                SELECT {main_article_cols}
                 FROM autokmdb_news main
                 LEFT JOIN users u ON main.mod_id = u.user_id
-                WHERE (main.group_id IS NULL 
+                WHERE (main.group_id IS NULL
                        OR main.id = (SELECT MIN(n3.id) FROM autokmdb_news n3 WHERE n3.group_id = main.group_id))
                   AND (
-                      (main.group_id IS NULL AND ({where_clause.replace('n.', 'main.')}))
+                      (main.group_id IS NULL AND ({where_main}))
                       OR
                       (main.group_id IS NOT NULL AND {group_condition})
                   )
                 ORDER BY {sort_field} {sort_order}
                 LIMIT 10 OFFSET {offset}
             """
-
-            cursor.execute(paginated_query, params)
-            main_articles = cursor.fetchall()
-
-        # Step 3: Bulk fetch all grouped articles for all groups on this page
-        articles_with_groups = []
-        grouped_by_group_id = {}
-        
-        if main_articles:
-            # Get all group_ids that have groups on this page
-            page_group_ids = [
-                article["group_id"] for article in main_articles if article["group_id"]
+            main_articles = [
+                dict(r) for r in conn.execute(text(paginated_query), params).mappings()
             ]
 
-            if page_group_ids:
-                # Single query to get all grouped articles for all groups on this page
-                groups_list_page = ",".join(map(str, page_group_ids))
-                main_ids_list = ",".join(str(article['id']) for article in main_articles if article['group_id'])
-                
-                bulk_group_query = f"""
-                    SELECT 
-                        n.group_id,
-                        n.id, n.clean_url AS url, n.title, n.description,
-                        CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date, 
-                        n.newspaper_name, annotation_label, classification_label, negative_reason
-                    FROM autokmdb_news n 
-                    WHERE n.group_id IN ({groups_list_page}) 
-                      AND n.id NOT IN ({main_ids_list})
-                    ORDER BY n.group_id, n.id
-                """
+        # Bulk fetch grouped articles for all groups on this page
+        grouped_by_group_id: dict = {}
+        page_group_ids = [a["group_id"] for a in main_articles if a["group_id"]]
+        if page_group_ids:
+            groups_list_page = ",".join(map(str, page_group_ids))
+            main_ids_list = ",".join(
+                str(a["id"]) for a in main_articles if a["group_id"]
+            )
+            bulk_group_query = f"""
+                SELECT
+                    n.group_id,
+                    n.id, n.clean_url AS url, n.title, n.description,
+                    CONVERT_TZ(n.article_date, @@session.time_zone, '+00:00') AS date,
+                    n.newspaper_name, annotation_label, classification_label, negative_reason
+                FROM autokmdb_news n
+                WHERE n.group_id IN ({groups_list_page})
+                  AND n.id NOT IN ({main_ids_list})
+                ORDER BY n.group_id, n.id
+            """
+            for article in conn.execute(text(bulk_group_query)).mappings():
+                grouped_by_group_id.setdefault(article["group_id"], []).append(dict(article))
 
-                cursor.execute(bulk_group_query)
-                all_grouped_articles = cursor.fetchall()
-
-                # Group the results by group_id for easy lookup
-                for article in all_grouped_articles:
-                    group_id = article["group_id"]
-                    if group_id not in grouped_by_group_id:
-                        grouped_by_group_id[group_id] = []
-                    grouped_by_group_id[group_id].append(dict(article))
-
-        # Step 4: Assign grouped articles to their main articles
-        for article in main_articles:
-            if article["group_id"]:
-                article["groupedArticles"] = grouped_by_group_id.get(
-                    article["group_id"], []
-                )
-            else:
-                article["groupedArticles"] = []
-
-            articles_with_groups.append(article)
-
-        return total_count, articles_with_groups
-
-
-def force_accept_article(
-    connection: PooledMySQLConnection, id: int, user_id: int
-) -> None:
-    query = """UPDATE autokmdb_news SET classification_label = 1, processing_step = 4, skip_reason = NULL, source = 1, mod_id = %s WHERE id = %s;"""
-    with connection.cursor() as cursor:
-        cursor.execute(query, (user_id, id))
-    connection.commit()
-
-
-def annote_negative(
-    connection: PooledMySQLConnection, id: int, reason: int, user_id: int
-) -> None:
-    query = """UPDATE autokmdb_news SET annotation_label = 0, processing_step = 5, negative_reason = %s, mod_id = %s WHERE id = %s;"""
-    query_id = """SELECT news_id FROM autokmdb_news WHERE id = %s;"""
-    query_remove = """DELETE FROM news_news WHERE news_id = %s;"""
-    query_remove_person = """DELETE FROM news_persons_link WHERE news_id = %s;"""
-    query_remove_institution = (
-        """DELETE FROM news_institutions_link WHERE news_id = %s;"""
-    )
-    query_remove_place = """DELETE FROM news_places_link WHERE news_id = %s;"""
-    query_remove_other = """DELETE FROM news_others_link WHERE news_id = %s;"""
-    query_remove_lang = """DELETE FROM news_lang WHERE news_id = %s;"""
-
-    with connection.cursor() as cursor:
-        cursor.execute(query_id, (id,))
-        news_id: int = cursor.fetchone()[0]
-        cursor.execute(
-            query,
-            (
-                reason,
-                user_id,
-                id,
-            ),
+    articles_with_groups = []
+    for article in main_articles:
+        article["groupedArticles"] = (
+            grouped_by_group_id.get(article["group_id"], []) if article["group_id"] else []
         )
+        articles_with_groups.append(article)
+
+    return total_count, articles_with_groups
+
+
+def force_accept_article(id: int, user_id: int) -> None:
+    _execute(
+        """UPDATE autokmdb_news SET classification_label = 1, processing_step = 4,
+           skip_reason = NULL, source = 1, mod_id = :user_id WHERE id = :id""",
+        {"user_id": user_id, "id": id},
+    )
+
+
+def annote_negative(id: int, reason: int, user_id: int) -> None:
+    with engine.begin() as conn:
+        row = conn.execute(
+            text("SELECT news_id FROM autokmdb_news WHERE id = :id"), {"id": id}
+        ).first()
+        news_id = row[0] if row else None
+
+        conn.execute(
+            text("""UPDATE autokmdb_news SET annotation_label = 0, processing_step = 5,
+                    negative_reason = :reason, mod_id = :user_id WHERE id = :id"""),
+            {"reason": reason, "user_id": user_id, "id": id},
+        )
+
         if news_id:
-            cursor.execute(query_remove, (news_id,))
-            cursor.execute(query_remove_person, (news_id,))
-            cursor.execute(query_remove_institution, (news_id,))
-            cursor.execute(query_remove_place, (news_id,))
-            cursor.execute(query_remove_other, (news_id,))
-            cursor.execute(query_remove_lang, (news_id,))
-    connection.commit()
+            for query in [
+                "DELETE FROM news_news WHERE news_id = :news_id",
+                "DELETE FROM news_persons_link WHERE news_id = :news_id",
+                "DELETE FROM news_institutions_link WHERE news_id = :news_id",
+                "DELETE FROM news_places_link WHERE news_id = :news_id",
+                "DELETE FROM news_others_link WHERE news_id = :news_id",
+                "DELETE FROM news_lang WHERE news_id = :news_id",
+            ]:
+                conn.execute(text(query), {"news_id": news_id})
 
 
-def create_person(connection: PooledMySQLConnection, name: str, user_id: int) -> int:
-    logging.info("adding new person: " + name)
-    query: str = (
-        """INSERT INTO news_persons (status, name, cre_id, mod_id, import_id, cre_time, mod_time) VALUES (%s, %s, %s, %s, %s, %s, %s);"""
-    )
-    query_seo: str = (
-        """INSERT INTO tags_seo_data (seo_name, tag_type, item_id) VALUES (%s, %s, %s);"""
-    )
-    query_check_person: str = """SELECT person_id FROM news_persons WHERE name = %s;"""
-
-    current_datetime: datetime = datetime.now()
-    cre_time: int = int(current_datetime.timestamp())
-
-    with connection.cursor() as cursor:
-        cursor.execute(query_check_person, (name,))
-        result: Optional[list[int]] = cursor.fetchone()
-        if result:
-            person_id: int = result[0]
-            logging.info(f"Person already exists with ID: {person_id}")
-            return person_id
-
-        cursor.execute(query, ("Y", name, user_id, user_id, 0, cre_time, cre_time))
-        db_id: int = cursor.lastrowid
-        cursor.execute(query_seo, (slugify(name), "persons", db_id))
-    connection.commit()
-    return db_id
-
-
-def create_institution(
-    connection: PooledMySQLConnection, name: str, user_id: int
+def _create_tag(
+    table: str, id_column: str, tag_type: str, name: str, user_id: int
 ) -> int:
-    logging.info("adding new institution: " + name)
-    query = """INSERT INTO news_institutions (status, name, cre_id, mod_id, import_id, cre_time, mod_time) VALUES (%s, %s, %s, %s, %s, %s, %s);"""
-    query_seo = """INSERT INTO tags_seo_data (seo_name, tag_type, item_id) VALUES (%s, %s, %s);"""
-    query_check_institution = (
-        """SELECT institution_id FROM news_institutions WHERE name = %s;"""
-    )
+    cre_time = int(datetime.now().timestamp())
+    with engine.begin() as conn:
+        existing = conn.execute(
+            text(f"SELECT {id_column} FROM {table} WHERE name = :name"),
+            {"name": name},
+        ).scalar()
+        if existing:
+            logging.info(f"{tag_type} already exists with ID: {existing}")
+            return existing
 
-    current_datetime: datetime = datetime.now()
-    cre_time = int(current_datetime.timestamp())
-
-    with connection.cursor() as cursor:
-        cursor.execute(query_check_institution, (name,))
-        result: list[int] = cursor.fetchone()
-        if result:
-            institution_id: int = result[0]
-            logging.info(f"Institution already exists with ID: {institution_id}")
-            return institution_id
-
-        cursor.execute(query, ("Y", name, user_id, user_id, 0, cre_time, cre_time))
-        db_id: int = cursor.lastrowid
-        cursor.execute(query_seo, (slugify(name), "institutions", db_id))
-    connection.commit()
+        db_id = conn.execute(
+            text(f"""INSERT INTO {table} (status, name, cre_id, mod_id, import_id, cre_time, mod_time)
+                     VALUES ('Y', :name, :user_id, :user_id, 0, :cre_time, :cre_time)"""),
+            {"name": name, "user_id": user_id, "cre_time": cre_time},
+        ).lastrowid
+        conn.execute(
+            text("""INSERT INTO tags_seo_data (seo_name, tag_type, item_id)
+                    VALUES (:seo_name, :tag_type, :item_id)"""),
+            {"seo_name": slugify(name), "tag_type": tag_type, "item_id": db_id},
+        )
     return db_id
+
+
+def create_person(name: str, user_id: int) -> int:
+    logging.info("adding new person: " + name)
+    return _create_tag("news_persons", "person_id", "persons", name, user_id)
+
+
+def create_institution(name: str, user_id: int) -> int:
+    logging.info("adding new institution: " + name)
+    return _create_tag("news_institutions", "institution_id", "institutions", name, user_id)
 
 
 def get_article_annotation(news_id):
@@ -1626,7 +1370,7 @@ def get_article_annotation(news_id):
     )
 
 
-def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
+def setTags(conn, news_id, persons, newspaper, institutions, places, others):
     def to_names(lst):
         result = []
         seen = set()
@@ -1647,47 +1391,34 @@ def setTags(cursor, news_id, persons, newspaper, institutions, places, others):
     names += to_names(institutions)
     names += to_names(places)
     names += to_names(others)
-
     names_str: str = "|".join(names)
 
-    tag_query = """SELECT tag_id FROM news_tags WHERE news_id = %s"""
-    tag_update = """UPDATE news_tags SET names = %s WHERE tag_id = %s"""
-    tag_insert = """INSERT INTO news_tags (names, news_id) VALUES (%s, %s)"""
+    tag_id = conn.execute(
+        text("SELECT tag_id FROM news_tags WHERE news_id = :news_id"),
+        {"news_id": news_id},
+    ).scalar()
 
-    cursor.execute(tag_query, (news_id,))
-    tag_result = cursor.fetchone()
-
-    if tag_result and tag_result.get("tag_id"):
-        tag_id = tag_result["tag_id"]
-        cursor.execute(
-            tag_update,
-            (
-                names_str,
-                tag_id,
-            ),
+    if tag_id:
+        conn.execute(
+            text("UPDATE news_tags SET names = :names WHERE tag_id = :tag_id"),
+            {"names": names_str, "tag_id": tag_id},
         )
-        logging.info(
-            f"updating tag_id={tag_id} news_id={news_id} with text: {names_str}"
-        )
+        logging.info(f"updating tag_id={tag_id} news_id={news_id} with text: {names_str}")
     else:
-        cursor.execute(
-            tag_insert,
-            (
-                names_str,
-                news_id,
-            ),
+        conn.execute(
+            text("INSERT INTO news_tags (names, news_id) VALUES (:names, :news_id)"),
+            {"names": names_str, "news_id": news_id},
         )
         logging.info(f"updating news_id={news_id} with text: {names_str}")
 
 
 def annote_positive(
-    connection: PooledMySQLConnection,
     id,
     source_url,
     source_url_string,
     title,
     description,
-    text,
+    text_content,
     persons,
     institutions,
     places,
@@ -1701,314 +1432,261 @@ def annote_positive(
     pub_date,
 ):
     """
-        This function annotates an article as positive, updating or creating the necessary records in the database.
-        It handles both the creation of new articles and the updating of existing ones, ensuring that all related entities are properly linked.
-        It should remove entities that are not present in the new data. It should update the article's status, source URL, and other metadata.
+    Annotates an article as positive, creating or updating the necessary records.
+    Handles entity linking and removes stale links.
     """
-
-    # Pre-calculate all constants
-    current_datetime = datetime.now()
-    cre_time = int(current_datetime.timestamp())
+    cre_time = int(datetime.now().timestamp())
     category_dict = {0: 5, 1: 6, 2: 7, None: 5}
     alias = slugify(title)
     seo_url_default = "hirek/magyar-hirek/" + alias
-    processed_text = text.replace("\n", "<br>")
+    processed_text = text_content.replace("\n", "<br>")
     pub_timestamp = int(pub_date.timestamp())
     status_flag = "Y" if is_active else "N"
-    
-    # Prepare entity collections
-    persons_to_create = [p for p in persons if ("db_id" not in p or not p["db_id"]) and p.get("name")]
-    institutions_to_create = [i for i in institutions if ("db_id" not in i or not i["db_id"]) and i.get("name")]
 
-    with connection.cursor(dictionary=True) as cursor:
-        # Single query to get all initial data needed
-        cursor.execute("SELECT news_id FROM autokmdb_news WHERE id = %s", (id,))
-        result = cursor.fetchone()
-        news_id = result["news_id"] if result else None
-        is_update = bool(news_id)
+    persons_to_create = [
+        p for p in persons
+        if ("db_id" not in p or not p["db_id"]) and p.get("name")
+    ]
+    institutions_to_create = [
+        i for i in institutions
+        if ("db_id" not in i or not i["db_id"]) and i.get("name")
+    ]
 
-        # Batch check existing entities in single transaction
-        existing_persons = {}
-        existing_institutions = {}
-        
-        if persons_to_create:
-            person_names = [p["name"] for p in persons_to_create]
-            placeholders = ",".join(["%s"] * len(person_names))
-            cursor.execute(
-                f"SELECT person_id, name FROM news_persons WHERE name IN ({placeholders})",
-                person_names
-            )
-            existing_persons = {row["name"]: row["person_id"] for row in cursor.fetchall()}
-
-        if institutions_to_create:
-            institution_names = [i["name"] for i in institutions_to_create]
-            placeholders = ",".join(["%s"] * len(institution_names))
-            cursor.execute(
-                f"SELECT institution_id, name FROM news_institutions WHERE name IN ({placeholders})",
-                institution_names
-            )
-            existing_institutions = {row["name"]: row["institution_id"] for row in cursor.fetchall()}
-
-        # Create missing entities (still needs individual calls for SEO)
+    # Resolve / create missing person+institution db_ids (these commit separately,
+    # matching the legacy behaviour where create_person/create_institution each
+    # had their own commit).
+    if persons_to_create:
+        person_names = [p["name"] for p in persons_to_create]
+        with engine.connect() as _conn:
+            stmt = text(
+                "SELECT person_id, name FROM news_persons WHERE name IN :names"
+            ).bindparams(bindparam("names", expanding=True))
+            existing_persons = {
+                r["name"]: r["person_id"]
+                for r in _conn.execute(stmt, {"names": person_names}).mappings()
+            }
         for person in persons_to_create:
             if person["name"] in existing_persons:
                 person["db_id"] = existing_persons[person["name"]]
             else:
-                person["db_id"] = create_person(connection, person["name"], user_id)
+                person["db_id"] = create_person(person["name"], user_id)
                 all_persons_by_id[person["db_id"]] = person["name"]
 
+    if institutions_to_create:
+        institution_names = [i["name"] for i in institutions_to_create]
+        with engine.connect() as _conn:
+            stmt = text(
+                "SELECT institution_id, name FROM news_institutions WHERE name IN :names"
+            ).bindparams(bindparam("names", expanding=True))
+            existing_institutions = {
+                r["name"]: r["institution_id"]
+                for r in _conn.execute(stmt, {"names": institution_names}).mappings()
+            }
         for institution in institutions_to_create:
             if institution["name"] in existing_institutions:
                 institution["db_id"] = existing_institutions[institution["name"]]
             else:
-                institution["db_id"] = create_institution(connection, institution["name"], user_id)
+                institution["db_id"] = create_institution(institution["name"], user_id)
                 all_institutions_by_id[institution["db_id"]] = institution["name"]
 
-        # Handle main news record operations
-        if is_update:
-            # Consolidated UPDATE for existing records
-            cursor.execute(
-                """UPDATE news_news SET source_url = %s, source_url_string = %s, 
-                   mod_time = %s, mod_id = %s, status = %s WHERE news_id = %s""",
-                (source_url, source_url_string, cre_time, user_id, status_flag, news_id)
-            )
-            
-            # Clear existing links before adding new ones
-            delete_queries = [
-                ("DELETE FROM news_persons_link WHERE news_id = %s", "persons"),
-                ("DELETE FROM news_institutions_link WHERE news_id = %s", "institutions"),
-                ("DELETE FROM news_places_link WHERE news_id = %s", "places"),
-                ("DELETE FROM news_others_link WHERE news_id = %s", "others"),
-                ("DELETE FROM news_files_link WHERE news_id = %s", "files")
-            ]
-            
-            for query, table_name in delete_queries:
-                try:
-                    cursor.execute(query, (news_id,))
-                    rows_affected = cursor.rowcount
-                    logging.info(f"Deleted {rows_affected} rows from {table_name} for news_id {news_id}")
-                except Exception as e:
-                    logging.error(f"Error deleting from {table_name}: {e}")
-                    # Re-raise to prevent duplicate key errors
-                    raise
-            
-        else:
-            # Create new news record
-            cursor.execute(
-                """INSERT INTO news_news (source_url, source_url_string, cre_time, 
-                   mod_time, pub_time, cre_id, mod_id, status, news_type, news_rel) 
-                   VALUES (%s, %s, %s, %s, %s, %s, %s, %s, 'D', 'N')""",
-                (source_url, source_url_string, cre_time, cre_time, pub_timestamp, 
-                 user_id, user_id, status_flag)
-            )
-            news_id = cursor.lastrowid
+    with engine.begin() as conn:
+        news_id = conn.execute(
+            text("SELECT news_id FROM autokmdb_news WHERE id = :id"), {"id": id}
+        ).scalar()
+        is_update = bool(news_id)
 
-        # Batch update autokmdb_news with category
-        cursor.execute(
-            """UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5, 
-               news_id = %s, title = %s, description = %s, text = %s, mod_id = %s, category = %s 
-               WHERE id = %s""",
-            (news_id, title, description, text, user_id, category, id)
+        if is_update:
+            conn.execute(
+                text("""UPDATE news_news SET source_url = :source_url,
+                        source_url_string = :source_url_string,
+                        mod_time = :cre_time, mod_id = :user_id, status = :status
+                        WHERE news_id = :news_id"""),
+                {
+                    "source_url": source_url, "source_url_string": source_url_string,
+                    "cre_time": cre_time, "user_id": user_id,
+                    "status": status_flag, "news_id": news_id,
+                },
+            )
+            for q in [
+                "DELETE FROM news_persons_link WHERE news_id = :news_id",
+                "DELETE FROM news_institutions_link WHERE news_id = :news_id",
+                "DELETE FROM news_places_link WHERE news_id = :news_id",
+                "DELETE FROM news_others_link WHERE news_id = :news_id",
+                "DELETE FROM news_files_link WHERE news_id = :news_id",
+            ]:
+                conn.execute(text(q), {"news_id": news_id})
+        else:
+            news_id = conn.execute(
+                text("""INSERT INTO news_news (source_url, source_url_string, cre_time,
+                        mod_time, pub_time, cre_id, mod_id, status, news_type, news_rel)
+                        VALUES (:source_url, :source_url_string, :cre_time, :cre_time,
+                                :pub_time, :user_id, :user_id, :status, 'D', 'N')"""),
+                {
+                    "source_url": source_url, "source_url_string": source_url_string,
+                    "cre_time": cre_time, "pub_time": pub_timestamp,
+                    "user_id": user_id, "status": status_flag,
+                },
+            ).lastrowid
+
+        conn.execute(
+            text("""UPDATE autokmdb_news SET annotation_label = 1, processing_step = 5,
+                    news_id = :news_id, title = :title, description = :description,
+                    text = :text, mod_id = :user_id, category = :category
+                    WHERE id = :id"""),
+            {
+                "news_id": news_id, "title": title, "description": description,
+                "text": text_content, "user_id": user_id, "category": category, "id": id,
+            },
         )
 
-        # Use REPLACE for SEO URLs (more efficient than DELETE + INSERT)
-        cursor.execute(
-            """REPLACE INTO seo_urls_data (seo_url, modul, action, item_id, lang) 
-               VALUES (%s, 'news', 'view', %s, 'hu')""",
-            (seo_url_default, news_id)
+        conn.execute(
+            text("""REPLACE INTO seo_urls_data (seo_url, modul, action, item_id, lang)
+                    VALUES (:seo_url, 'news', 'view', :item_id, 'hu')"""),
+            {"seo_url": seo_url_default, "item_id": news_id},
         )
 
-        # Handle language data
         if is_update:
-            cursor.execute(
-                """UPDATE news_lang SET lang = 'hu', name = %s, teaser = %s, 
-                   articletext = %s, alias = %s, seo_url_default = %s WHERE news_id = %s""",
-                (title, description, processed_text, alias, seo_url_default, news_id)
+            conn.execute(
+                text("""UPDATE news_lang SET lang = 'hu', name = :name, teaser = :teaser,
+                        articletext = :body, alias = :alias, seo_url_default = :seo
+                        WHERE news_id = :news_id"""),
+                {
+                    "name": title, "teaser": description, "body": processed_text,
+                    "alias": alias, "seo": seo_url_default, "news_id": news_id,
+                },
+            )
+            conn.execute(
+                text("UPDATE news_newspapers_link SET newspaper_id = :np WHERE news_id = :news_id"),
+                {"np": newspaper_id, "news_id": news_id},
+            )
+            conn.execute(
+                text("UPDATE news_categories_link SET cid = :cid, head = 'Y' WHERE news_id = :news_id"),
+                {"cid": category_dict[category], "news_id": news_id},
             )
         else:
-            cursor.execute(
-                """INSERT INTO news_lang (news_id, lang, name, teaser, articletext, alias, seo_url_default) 
-                   VALUES (%s, 'hu', %s, %s, %s, %s, %s)""",
-                (news_id, title, description, processed_text, alias, seo_url_default)
+            conn.execute(
+                text("""INSERT INTO news_lang (news_id, lang, name, teaser, articletext, alias, seo_url_default)
+                        VALUES (:news_id, 'hu', :name, :teaser, :body, :alias, :seo)"""),
+                {
+                    "news_id": news_id, "name": title, "teaser": description,
+                    "body": processed_text, "alias": alias, "seo": seo_url_default,
+                },
+            )
+            conn.execute(
+                text("INSERT INTO news_newspapers_link (news_id, newspaper_id) VALUES (:news_id, :np)"),
+                {"news_id": news_id, "np": newspaper_id},
+            )
+            conn.execute(
+                text("INSERT INTO news_categories_link (news_id, cid, head) VALUES (:news_id, :cid, 'Y')"),
+                {"news_id": news_id, "cid": category_dict[category]},
             )
 
-        # Handle newspaper and category links
-        if is_update:
-            cursor.execute(
-                "UPDATE news_newspapers_link SET newspaper_id = %s WHERE news_id = %s",
-                (newspaper_id, news_id)
-            )
-            cursor.execute(
-                "UPDATE news_categories_link SET cid = %s, head = 'Y' WHERE news_id = %s",
-                (category_dict[category], news_id)
-            )
-        else:
-            cursor.execute(
-                "INSERT INTO news_newspapers_link (news_id, newspaper_id) VALUES (%s, %s)",
-                (news_id, newspaper_id)
-            )
-            cursor.execute(
-                "INSERT INTO news_categories_link (news_id, cid, head) VALUES (%s, %s, 'Y')",
-                (news_id, category_dict[category])
-            )
+        # Collect unique entity IDs and per-entity annotation updates.
+        unique_person_ids, unique_institution_ids, unique_place_ids = set(), set(), set()
+        person_updates, institution_updates, place_updates = [], [], []
 
-        # Efficiently collect unique entity IDs and prepare batch operations
-        unique_person_ids = set()
-        unique_institution_ids = set()
-        unique_place_ids = set()
-        
-        person_updates = []
-        institution_updates = []
-        place_updates = []
-        
         for person in persons:
             if person.get("db_id"):
                 unique_person_ids.add(person["db_id"])
-            if "id" in person and isinstance(person["id"], int):
+            if isinstance(person.get("id"), int):
                 person_updates.append(person["id"])
-
         for institution in institutions:
             if institution.get("db_id"):
                 unique_institution_ids.add(institution["db_id"])
-            if "id" in institution and isinstance(institution["id"], int):
+            if isinstance(institution.get("id"), int):
                 institution_updates.append(institution["id"])
-
         for place in places:
             if place.get("db_id"):
                 unique_place_ids.add(place["db_id"])
-            if "id" in place and isinstance(place["id"], int):
+            if isinstance(place.get("id"), int):
                 place_updates.append(place["id"])
 
-        # Get parent places in batch if needed
         if unique_place_ids:
-            place_list = list(unique_place_ids)
-            placeholders = ",".join(["%s"] * len(place_list))
-            cursor.execute(
-                f"SELECT parent_id FROM news_places WHERE place_id IN ({placeholders}) AND parent_id IS NOT NULL",
-                place_list
-            )
-            for row in cursor.fetchall():
+            parent_stmt = text(
+                """SELECT parent_id FROM news_places
+                   WHERE place_id IN :ids AND parent_id IS NOT NULL"""
+            ).bindparams(bindparam("ids", expanding=True))
+            for row in conn.execute(
+                parent_stmt, {"ids": list(unique_place_ids)}
+            ).mappings():
                 if row["parent_id"]:
                     unique_place_ids.add(row["parent_id"])
 
-        # Prepare all batch insert operations
-        batch_inserts = []
-        
+        link_specs: list[tuple[str, list[dict]]] = []
         if unique_person_ids:
-            person_links = [(news_id, pid) for pid in unique_person_ids]
-            batch_inserts.append(("INSERT INTO news_persons_link (news_id, person_id) VALUES (%s, %s)", person_links))
-            
+            link_specs.append((
+                "INSERT INTO news_persons_link (news_id, person_id) VALUES (:news_id, :entity_id)",
+                [{"news_id": news_id, "entity_id": pid} for pid in unique_person_ids],
+            ))
         if unique_institution_ids:
-            institution_links = [(news_id, iid) for iid in unique_institution_ids]
-            batch_inserts.append(("INSERT INTO news_institutions_link (news_id, institution_id) VALUES (%s, %s)", institution_links))
-            
+            link_specs.append((
+                "INSERT INTO news_institutions_link (news_id, institution_id) VALUES (:news_id, :entity_id)",
+                [{"news_id": news_id, "entity_id": iid} for iid in unique_institution_ids],
+            ))
         if unique_place_ids:
-            place_links = [(news_id, pid) for pid in unique_place_ids]
-            batch_inserts.append(("INSERT INTO news_places_link (news_id, place_id) VALUES (%s, %s)", place_links))
-            
-        if others:
-            other_links = [(news_id, other["db_id"]) for other in others if other.get("db_id")]
-            if other_links:
-                batch_inserts.append(("INSERT INTO news_others_link (news_id, other_id) VALUES (%s, %s)", other_links))
-            
+            link_specs.append((
+                "INSERT INTO news_places_link (news_id, place_id) VALUES (:news_id, :entity_id)",
+                [{"news_id": news_id, "entity_id": pid} for pid in unique_place_ids],
+            ))
+        other_links = [
+            {"news_id": news_id, "entity_id": o["db_id"]}
+            for o in others if o.get("db_id")
+        ]
+        if other_links:
+            link_specs.append((
+                "INSERT INTO news_others_link (news_id, other_id) VALUES (:news_id, :entity_id)",
+                other_links,
+            ))
         if file_ids:
-            file_links = [(news_id, fid) for fid in file_ids]
-            batch_inserts.append(("INSERT INTO news_files_link (news_id, file_id) VALUES (%s, %s)", file_links))
+            link_specs.append((
+                "INSERT INTO news_files_link (news_id, file_id) VALUES (:news_id, :entity_id)",
+                [{"news_id": news_id, "entity_id": fid} for fid in file_ids],
+            ))
 
-        # Execute all batch inserts with error handling
-        for query, data in batch_inserts:
-            if data:
-                try:
-                    cursor.executemany(query, data)
-                    logging.info(f"Successfully inserted {len(data)} records for: {query.split()[2]}")
-                except Exception as e:
-                    logging.error(f"Error inserting data with query {query}: {e}")
-                    logging.error(f"Data sample: {data[:3] if len(data) > 3 else data}")
-                    raise
+        for query, data in link_specs:
+            try:
+                conn.execute(text(query), data)
+                logging.info(f"Successfully inserted {len(data)} records for: {query.split()[2]}")
+            except Exception as e:
+                logging.error(f"Error inserting data with query {query}: {e}")
+                logging.error(f"Data sample: {data[:3] if len(data) > 3 else data}")
+                raise
 
-        # First set all existing entities for this article to annotation_label = 0
-        cursor.execute(
-            "UPDATE autokmdb_persons SET annotation_label = 0 WHERE autokmdb_news_id = %s",
-            (id,)
-        )
-        cursor.execute(
-            "UPDATE autokmdb_institutions SET annotation_label = 0 WHERE autokmdb_news_id = %s",
-            (id,)
-        )
-        cursor.execute(
-            "UPDATE autokmdb_places SET annotation_label = 0 WHERE autokmdb_news_id = %s",
-            (id,)
-        )
-        cursor.execute(
-            "UPDATE autokmdb_others SET annotation_label = 0 WHERE autokmdb_news_id = %s",
-            (id,)
-        )
-        cursor.execute(
-            "UPDATE autokmdb_files SET annotation_label = 0 WHERE autokmdb_news_id = %s",
-            (id,)
-        )
-
-        # Then update annotation labels to 1 for entities present in the request
-        if person_updates:
-            cursor.executemany(
-                "UPDATE autokmdb_persons SET annotation_label = 1 WHERE id = %s",
-                [(pid,) for pid in person_updates]
-            )
-            
-        if institution_updates:
-            cursor.executemany(
-                "UPDATE autokmdb_institutions SET annotation_label = 1 WHERE id = %s",
-                [(iid,) for iid in institution_updates]
-            )
-            
-        if place_updates:
-            cursor.executemany(
-                "UPDATE autokmdb_places SET annotation_label = 1 WHERE id = %s",
-                [(pid,) for pid in place_updates]
+        # Reset annotation_label=0 on all autokmdb_* entities for this article.
+        for table in ("autokmdb_persons", "autokmdb_institutions",
+                      "autokmdb_places", "autokmdb_others", "autokmdb_files"):
+            conn.execute(
+                text(f"UPDATE {table} SET annotation_label = 0 WHERE autokmdb_news_id = :id"),
+                {"id": id},
             )
 
-        # Update others entities that are present in the request
-        others_updates = []
-        for other in others:
-            if "id" in other and isinstance(other["id"], int):
-                others_updates.append(other["id"])
-        
-        if others_updates:
-            cursor.executemany(
-                "UPDATE autokmdb_others SET annotation_label = 1 WHERE id = %s",
-                [(oid,) for oid in others_updates]
-            )
-        
-        # Update files entities that are present in the request
-        files_updates = []
-        for file_id in file_ids:
-            if isinstance(file_id, int):
-                files_updates.append(file_id)
+        # Re-set annotation_label=1 for entities present in the request.
+        def _set_labels_one(table: str, ids: list[int]) -> None:
+            if ids:
+                conn.execute(
+                    text(f"UPDATE {table} SET annotation_label = 1 WHERE id = :id"),
+                    [{"id": i} for i in ids],
+                )
 
-        if files_updates:
-            cursor.executemany(
-                "UPDATE autokmdb_files SET annotation_label = 1 WHERE id = %s",
-                [(fid,) for fid in files_updates]
-            )
+        _set_labels_one("autokmdb_persons", person_updates)
+        _set_labels_one("autokmdb_institutions", institution_updates)
+        _set_labels_one("autokmdb_places", place_updates)
+        _set_labels_one("autokmdb_others", [
+            o["id"] for o in others if isinstance(o.get("id"), int)
+        ])
+        _set_labels_one("autokmdb_files", [
+            fid for fid in file_ids if isinstance(fid, int)
+        ])
 
-        # Handle tags last
-        setTags(cursor, news_id, persons, newspaper_name, institutions, places, others)
-
-    connection.commit()
+        setTags(conn, news_id, persons, newspaper_name, institutions, places, others)
 
 
-def save_ner_step(connection: PooledMySQLConnection, id):
-    query = """UPDATE autokmdb_news SET processing_step = 3 WHERE id = %s;"""
-    with connection.cursor() as cursor:
-        cursor.execute(query, (id,))
-    connection.commit()
+def save_ner_step(id):
+    _execute("UPDATE autokmdb_news SET processing_step = 3 WHERE id = :id", {"id": id})
 
 
-def save_keyword_step(connection: PooledMySQLConnection, id):
-    query = """UPDATE autokmdb_news SET processing_step = 4 WHERE id = %s;"""
-    with connection.cursor() as cursor:
-        cursor.execute(query, (id,))
-    connection.commit()
+def save_keyword_step(id):
+    _execute("UPDATE autokmdb_news SET processing_step = 4 WHERE id = :id", {"id": id})
 
 
 def get_rss_urls() -> list[dict]:
@@ -2024,113 +1702,72 @@ def get_keyword_synonyms() -> list[dict]:
     )
 
 
-def update_session(
-    connection: PooledMySQLConnection, session_id: Optional[str], unix_timestamp: int
-):
-    query = """UPDATE users_sessions SET session_expires = %s WHERE session_id = %s"""
-    dt: datetime = datetime.fromtimestamp(unix_timestamp)
-    new_dt: datetime = dt + timedelta(minutes=30)
-    new_unix_timestamp = int(new_dt.timestamp())
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (new_unix_timestamp, session_id))
-    connection.commit()
+def update_session(session_id: Optional[str], unix_timestamp: int):
+    new_unix_timestamp = int(
+        (datetime.fromtimestamp(unix_timestamp) + timedelta(minutes=30)).timestamp()
+    )
+    _execute(
+        "UPDATE users_sessions SET session_expires = :expires WHERE session_id = :id",
+        {"expires": new_unix_timestamp, "id": session_id},
+    )
 
 
-def validate_session(connection: PooledMySQLConnection, session_id: Optional[str]):
+def validate_session(session_id: Optional[str]):
     if "NO_LOGIN" in os.environ:
         return True
-    query = """SELECT * FROM users_sessions WHERE session_id = %s;"""
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (session_id,))
-        session: Optional[dict] = cursor.fetchone()
+    session = _fetch_one_dict(
+        "SELECT * FROM users_sessions WHERE session_id = :id", {"id": session_id}
+    )
     if session is None or session["registered"] == 0:
         return None
-
-    update_session(connection, session_id, session["session_expires"])
-
+    update_session(session_id, session["session_expires"])
     return session["registered"]
 
 
-def get_roles(connection: PooledMySQLConnection, session_id: int):
-    query = """SELECT * FROM users_sessions WHERE session_id = %s;"""
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (session_id,))
-    session: dict = cursor.fetchone()
+def get_roles(session_id: int):
+    session = _fetch_one_dict(
+        "SELECT * FROM users_sessions WHERE session_id = :id", {"id": session_id}
+    )
     if session is None or session["registered"] == 0:
         return []
-
-    user_id: int = session["registered"]
-
-    query_u = """SELECT * FROM users_modul_rights WHERE user_id = %s;"""
-
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query_u, (user_id,))
-
-    roles: list[dict[str, Any]] = [
+    rows = _fetch_all_dicts(
+        "SELECT * FROM users_modul_rights WHERE user_id = :user_id",
+        {"user_id": session["registered"]},
+    )
+    return [
         {
             "modul_name": r["modul_name"],
             "action_name": r["action_name"],
             "action_right": r["action_right"],
         }
-        for r in cursor.fetchall()
+        for r in rows
     ]
 
-    return roles
 
-
-def validate_user_credentials(connection: PooledMySQLConnection, username: str, password: str) -> Optional[int]:
-    """
-    Validate user credentials against the database.
-    
-    Args:
-        connection: Database connection
-        username: Username to validate
-        password: Password to validate (will be MD5 hashed)
-    
-    Returns:
-        User ID if valid, None if invalid
-    """
+def validate_user_credentials(username: str, password: str) -> Optional[int]:
+    """Validate user credentials (MD5). Returns user_id if valid, else None."""
     import hashlib
-    
-    # Hash the password using MD5
-    password_hash = hashlib.md5(password.encode('utf-8')).hexdigest()
-    
-    query = """SELECT user_id FROM users WHERE uname = %s AND upass = %s AND ustatus = 'Y'"""
-    with connection.cursor(dictionary=True) as cursor:
-        cursor.execute(query, (username, password_hash))
-        result = cursor.fetchone()
-        return result["user_id"] if result else None
+    password_hash = hashlib.md5(password.encode("utf-8")).hexdigest()
+    return _fetch_scalar(
+        """SELECT user_id FROM users
+           WHERE uname = :username AND upass = :password_hash AND ustatus = 'Y'""",
+        {"username": username, "password_hash": password_hash},
+    )
 
 
-def create_user_session(connection: PooledMySQLConnection, user_id: int) -> str:
-    """
-    Create a new session for the user.
-    
-    Args:
-        connection: Database connection
-        user_id: ID of the user to create session for
-    
-    Returns:
-        Session ID string
-    """
+def create_user_session(user_id: int) -> str:
+    """Create a new 8-hour session for the user. Returns the session ID."""
     import secrets
     import time
     import string
-    
-    # Generate a secure random session ID using only alphanumeric characters
+
     alphabet = string.ascii_letters + string.digits
-    session_id = ''.join(secrets.choice(alphabet) for _ in range(32))
-    
-    # Set session to expire in 8 hours
-    current_time = int(time.time())
-    expires_time = current_time + (8 * 60 * 60)  # 8 hours from now
-    
-    # Insert session into database
-    query = """INSERT INTO users_sessions (session_id, registered, session_expires) 
-               VALUES (%s, %s, %s)"""
-    
-    with connection.cursor() as cursor:
-        cursor.execute(query, (session_id, user_id, expires_time))
-    
-    connection.commit()
+    session_id = "".join(secrets.choice(alphabet) for _ in range(32))
+    expires_time = int(time.time()) + (8 * 60 * 60)
+
+    _execute(
+        """INSERT INTO users_sessions (session_id, registered, session_expires)
+           VALUES (:session_id, :user_id, :expires)""",
+        {"session_id": session_id, "user_id": user_id, "expires": expires_time},
+    )
     return session_id

@@ -9,7 +9,6 @@ from typing import Literal, Optional, Sequence
 import logging
 from spacy.language import Language
 
-from auto_kmdb.db import connection_pool
 from auto_kmdb.db import (
     get_all_persons_freq,
     get_all_institutions_freq,
@@ -52,11 +51,10 @@ def get_synonyms_file(
     synonym_mapping = pd.DataFrame(columns=["db_keyword"])
     synonym_mapping.index.name = "entity"
 
-    with connection_pool.get_connection() as connection:
-        if entity_type == "places":
-            db_entities = get_all_places()
-        elif entity_type == "institutions":
-            db_entities = get_all_institutions()
+    if entity_type == "places":
+        db_entities = get_all_places()
+    elif entity_type == "institutions":
+        db_entities = get_all_institutions()
 
     entity_dict = {}
     for e in db_entities:
@@ -92,17 +90,16 @@ def get_entities_freq(
     Returns:
         Dataframe indexed by db keyword names, containing 'id' and 'count' column.
     """
-    with connection_pool.get_connection() as connection:
-        if type == "people":
-            db_entities = get_all_persons_freq()
-        elif type == "places":
-            db_entities = get_all_places_freq()
-        elif type == "institutions":
-            db_entities = get_all_institutions_freq()
-        else:
-            raise ValueError(
-                "type parameter should be one of the following: 'people', 'places', 'institutions'"
-            )
+    if type == "people":
+        db_entities = get_all_persons_freq()
+    elif type == "places":
+        db_entities = get_all_places_freq()
+    elif type == "institutions":
+        db_entities = get_all_institutions_freq()
+    else:
+        raise ValueError(
+            "type parameter should be one of the following: 'people', 'places', 'institutions'"
+        )
     db_entities = (
         pd.DataFrame(db_entities)
         .convert_dtypes(

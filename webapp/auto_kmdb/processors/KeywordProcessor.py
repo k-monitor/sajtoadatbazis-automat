@@ -146,35 +146,32 @@ class KeywordProcessor(Processor):
             others = self.predict_others(text)
             files = self.predict_files(text)
 
-            with db.connection_pool.get_connection() as connection:
-                for other_name, classification_score in others:
-                    other_id = other_name_to_id.get(other_name, None)
-                    if other_id is None:
-                        logging.warning(
-                            f"KeywordProcessor: {other_name} not found in others table"
-                        )
-                        continue
-                    db.add_auto_other(
-                        connection,
-                        next_row["id"],
-                        other_id,
-                        other_name,
-                        float(classification_score),
-                        1,
+            for other_name, classification_score in others:
+                other_id = other_name_to_id.get(other_name, None)
+                if other_id is None:
+                    logging.warning(
+                        f"KeywordProcessor: {other_name} not found in others table"
                     )
-                for file_name, classification_score in files:
-                    file_id = file_name_to_id.get(file_name, None)
-                    if file_id is None:
-                        logging.warning(
-                            f"KeywordProcessor: {file_name} not found in files table"
-                        )
-                        continue
-                    db.add_auto_files(
-                        connection,
-                        next_row["id"],
-                        file_id,
-                        file_name,
-                        float(classification_score),
-                        1,
+                    continue
+                db.add_auto_other(
+                    next_row["id"],
+                    other_id,
+                    other_name,
+                    float(classification_score),
+                    1,
+                )
+            for file_name, classification_score in files:
+                file_id = file_name_to_id.get(file_name, None)
+                if file_id is None:
+                    logging.warning(
+                        f"KeywordProcessor: {file_name} not found in files table"
                     )
-                db.save_keyword_step(connection, next_row["id"])
+                    continue
+                db.add_auto_files(
+                    next_row["id"],
+                    file_id,
+                    file_name,
+                    float(classification_score),
+                    1,
+                )
+            db.save_keyword_step(next_row["id"])

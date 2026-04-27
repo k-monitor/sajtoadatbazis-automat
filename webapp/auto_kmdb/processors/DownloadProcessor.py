@@ -192,29 +192,25 @@ def save_article(
         and article_download.same_news_id != newspaper_id
         and source != 1
     ):
-        with db.connection_pool.get_connection() as connection:
-            db.skip_same_news(
-                connection,
-                news_id,
-                article_download.text,
-                article_download.title,
-                article_download.description,
-                article_download.authors,
-                str_date,
-                article_download.is_paywalled,
-            )
+        db.skip_same_news(
+            news_id,
+            article_download.text,
+            article_download.title,
+            article_download.description,
+            article_download.authors,
+            str_date,
+            article_download.is_paywalled,
+        )
     else:
-        with db.connection_pool.get_connection() as connection:
-            db.save_download_step(
-                connection,
-                news_id,
-                article_download.text,
-                article_download.title,
-                article_download.description,
-                article_download.authors,
-                str_date,
-                article_download.is_paywalled,
-            )
+        db.save_download_step(
+            news_id,
+            article_download.text,
+            article_download.title,
+            article_download.description,
+            article_download.authors,
+            str_date,
+            article_download.is_paywalled,
+        )
 
 
 def login_24(username: str, password: str) -> dict[str, str]:
@@ -595,6 +591,5 @@ class DownloadProcessor(Processor):
             )
         except Exception as e:
             logging.error(e)
-            with db.connection_pool.get_connection() as connection:
-                db.skip_download_error(connection, next_row["id"])
+            db.skip_download_error(next_row["id"])
             sleep(2)

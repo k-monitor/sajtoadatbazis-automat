@@ -57,17 +57,15 @@ def rss_watcher(app_context):
             if not db.check_url_exists(article["clean_url"]) and not skip_url(
                 article["clean_url"]
             ) and not re.fullmatch(r'.*\/\d{4}\/\d{2}', article["clean_url"]):
-                with db.connection_pool.get_connection() as connection:
-                    db.init_news(
-                        connection,
-                        "rss",
-                        article["url"],
-                        article["clean_url"],
-                        article["newspaper"],
-                        article["newspaper_id"],
-                        1,
-                        article["release_date"],
-                    )
+                db.init_news(
+                    "rss",
+                    article["url"],
+                    article["clean_url"],
+                    article["newspaper"],
+                    article["newspaper_id"],
+                    1,
+                    article["release_date"],
+                )
 
 
 def skip_url(url) -> bool:

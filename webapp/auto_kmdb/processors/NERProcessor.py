@@ -11,7 +11,6 @@ from auto_kmdb.utils.entity_linking import (
 )
 from auto_kmdb.processors import Processor
 from time import sleep
-from auto_kmdb.db import connection_pool
 import warnings
 
 warnings.simplefilter(action="ignore", category=FutureWarning)
@@ -235,23 +234,20 @@ class NERProcessor(Processor):
                 )
                 for start_char in mapping.index.values:
                     entity_infos = mapping.loc[start_char]
-                    with connection_pool.get_connection() as connection:
-                        db_function(
-                            connection,
-                            next_row["id"],
-                            entity_infos.loc["combed_mapping"],
-                            str(entity_infos.loc["keyword_id"]),
-                            entity_infos.loc["detected_ent_raw"],
-                            str(start_char),
-                            add_institution_dot(entity_infos.loc["detected_ent"], type),
-                            str(entity_infos.loc["score"]),
-                            str(entity_infos.loc["class"]),
-                        )
+                    db_function(
+                        next_row["id"],
+                        entity_infos.loc["combed_mapping"],
+                        str(entity_infos.loc["keyword_id"]),
+                        entity_infos.loc["detected_ent_raw"],
+                        str(start_char),
+                        add_institution_dot(entity_infos.loc["detected_ent"], type),
+                        str(entity_infos.loc["score"]),
+                        str(entity_infos.loc["class"]),
+                    )
                 del mapping
                 gc.collect()
 
-        with connection_pool.get_connection() as connection:
-            save_ner_step(connection, next_row["id"])
+        save_ner_step(next_row["id"])
 
     def process_next(self):
         next_rows: list = get_ner_queue()
@@ -263,7 +259,7 @@ class NERProcessor(Processor):
             try:
                 self.do_process(next_row)
             except Exception as e:
-                skip_processing_error(connection, next_row["id"])
+                skip_processing_error(next_row["id"])
                 logging.warn("exception during: " + str(next_row["id"]))
                 logging.error(e)
                 print(traceback.format_exc())

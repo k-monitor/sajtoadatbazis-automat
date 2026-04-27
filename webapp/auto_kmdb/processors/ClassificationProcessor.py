@@ -287,14 +287,12 @@ class ClassificationProcessor(Processor):
         del inputs, logits, probabilities
         return label, score, category, article_text
 
-    def _save_classification(self, connection, next_row, label, score, category):
+    def _save_classification(self, next_row, label, score, category):
         """Saves the classification result to the database."""
         if next_row["source"] == 1:
-            db.save_classification_step(connection, next_row["id"], 1, 1.0, category)
+            db.save_classification_step(next_row["id"], 1, 1.0, category)
         else:
-            db.save_classification_step(
-                connection, next_row["id"], label, score, category
-            )
+            db.save_classification_step(next_row["id"], label, score, category)
 
     def process_next(self):
         next_rows = db.get_classification_queue()
@@ -339,34 +337,23 @@ class ClassificationProcessor(Processor):
                     # article_id: similar article
                     for article_id, distance in good_results:
                         group_id = db.find_group_by_autokmdb_id(article_id)
-                        with db.connection_pool.get_connection() as connection:
-                            if group_id:
-                                db.add_article_to_group(
-                                    connection, autokmdb_id, group_id
-                                )
-                            else:
-                                # time comparison can be implemented in the future
-                                original_article_id = article_id
-                                new_article_id = autokmdb_id
-                                db.add_article_group(connection, original_article_id)
-                                group_id = db.find_group_by_autokmdb_id(
-                                    original_article_id
-                                )
-                                db.add_article_to_group(
-                                    connection, new_article_id, group_id
-                                )
+                        if group_id:
+                            db.add_article_to_group(autokmdb_id, group_id)
+                        else:
+                            # time comparison can be implemented in the future
+                            original_article_id = article_id
+                            new_article_id = autokmdb_id
+                            db.add_article_group(original_article_id)
+                            group_id = db.find_group_by_autokmdb_id(original_article_id)
+                            db.add_article_to_group(new_article_id, group_id)
                         break  # temporary solution
 
                     # Add to search index for future comparisons
                     add_to_search_index(autokmdb_id, full_text, domain)
 
-                with db.connection_pool.get_connection() as connection:
-                    self._save_classification(
-                        connection, next_row, label, score, category
-                    )
+                self._save_classification(next_row, label, score, category)
             except Exception as e:
-                with db.connection_pool.get_connection() as connection:
-                    db.skip_processing_error(connection, autokmdb_id)
+                db.skip_processing_error(autokmdb_id)
 
                 logging.warning(
                     f"Exception during Classification Processing: {autokmdb_id}"
