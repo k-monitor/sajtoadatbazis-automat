@@ -187,32 +187,32 @@ const { data: articleCounts, refresh: refreshArticleCounts } = useAuthLazyFetch(
 
 const statusItems = computed(() => [
   {
-    label: `Ellenőrizendő (${articleCounts.value ? articleCounts.value["mixed"] : "..."
-      })`,
+    label: "Ellenőrizendő",
+    count: articleCounts.value ? articleCounts.value["mixed"] : null,
     key: "mixed",
     icon: "i-heroicons-question-mark-circle-solid",
   },
   {
-    label: `Elfogadott (${articleCounts.value ? articleCounts.value["positive"] : "..."
-      })`,
+    label: "Elfogadott",
+    count: articleCounts.value ? articleCounts.value["positive"] : null,
     key: "positive",
     icon: "i-heroicons-check-circle-solid",
   },
   {
-    label: `Elutasított (${articleCounts.value ? articleCounts.value["negative"] : "..."
-      })`,
+    label: "Elutasított",
+    count: articleCounts.value ? articleCounts.value["negative"] : null,
     key: "negative",
     icon: "i-heroicons-x-circle-solid",
   },
   {
-    label: `Feldolgozás alatt (${articleCounts.value ? articleCounts.value["processing"] : "..."
-      })`,
+    label: "Feldolgozás alatt",
+    count: articleCounts.value ? articleCounts.value["processing"] : null,
     key: "processing",
     icon: "i-heroicons-clock",
   },
   {
-    label: `Mindegyik (${articleCounts.value ? articleCounts.value["all"] : "..."
-      })`,
+    label: "Mindegyik",
+    count: articleCounts.value ? articleCounts.value["all"] : null,
     key: "all",
     icon: "i-heroicons-bars-3",
   },
@@ -472,7 +472,7 @@ async function handleAddUrl(newUrl: string, selectedDomain: { id: number; name: 
     
     <!-- Show main content if authenticated -->
     <template v-else>
-      <UContainer class="my-1 flex flex-wrap lg:px-0 px-4 sm:px-0 ml-1 max-w-full items-center gap-2">
+      <UContainer class="my-1 pb-2 border-b border-gray-200 dark:border-gray-700 flex flex-wrap lg:px-0 px-4 sm:px-0 ml-1 max-w-full items-center gap-2">
         <div class="flex items-center my-1">
           <PageTitle :baseUrl="baseUrl" />
           <a href="./stats" class="ml-1"><Icon title="Statisztikák" name="mdi:chart-arc" size="30" style="color:rgb(34 197 94 / 1);"></Icon></a>
@@ -493,7 +493,7 @@ async function handleAddUrl(newUrl: string, selectedDomain: { id: number; name: 
         <AnnoteMultiple :articles="articles" :loadingDelete="loadingDelete" @bulkDelete="deleteArticles" />
       </UContainer>
 
-      <UContainer class="my-1 flex flex-wrap lg:px-0 px-4 sm:px-0 ml-1 max-w-full items-center gap-1">
+      <UContainer class="my-1 pb-2 border-b border-gray-200 dark:border-gray-700 flex flex-wrap lg:px-0 px-4 sm:px-0 ml-1 max-w-full items-center gap-1">
         <span class="text-sm text-gray-600 font-medium ml-1 mr-1">Szűrők:</span>
         <NewspaperSelectMenu :allDomains="allDomains" :selectedDomains="selectedDomains"
           @update:selectedDomains="updateSelectedDomains" @refresh="refresh" />
@@ -541,7 +541,51 @@ async function handleAddUrl(newUrl: string, selectedDomain: { id: number; name: 
         </div>
       </UModal>
 
-      <UTabs :items="statusItems" v-model="statusId" @change="resetPageRefresh">
+      <UTabs
+        :items="statusItems"
+        v-model="statusId"
+        @change="resetPageRefresh"
+        :ui="{
+          wrapper: 'space-y-2',
+          list: {
+            base: 'relative',
+            width: 'w-auto',
+            background: 'bg-transparent',
+            rounded: 'rounded-none',
+            shadow: '',
+            padding: 'p-0',
+            height: 'h-auto',
+            marker: {
+              wrapper: 'absolute top-[unset] bottom-0 left-0 duration-200 ease-out focus:outline-none',
+              base: 'w-full h-full',
+              background: 'bg-transparent',
+              rounded: 'rounded-none',
+              shadow: '',
+            },
+            tab: {
+              base: 'relative inline-flex items-center justify-center flex-shrink-0 w-auto ui-focus-visible:outline-0 ui-focus-visible:ring-0 ui-not-focus-visible:outline-none focus:outline-none disabled:cursor-not-allowed disabled:opacity-75 transition-colors duration-200 ease-out',
+              background: '',
+              active: 'text-gray-900 dark:text-white font-bold border-b-2 border-green-500',
+              inactive: 'text-gray-600 dark:text-gray-300 hover:text-gray-900 border-b-2 border-transparent',
+              height: 'h-10',
+              padding: 'px-3',
+              size: 'text-sm',
+              font: '',
+              rounded: 'rounded-none',
+              shadow: '',
+              icon: 'flex-shrink-0 w-4 h-4 text-gray-500 dark:text-gray-500 me-2',
+            },
+          },
+        }"
+        class="border-b border-gray-200 dark:border-gray-700"
+      >
+        <template #default="{ item, selected }">
+          <span class="truncate">{{ item.label }}</span>
+          <span
+            class="ml-2 px-1.5 py-0.5 text-xs rounded font-medium"
+            :class="selected ? 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400'"
+          >{{ item.count !== null ? item.count.toLocaleString('hu-HU') : '...' }}</span>
+        </template>
         <template #item="{ item }" v-if="!pending">
           <UPagination class="p-4 justify-center" v-model="page" :page-count="10" :total="itemsCount || 0" @change="refresh" />
 
@@ -582,5 +626,11 @@ async function handleAddUrl(newUrl: string, selectedDomain: { id: number; name: 
 <style scoped>
 .date-separator {
   width: 100%;
+}
+
+:deep([role="tablist"]) {
+  display: flex !important;
+  justify-content: flex-start;
+  grid-template-columns: none !important;
 }
 </style>
