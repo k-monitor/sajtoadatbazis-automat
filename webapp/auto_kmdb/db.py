@@ -1030,10 +1030,10 @@ def group_articles(articles):
 
 def _score_bucket_range(score_bucket: int) -> Optional[tuple[float, float]]:
     buckets = {
-        0: (0.0, 0.25),
-        1: (0.25, 0.5),
+        0: (0.9, 1.0001),
+        1: (0.75, 0.9),
         2: (0.5, 0.75),
-        3: (0.75, 1.0001),
+        3: (0.0, 0.5),
     }
     return buckets.get(score_bucket)
 

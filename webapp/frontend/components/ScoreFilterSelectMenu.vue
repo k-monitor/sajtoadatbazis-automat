@@ -18,10 +18,10 @@ import { ref, watch } from 'vue';
 
 const buckets = [
     { name: "Bármilyen %", id: -1, min: null, max: null },
-    { name: "0–25%", id: 0, min: 0.0, max: 0.25 },
-    { name: "25–50%", id: 1, min: 0.25, max: 0.5 },
+    { name: "90–100%", id: 0, min: 0.9, max: 1.0001 },
+    { name: "75–90%", id: 1, min: 0.75, max: 0.9 },
     { name: "50–75%", id: 2, min: 0.5, max: 0.75 },
-    { name: "75–100%", id: 3, min: 0.75, max: 1.0001 },
+    { name: "< 50%", id: 3, min: 0.0, max: 0.5 },
 ];
 
 const emit = defineEmits(['update:selectedScore', 'refresh']);
