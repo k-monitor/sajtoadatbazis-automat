@@ -591,7 +591,11 @@ let errorText = ref("");
 let articleLength = computed(() => (article.value.text ?? "").length)
 
 async function retryArticle() {
-  // TODO
+  await postUrl(baseUrl + "/api/retry_article", {
+    method: "POST",
+    body: { id: article.value.id },
+  });
+  refresh();
 }
 
 function getMethod() {

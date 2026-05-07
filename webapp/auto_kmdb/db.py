@@ -1306,6 +1306,16 @@ def force_accept_article(id: int, user_id: int) -> None:
     )
 
 
+def retry_article(id: int) -> None:
+    _execute(
+        """UPDATE autokmdb_news
+           SET skip_reason = NULL,
+               processing_step = CASE WHEN COALESCE(text, '') = '' THEN 0 ELSE 1 END
+           WHERE id = :id""",
+        {"id": id},
+    )
+
+
 def annote_negative(id: int, reason: int, user_id: int) -> None:
     with engine.begin() as conn:
         row = conn.execute(

@@ -229,6 +229,23 @@ def force_accept():
     return jsonify({}), 200
 
 
+@api.route("/retry_article", methods=["POST"])
+def retry_article():
+    session_id: Optional[str] = get_session_id(request)
+    user_id: Optional[int | bool] = db.validate_session(session_id)
+    if not user_id:
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    content: Optional[dict] = request.json
+
+    if not content:
+        return jsonify({}), 400
+
+    id: int = content["id"]
+    db.retry_article(id)
+    return jsonify({}), 200
+
+
 @api.route("/process_and_accept", methods=["POST"])
 def process_and_accept():
     session_id: Optional[str] = get_session_id(request)
