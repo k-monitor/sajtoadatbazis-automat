@@ -563,13 +563,22 @@ def get_human_queue() -> list[dict[str, Any]]:
     return get_step_queue(4)
 
 
-@cached(cache=TTLCache(maxsize=32, ttl=3600))
+@cached(cache=TTLCache(maxsize=64, ttl=3600))
 def get_articles_by_day(
-    newspaper_id: Optional[int] = None
+    newspaper_id: Optional[int] = None,
+    start: str = "2000-01-01",
+    end: str = "2050-01-01",
 ) -> list[dict]:
-    newspaper_condition = "WHERE newspaper_id = :newspaper_id" if newspaper_id else ""
-    params = {"newspaper_id": newspaper_id} if newspaper_id else {}
+    conditions = ["article_date BETWEEN :start AND :end"]
+    params: dict[str, Any] = {
+        "start": start + " 00:00:00",
+        "end": end + " 23:59:59",
+    }
+    if newspaper_id:
+        conditions.append("newspaper_id = :newspaper_id")
+        params["newspaper_id"] = newspaper_id
 
+    where_clause = " AND ".join(conditions)
     query = f"""
         SELECT
             DATE(article_date) AS date,
@@ -583,7 +592,7 @@ def get_articles_by_day(
             SUM(CASE WHEN classification_label = 1 AND processing_step = 4
                      AND annotation_label IS NULL AND COALESCE(skip_reason, 0) = 0 THEN 1 ELSE 0 END) AS count_todo
         FROM autokmdb_news
-        {newspaper_condition}
+        WHERE {where_clause}
         GROUP BY DATE(article_date)
         ORDER BY date
     """
