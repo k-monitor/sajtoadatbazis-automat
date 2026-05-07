@@ -87,13 +87,15 @@ def api_article_counts():
     domains: dict = content["domain"]
     domain_ids: list[int] = [domain["id"] for domain in domains] if domains else [-1]
     skip_reasin: int = content.get("skip_reason", -1)
+    score_bucket: int = content.get("score_bucket", -1)
 
     # Check if search term is a URL and clean it
     is_url_search = is_url(q)
     cleaned_url = clear_url(q) if is_url_search else ""
 
     article_counts = db.get_article_counts(
-        domain_ids, "%" + q + "%", start, end, skip_reasin, is_url_search, cleaned_url
+        domain_ids, "%" + q + "%", start, end, skip_reasin, is_url_search, cleaned_url,
+        score_bucket=score_bucket,
     )
 
     return jsonify(article_counts), 200
@@ -161,6 +163,7 @@ def api_articles():
     domain_ids: list[int] = [domain["id"] for domain in domains] if domains else [-1]
     reverse: bool = content.get("reverse", False)
     skip_reasin: int = content.get("skip_reason", -1)
+    score_bucket: int = content.get("score_bucket", -1)
 
     # Check if search term is a URL and clean it
     is_url_search = is_url(q)
@@ -178,6 +181,7 @@ def api_articles():
             skip_reasin,
             is_url_search,
             cleaned_url,
+            score_bucket=score_bucket,
         )
         if article_response is None:
             return jsonify({"error": "Hiba a lekérés során!"}), 500

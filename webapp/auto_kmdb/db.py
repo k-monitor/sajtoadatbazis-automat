@@ -7,9 +7,10 @@ import logging
 from datetime import datetime, timedelta
 from collections import defaultdict
 from cachetools import cached, LRUCache, TTLCache
-from sqlalchemy import create_engine, text, bindparam
+from sqlalchemy import create_engine, text, bindparam, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
+import time
 
 connection_pool: MySQLConnectionPool = MySQLConnectionPool(
     pool_name="cnx_pool",
@@ -28,6 +29,27 @@ engine: Engine = create_engine(
     creator=lambda: connection_pool.get_connection(),
     poolclass=NullPool,
 )
+
+slow_query_logger = logging.getLogger("autokmdb.slow_query")
+SLOW_QUERY_THRESHOLD_S = float(os.environ.get("SLOW_QUERY_THRESHOLD_S", "0.5"))
+
+
+@event.listens_for(engine, "before_cursor_execute")
+def _record_query_start(conn, cursor, statement, parameters, context, executemany):
+    context._query_start_time = time.monotonic()
+
+
+@event.listens_for(engine, "after_cursor_execute")
+def _log_slow_query(conn, cursor, statement, parameters, context, executemany):
+    elapsed = time.monotonic() - context._query_start_time
+    if elapsed >= SLOW_QUERY_THRESHOLD_S:
+        slow_query_logger.warning(
+            "slow_query elapsed=%.3fs rows=%s sql=%s params=%s",
+            elapsed,
+            cursor.rowcount,
+            " ".join(statement.split()),
+            parameters,
+        )
 
 
 def _fetch_all_dicts(query: str, params: Optional[dict] = None) -> list[dict]:
@@ -997,6 +1019,16 @@ def group_articles(articles):
     return articles
 
 
+def _score_bucket_range(score_bucket: int) -> Optional[tuple[float, float]]:
+    buckets = {
+        0: (0.0, 0.25),
+        1: (0.25, 0.5),
+        2: (0.5, 0.75),
+        3: (0.75, 1.0001),
+    }
+    return buckets.get(score_bucket)
+
+
 def get_article_counts(
     domains: list[int],
     search_query="",
@@ -1005,6 +1037,7 @@ def get_article_counts(
     skip_reason: int = -1,
     is_url_search: bool = False,
     cleaned_url: str = "",
+    score_bucket: int = -1,
 ) -> dict[str, int]:
     params: dict[str, Any] = {
         "start": start + " 00:00:00",
@@ -1028,6 +1061,13 @@ def get_article_counts(
     if skip_reason != -1:
         skip_condition = " AND n.skip_reason = " + str(int(skip_reason))
 
+    score_condition = ""
+    score_range = _score_bucket_range(score_bucket)
+    if score_range is not None:
+        score_condition = " AND n.classification_score >= :score_min AND n.classification_score < :score_max"
+        params["score_min"] = score_range[0]
+        params["score_max"] = score_range[1]
+
     query = f"""
         SELECT
             COUNT(CASE WHEN n.classification_label = 1 AND processing_step = 4
@@ -1041,6 +1081,7 @@ def get_article_counts(
         WHERE 1=1
         {domain_condition}
         {search_condition}
+        {score_condition}
         AND n.article_date BETWEEN :start AND :end
     """
 
@@ -1095,6 +1136,7 @@ def get_articles(
     skip_reason: int = -1,
     is_url_search: bool = False,
     cleaned_url: str = "",
+    score_bucket: int = -1,
 ) -> Optional[tuple[int, list[dict[str, Any]]]]:
     conditions: list[str] = []
     params: dict[str, Any] = {
@@ -1144,16 +1186,25 @@ def get_articles(
         conditions.append("n.skip_reason = :skip_reason")
         params["skip_reason"] = skip_reason
 
+    # Score bucket condition
+    score_range = _score_bucket_range(score_bucket)
+    if score_range is not None:
+        conditions.append("n.classification_score >= :score_min AND n.classification_score < :score_max")
+        params["score_min"] = score_range[0]
+        params["score_max"] = score_range[1]
+
     where_clause = " AND ".join(conditions)
     where_main = where_clause.replace("n.", "main.")
 
     # Sort configuration
     sort_order = "ASC" if reverse else "DESC"
-    sort_field = (
-        "main.source DESC, main.article_date"
-        if status != "positive"
-        else "main.article_date"
-    )
+    if status != "positive":
+        # source DESC is fixed; article_date follows sort_order
+        order_by_full = f"main.source DESC, main.article_date {sort_order}"
+        order_by_agg = f"MAX(main.source) DESC, MAX(main.article_date) {sort_order}"
+    else:
+        order_by_full = f"main.article_date {sort_order}"
+        order_by_agg = f"MAX(main.article_date) {sort_order}"
     offset = (page - 1) * 10
 
     main_article_cols = """
@@ -1166,101 +1217,45 @@ def get_articles(
     """
 
     with engine.connect() as conn:
-        if has_text_search:
-            # For text searches, first get matching IDs efficiently
-            match_query = f"""
-                SELECT main.id, main.group_id
-                FROM autokmdb_news main
-                WHERE {where_main}
-            """
-            matching_rows = [
-                dict(r) for r in conn.execute(text(match_query), params).mappings()
-            ]
-            if not matching_rows:
-                return 0, []
+        # One scan: dedup by group, sort by aggregated sort columns, page in
+        # SQL. Only 10 IDs ever cross the wire from this query — the heavy
+        # heap reads happen for those 10 rows in the follow-up fetch.
+        # COALESCE(group_id, -id) gives ungrouped rows their own singleton
+        # group; MAX() of the sort columns picks any value (within a group
+        # they are typically equal), and serves as the sort key.
+        page_query = f"""
+            SELECT MIN(main.id) AS id
+            FROM autokmdb_news main
+            WHERE {where_main}
+            GROUP BY COALESCE(main.group_id, -main.id)
+            ORDER BY {order_by_agg}
+            LIMIT 10 OFFSET {offset}
+        """
+        page_ids = [
+            r["id"] for r in conn.execute(text(page_query), params).mappings()
+        ]
 
-            matching_group_ids = {r["group_id"] for r in matching_rows if r["group_id"]}
+        count_query = f"""
+            SELECT COUNT(DISTINCT COALESCE(main.group_id, -main.id)) AS total
+            FROM autokmdb_news main
+            WHERE {where_main}
+        """
+        total_count = conn.execute(text(count_query), params).scalar() or 0
 
-            group_main_ids: set = set()
-            if matching_group_ids:
-                groups_list = ",".join(map(str, matching_group_ids))
-                rows = conn.execute(text(f"""
-                    SELECT MIN(id) as main_id, group_id
-                    FROM autokmdb_news
-                    WHERE group_id IN ({groups_list})
-                    GROUP BY group_id
-                """)).mappings()
-                for row in rows:
-                    group_main_ids.add(row["main_id"])
+        if not page_ids:
+            return total_count, []
 
-            ungrouped_match_ids = {
-                r["id"] for r in matching_rows if r["group_id"] is None
-            }
-            display_ids = ungrouped_match_ids | group_main_ids
-            if not display_ids:
-                return 0, []
-
-            total_count = len(display_ids)
-            ids_list = ",".join(map(str, display_ids))
-            paginated_query = f"""
-                SELECT {main_article_cols}
-                FROM autokmdb_news main
-                LEFT JOIN users u ON main.mod_id = u.user_id
-                WHERE main.id IN ({ids_list})
-                ORDER BY {sort_field} {sort_order}
-                LIMIT 10 OFFSET {offset}
-            """
-            main_articles = [
-                dict(r) for r in conn.execute(text(paginated_query)).mappings()
-            ]
-        else:
-            # Non-search query: find qualifying groups first
-            qualifying_groups_query = f"""
-                SELECT DISTINCT n.group_id
-                FROM autokmdb_news n
-                WHERE n.group_id IS NOT NULL AND {where_clause}
-            """
-            qualifying_groups = [
-                row["group_id"] for row in
-                conn.execute(text(qualifying_groups_query), params).mappings()
-            ]
-
-            if qualifying_groups:
-                groups_list = ",".join(map(str, qualifying_groups))
-                group_condition = f"main.group_id IN ({groups_list})"
-            else:
-                group_condition = "FALSE"
-
-            count_query = f"""
-                SELECT COUNT(*) as total_count
-                FROM autokmdb_news main
-                WHERE (main.group_id IS NULL
-                       OR main.id = (SELECT MIN(n3.id) FROM autokmdb_news n3 WHERE n3.group_id = main.group_id))
-                  AND (
-                      (main.group_id IS NULL AND ({where_main}))
-                      OR
-                      (main.group_id IS NOT NULL AND {group_condition})
-                  )
-            """
-            total_count = conn.execute(text(count_query), params).scalar()
-
-            paginated_query = f"""
-                SELECT {main_article_cols}
-                FROM autokmdb_news main
-                LEFT JOIN users u ON main.mod_id = u.user_id
-                WHERE (main.group_id IS NULL
-                       OR main.id = (SELECT MIN(n3.id) FROM autokmdb_news n3 WHERE n3.group_id = main.group_id))
-                  AND (
-                      (main.group_id IS NULL AND ({where_main}))
-                      OR
-                      (main.group_id IS NOT NULL AND {group_condition})
-                  )
-                ORDER BY {sort_field} {sort_order}
-                LIMIT 10 OFFSET {offset}
-            """
-            main_articles = [
-                dict(r) for r in conn.execute(text(paginated_query), params).mappings()
-            ]
+        ids_list = ",".join(map(str, page_ids))
+        full_query = f"""
+            SELECT {main_article_cols}
+            FROM autokmdb_news main
+            LEFT JOIN users u ON main.mod_id = u.user_id
+            WHERE main.id IN ({ids_list})
+            ORDER BY {order_by_full}
+        """
+        main_articles = [
+            dict(r) for r in conn.execute(text(full_query)).mappings()
+        ]
 
         # Bulk fetch grouped articles for all groups on this page
         grouped_by_group_id: dict = {}
