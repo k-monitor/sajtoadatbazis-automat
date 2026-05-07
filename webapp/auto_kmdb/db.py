@@ -829,6 +829,50 @@ def get_article_others(conn, id) -> list[dict]:
     return [dict(r) for r in conn.execute(text(query), {"id": id}).mappings()]
 
 
+def _bulk_fetch_recommended_tags(
+    conn, article_ids: list[int]
+) -> dict[int, dict[str, list[dict]]]:
+    """Bulk-fetch a slim list of recommended/confirmed entity tags per article.
+
+    Returned per-article dict has keys 'persons' and 'institutions'; each is a
+    deduped (by db_id or name) list of {name, db_id}. An entity is included
+    when it was either confirmed by annotation (annotation_label=1) or, if
+    not yet annotated, recommended by the classifier (classification_label=1).
+    """
+    result: dict[int, dict[str, list[dict]]] = {
+        aid: {"persons": [], "institutions": []} for aid in article_ids
+    }
+    if not article_ids:
+        return result
+    ids_list = ",".join(str(int(a)) for a in article_ids)
+    where = (
+        f"autokmdb_news_id IN ({ids_list}) AND "
+        "(annotation_label = 1 OR (annotation_label IS NULL AND classification_label = 1))"
+    )
+    for kind, table, fk, fk_name in (
+        ("persons", "autokmdb_persons", "person_id", "person_name"),
+        ("institutions", "autokmdb_institutions", "institution_id", "institution_name"),
+    ):
+        seen: dict[int, set] = {aid: set() for aid in article_ids}
+        query = f"""
+            SELECT autokmdb_news_id AS aid, name, {fk} AS db_id, {fk_name} AS db_name
+            FROM {table}
+            WHERE {where}
+            ORDER BY autokmdb_news_id, id
+        """
+        for row in conn.execute(text(query)).mappings():
+            aid = row["aid"]
+            key = row["db_id"] if row["db_id"] is not None else row["name"]
+            if key in seen[aid]:
+                continue
+            seen[aid].add(key)
+            display_name = row["db_name"] if row["db_id"] is not None else row["name"]
+            result[aid][kind].append(
+                {"name": display_name, "db_id": row["db_id"]}
+            )
+    return result
+
+
 def get_article_files(conn, id) -> list[dict]:
     query = """SELECT name, id, files_id AS db_id, name AS db_name, classification_score, classification_label, annotation_label FROM autokmdb_files WHERE autokmdb_news_id = :id"""
     return [dict(r) for r in conn.execute(text(query), {"id": id}).mappings()]
@@ -1288,10 +1332,18 @@ def get_articles(
             for article in conn.execute(text(bulk_group_query)).mappings():
                 grouped_by_group_id.setdefault(article["group_id"], []).append(dict(article))
 
+    with engine.connect() as conn:
+        recommended_tags = _bulk_fetch_recommended_tags(
+            conn, [a["id"] for a in main_articles]
+        )
+
     articles_with_groups = []
     for article in main_articles:
         article["groupedArticles"] = (
             grouped_by_group_id.get(article["group_id"], []) if article["group_id"] else []
+        )
+        article["recommended_tags"] = recommended_tags.get(
+            article["id"], {"persons": [], "institutions": []}
         )
         articles_with_groups.append(article)
 

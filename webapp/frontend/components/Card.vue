@@ -87,7 +87,29 @@
       >{{ article.title }}</a>
 
       <!-- Description -->
-      <p class="text-sm text-gray-700 mb-3 text-pretty">{{ article.description }}</p>
+      <p class="text-sm text-gray-700 mb-2 text-pretty">{{ article.description }}</p>
+
+      <!-- Recommended tags -->
+      <div
+        v-if="recommendedPersons.length > 0 || recommendedInstitutions.length > 0"
+        class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-3 text-sm"
+      >
+        <span class="text-gray-600 font-medium">Ajánlott címkék:</span>
+        <UBadge
+          v-for="(p, i) in recommendedPersons"
+          :key="'p-' + (p.db_id ?? p.name) + '-' + i"
+          color="red"
+          variant="soft"
+          size="xs"
+        >{{ p.name }}</UBadge>
+        <UBadge
+          v-for="(inst, i) in recommendedInstitutions"
+          :key="'i-' + (inst.db_id ?? inst.name) + '-' + i"
+          color="blue"
+          variant="soft"
+          size="xs"
+        >{{ inst.name }}</UBadge>
+      </div>
 
       <!-- Action row for processed, non-skipped articles -->
       <div
@@ -525,6 +547,7 @@ function openModal() {
         let original = article.value;
         article.value = response._data;
         article.value.original = original;
+        article.value.recommended_tags = original.recommended_tags;
         allPersons.value = article.value.mapped_persons;
         allInstitutions.value = article.value.mapped_institutions;
         allPlaces.value = article.value.mapped_places;
@@ -644,6 +667,13 @@ function onFaviconError() {
 }
 
 const similarCount = computed(() => article.value.groupedArticles?.length ?? 0);
+
+const recommendedPersons = computed(
+  () => article.value.recommended_tags?.persons ?? []
+);
+const recommendedInstitutions = computed(
+  () => article.value.recommended_tags?.institutions ?? []
+);
 
 const formattedTime = computed(() => {
   const m = String(article.value.date ?? "").match(/(\d{2}):(\d{2})/);
