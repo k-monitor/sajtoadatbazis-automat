@@ -10,7 +10,6 @@
       </UTooltip>
       <div class="flex items-center gap-1 flex-shrink-0">
         <img v-if="favicon" :src="favicon" class="w-4 h-4" alt="" @error="onFaviconError" />
-        <span class="text-xs font-medium text-blue-700">{{ article.newspaper_name }}</span>
       </div>
       <a
         :href="article.url"
@@ -54,7 +53,7 @@
     <!-- Full card layout -->
     <div
       v-else
-      :class="['max-w-2xl w-full rounded-lg overflow-hidden shadow-lg p-4 border-2', borderColorClass]"
+      :class="['max-w-3xl w-full rounded-lg overflow-hidden shadow-lg p-4 border-2', borderColorClass]"
     >
       <!-- Top meta row -->
       <div class="flex flex-wrap items-center gap-2 mb-2">

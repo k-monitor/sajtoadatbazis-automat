@@ -608,7 +608,7 @@ async function handleAddUrl(newUrl: string, selectedDomain: { id: number; name: 
                 :refresh="refreshAll"
                 :is_small="false"
                 @update:filter_newspaper="filterNewspaper" 
-                class="w-full max-w-2xl"
+                class="w-full max-w-3xl"
               />
             </div>
           </template>
