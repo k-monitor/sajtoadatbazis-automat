@@ -16,6 +16,7 @@
         target="_blank"
         class="font-medium text-sm flex-1 min-w-0 truncate hover:underline"
         :style="article.group_id && article.annotation_label != null ? 'color: #888' : ''"
+        :title="article.title"
       >{{ article.title }}</a>
       <span class="text-xs text-gray-500 flex-shrink-0" :title="article.date">{{ formattedTime }}</span>
       <div class="flex items-center gap-1 flex-shrink-0">
@@ -34,7 +35,7 @@
             @click.stop="clearPendingNegative"
           />
         </UBadge>
-        <template v-if="!(article.negative_reason == 1 && article.annotation_label == 0)">
+        <template v-if="!(article.annotation_label == 0)">
           <UButton v-if="!in_search_result" size="xs" color="red" @click="toPool">
             Hasonló tartalom
           </UButton>
@@ -300,6 +301,7 @@ import { $authFetch } from "~/auth_fetch";
 
 const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
+const toast = useToast();
 
 function formatDate(apiDateString: string): string {
   const date = new Date(apiDateString);
@@ -386,6 +388,15 @@ async function pickOut() {
     method: "POST",
     body: { id: article.value.id },
   });
+  if (is_small) {
+    const toastPayload = {
+      title: "A cikk feldolgozás alá került, hamarosan megjelenik a Kiemelt hírek között.",
+    };
+    toast.add(toastPayload);
+    try {
+      sessionStorage.setItem("pendingToast", JSON.stringify(toastPayload));
+    } catch {}
+  }
   refresh();
 }
 
