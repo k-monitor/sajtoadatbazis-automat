@@ -152,7 +152,16 @@ def process_article(
             description = article_lines[:400]
 
     date: Optional[datetime] = None
-    if article.publish_date:
+    meta_date_tag = BeautifulSoup(article.html, "lxml").find(
+        "meta", attrs={"property": "article:published_time"}
+    )
+    if meta_date_tag and meta_date_tag.get("content"):
+        try:
+            content = meta_date_tag["content"].replace("Z", "+00:00")
+            date = datetime.fromisoformat(content).astimezone(timezone.utc)
+        except ValueError:
+            pass
+    if date is None and article.publish_date:
         date = article.publish_date.astimezone(timezone.utc)
 
     same_news_id: Optional[int] = same_news(title, description, text)
