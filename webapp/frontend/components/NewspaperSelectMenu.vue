@@ -1,8 +1,7 @@
 <template>
     <div class="flex my-auto px-1 my-1">
-        <p>Kiválasztott hírportál: &nbsp;</p>
         <USelectMenu searchable :search-attributes="['name']" searchable-placeholder="Keresés..." clear-search-on-close
-            multiple class="w-48" v-model="selectedDomainsInternal" by="id" :options="allDomains"
+            multiple class="w-44" v-model="selectedDomainsInternal" by="id" :options="allDomains"
             @change="emit('refresh')">
             <template #option="{ option }">
                 <span>

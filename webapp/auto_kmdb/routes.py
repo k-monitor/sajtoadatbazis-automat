@@ -11,8 +11,7 @@ import re
 import os
 
 
-with db.connection_pool.get_connection() as connection:
-    keyword_synonyms: list[dict] = db.get_keyword_synonyms(connection)
+keyword_synonyms: list[dict] = db.get_keyword_synonyms()
 
 api = Blueprint("api", __name__, url_prefix="/api")
 all_domains: list[dict] = db.get_all_newspapers()
@@ -43,20 +42,19 @@ def get_articles_by_day():
     start: str = content.get("from", "2000-01-01")
     end: str = content.get("to", "2050-01-01")
     newspaper_id: Optional[int] = content.get("newspaper_id", None)
-    with db.connection_pool.get_connection() as connection:
-        articles_by_day: list[dict] = db.get_articles_by_day(newspaper_id)
+    articles_by_day: list[dict] = db.get_articles_by_day(newspaper_id, start, end)
 
-        output = io.StringIO()
-        writer = csv.DictWriter(output, fieldnames=articles_by_day[0].keys())
+    output = io.StringIO()
+    writer = csv.DictWriter(output, fieldnames=articles_by_day[0].keys())
 
-        writer.writeheader()
-        writer.writerows(articles_by_day)
+    writer.writeheader()
+    writer.writerows(articles_by_day)
 
-        output.seek(0)
-        response = Response(output, mimetype="text/csv")
-        response.headers["Content-Disposition"] = "attachment; filename=data.csv"
+    output.seek(0)
+    response = Response(output, mimetype="text/csv")
+    response.headers["Content-Disposition"] = "attachment; filename=data.csv"
 
-        return response
+    return response
 
 
 @api.route("/articles_by_day", methods=["GET"])
@@ -65,20 +63,18 @@ def get_articles_by_day_json():
     start: str = content.get("from", "2000-01-01")
     end: str = content.get("to", "2050-01-01")
     newspaper_id: Optional[int] = content.get("newspaper_id", None)
-    with db.connection_pool.get_connection() as connection:
-        articles_by_day: list[dict] = db.get_articles_by_day(newspaper_id)
-        for article in articles_by_day:
-            if "date" in article and type(article["date"]) == datetime:
-                article["date"] = article["date"].strftime("%Y-%m-%d")
-        return jsonify(articles_by_day), 200
+    articles_by_day: list[dict] = db.get_articles_by_day(newspaper_id, start, end)
+    for article in articles_by_day:
+        if "date" in article and type(article["date"]) == datetime:
+            article["date"] = article["date"].strftime("%Y-%m-%d")
+    return jsonify(articles_by_day), 200
 
 
 @api.route("/article_counts", methods=["POST"])
 def api_article_counts():
     session_id: Optional[str] = get_session_id(request)
-    with db.connection_pool.get_connection() as connection:
-        if not db.validate_session(connection, session_id):
-            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+    if not db.validate_session(session_id):
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
     content: Optional[dict] = request.json
 
@@ -91,15 +87,16 @@ def api_article_counts():
     domains: dict = content["domain"]
     domain_ids: list[int] = [domain["id"] for domain in domains] if domains else [-1]
     skip_reasin: int = content.get("skip_reason", -1)
+    score_bucket: int = content.get("score_bucket", -1)
 
     # Check if search term is a URL and clean it
     is_url_search = is_url(q)
     cleaned_url = clear_url(q) if is_url_search else ""
 
-    with db.connection_pool.get_connection() as connection:
-        article_counts = db.get_article_counts(
-            connection, domain_ids, "%" + q + "%", start, end, skip_reasin, is_url_search, cleaned_url
-        )
+    article_counts = db.get_article_counts(
+        domain_ids, "%" + q + "%", start, end, skip_reasin, is_url_search, cleaned_url,
+        score_bucket=score_bucket,
+    )
 
     return jsonify(article_counts), 200
 
@@ -107,12 +104,10 @@ def api_article_counts():
 @api.route("/article/<int:id>", methods=["GET"])
 def api_article(id):
     session_id: Optional[str] = get_session_id(request)
-    with db.connection_pool.get_connection() as connection:
-        if not db.validate_session(connection, session_id):
-            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+    if not db.validate_session(session_id):
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
-    with db.connection_pool.get_connection() as connection:
-        article = db.get_article(connection, id)
+    article = db.get_article(id)
 
     return jsonify(article), 200
 
@@ -125,28 +120,24 @@ def api_article_by_url():
     Returns the main article and all grouped articles.
     """
     session_id: Optional[str] = get_session_id(request)
-    with db.connection_pool.get_connection() as connection:
-        if not db.validate_session(connection, session_id):
-            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+    if not db.validate_session(session_id):
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
     content: Optional[dict] = request.json
     
     if not content or "url" not in content:
         return jsonify({"error": "URL mező hiányzik!"}), 400
     
-    source_url: str = content["url"].strip().rstrip('/')
+    source_url: str = content["url"].strip()
     
     if not source_url:
         return jsonify({"error": "Üres URL!"}), 400
 
     try:
-        with db.connection_pool.get_connection() as connection:
-            result = db.find_article_by_url_with_group(connection, source_url)
-            
-            if result is None:
-                return jsonify({"error": "Nem található cikk ezzel az URL-lel!"}), 404
-            
-            return jsonify(result), 200
+        result = db.find_article_by_url_with_group(source_url)
+        if result is None:
+            return jsonify({"error": "Nem található cikk ezzel az URL-lel!"}), 404
+        return jsonify(result), 200
     except Exception as e:
         logging.error(f"Error finding article by URL: {e}")
         return jsonify({"error": "Hiba a keresés során!"}), 500
@@ -155,9 +146,8 @@ def api_article_by_url():
 @api.route("/articles", methods=["POST"])
 def api_articles():
     session_id: Optional[str] = get_session_id(request)
-    with db.connection_pool.get_connection() as connection:
-        if not db.validate_session(connection, session_id):
-            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+    if not db.validate_session(session_id):
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
     content: Optional[dict] = request.json
 
@@ -173,30 +163,30 @@ def api_articles():
     domain_ids: list[int] = [domain["id"] for domain in domains] if domains else [-1]
     reverse: bool = content.get("reverse", False)
     skip_reasin: int = content.get("skip_reason", -1)
+    score_bucket: int = content.get("score_bucket", -1)
 
     # Check if search term is a URL and clean it
     is_url_search = is_url(q)
     cleaned_url = clear_url(q) if is_url_search else ""
 
     try:
-        with db.connection_pool.get_connection() as connection:
-            article_response = db.get_articles(
-                connection,
-                page,
-                status,
-                domain_ids,
-                "%" + q + "%",
-                start,
-                end,
-                reverse,
-                skip_reasin,
-                is_url_search,
-                cleaned_url,
-            )
-            if article_response is None:
-                return jsonify({"error": "Hiba a lekérés során!"}), 500
-            length, articles = article_response
-            articles = db.group_articles(articles)
+        article_response = db.get_articles(
+            page,
+            status,
+            domain_ids,
+            "%" + q + "%",
+            start,
+            end,
+            reverse,
+            skip_reasin,
+            is_url_search,
+            cleaned_url,
+            score_bucket=score_bucket,
+        )
+        if article_response is None:
+            return jsonify({"error": "Hiba a lekérés során!"}), 500
+        length, articles = article_response
+        articles = db.group_articles(articles)
 
         return jsonify({"pages": ceil(length / 10), "articles": articles}), 200
     except Exception as e:
@@ -207,10 +197,9 @@ def api_articles():
 @api.route("/annote/negative", methods=["POST"])
 def not_corruption():
     session_id: Optional[str] = get_session_id(request)
-    with db.connection_pool.get_connection() as connection:
-        user_id: Optional[int | bool] = db.validate_session(connection, session_id)
-        if not user_id:
-            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+    user_id: Optional[int | bool] = db.validate_session(session_id)
+    if not user_id:
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
     content: Optional[dict] = request.json
 
@@ -219,18 +208,16 @@ def not_corruption():
 
     id: int = content["id"]
     reason: int = content["reason"]
-    with db.connection_pool.get_connection() as connection:
-        db.annote_negative(connection, id, reason, user_id)
+    db.annote_negative(id, reason, user_id)
     return jsonify({}), 200
 
 
 @api.route("/annote/force_accept", methods=["POST"])
 def force_accept():
     session_id: Optional[str] = get_session_id(request)
-    with db.connection_pool.get_connection() as connection:
-        user_id: Optional[int | bool] = db.validate_session(connection, session_id)
-        if not user_id:
-            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+    user_id: Optional[int | bool] = db.validate_session(session_id)
+    if not user_id:
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
     content: Optional[dict] = request.json
 
@@ -238,37 +225,50 @@ def force_accept():
         return jsonify({}), 400
 
     id: int = content["id"]
-    with db.connection_pool.get_connection() as connection:
-        db.force_accept_article(connection, id, user_id)
+    db.force_accept_article(id, user_id)
+    return jsonify({}), 200
+
+
+@api.route("/retry_article", methods=["POST"])
+def retry_article():
+    session_id: Optional[str] = get_session_id(request)
+    user_id: Optional[int | bool] = db.validate_session(session_id)
+    if not user_id:
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    content: Optional[dict] = request.json
+
+    if not content:
+        return jsonify({}), 400
+
+    id: int = content["id"]
+    db.retry_article(id)
     return jsonify({}), 200
 
 
 @api.route("/process_and_accept", methods=["POST"])
 def process_and_accept():
     session_id: Optional[str] = get_session_id(request)
-    with db.connection_pool.get_connection() as connection:
-        user_id = db.validate_session(connection, session_id)
-        if not user_id:
-            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+    user_id = db.validate_session(session_id)
+    if not user_id:
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
     content: Optional[dict] = request.json
 
     if not content:
         return jsonify({}), 400
 
-    with db.connection_pool.get_connection() as connection:
-        article_id: int = content["article_id"]
-        db.process_and_accept_article(connection, article_id, user_id)
-        return jsonify({}), 200
+    article_id: int = content["article_id"]
+    db.process_and_accept_article(article_id, user_id)
+    return jsonify({}), 200
 
 
 @api.route("/annote/pick_out", methods=["POST"])
 def pick_out():
     session_id: Optional[str] = get_session_id(request)
-    with db.connection_pool.get_connection() as connection:
-        user_id: Optional[int | bool] = db.validate_session(connection, session_id)
-        if not user_id:
-            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+    user_id: Optional[int | bool] = db.validate_session(session_id)
+    if not user_id:
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
     content: Optional[dict] = request.json
 
@@ -276,8 +276,7 @@ def pick_out():
         return jsonify({}), 400
 
     id: int = content["id"]
-    with db.connection_pool.get_connection() as connection:
-        db.pick_out_article(connection, id, user_id)
+    db.pick_out_article(id, user_id)
     return jsonify({}), 200
 
 
@@ -286,10 +285,9 @@ def pick_out():
 @api.route("/edit/positive", methods=["POST"])
 def annote():
     session_id: Optional[str] = get_session_id(request)
-    with db.connection_pool.get_connection() as connection:
-        user_id = db.validate_session(connection, session_id)
-        if not user_id:
-            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+    user_id = db.validate_session(session_id)
+    if not user_id:
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
     content: Optional[dict] = request.json
 
@@ -303,8 +301,7 @@ def annote():
         1: "/api/edit/positive",
         0: "/api/change/positive",
     }
-    with db.connection_pool.get_connection() as connection:
-        annotation_label: Optional[int] = db.get_article_annotation(connection, id)
+    annotation_label: Optional[int] = db.get_article_annotation(id)
     if request.path != correct_annotations[annotation_label]:
         return (
             jsonify(
@@ -340,41 +337,38 @@ def annote():
     if "file_ids" in content:
         file_ids: list[int] = content["file_ids"]
 
-    with db.connection_pool.get_connection() as connection:
-        if (
-            db.url_exists_in_kmdb(connection, url)
-            and request.path == "/api/annote/positive"
-        ):
-            return (
-                jsonify(
-                    {
-                        "error": "Ez a cikk url alapján már szerepel az adatbázisban. Valószínűleg az autokmdb-n kívülről lett hozzáadva."
-                    }
-                ),
-                409,
-            )
-
-    with db.connection_pool.get_connection() as connection:
-        db.annote_positive(
-            connection,
-            id,
-            url,
-            title,
-            title,
-            description,
-            text,
-            persons,
-            institutions,
-            places,
-            newspaper_id,
-            newspaper_name,
-            user_id,
-            is_active,
-            category,
-            others,
-            file_ids,
-            parsed_date,
+    if (
+        db.url_exists_in_kmdb(url)
+        and request.path == "/api/annote/positive"
+    ):
+        return (
+            jsonify(
+                {
+                    "error": "Ez a cikk url alapján már szerepel az adatbázisban. Valószínűleg az autokmdb-n kívülről lett hozzáadva."
+                }
+            ),
+            409,
         )
+
+    db.annote_positive(
+        id,
+        url,
+        title,
+        title,
+        description,
+        text,
+        persons,
+        institutions,
+        places,
+        newspaper_id,
+        newspaper_name,
+        user_id,
+        is_active,
+        category,
+        others,
+        file_ids,
+        parsed_date,
+    )
     return jsonify({}), 200
 
 
@@ -391,39 +385,35 @@ def add_url():
     else:
         # Fall back to session validation
         session_id: Optional[str] = get_session_id(request)
-        with db.connection_pool.get_connection() as connection:
-            user_id = db.validate_session(connection, session_id)
-            if not user_id:
-                return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+        user_id = db.validate_session(session_id)
+        if not user_id:
+            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
     content: Optional[dict] = request.json
 
     if not content:
         return jsonify({}), 400
 
-    with db.connection_pool.get_connection() as connection:
-        url: str = content["url"]
-        if db.check_url_exists(connection, url):
-            return jsonify({"error": "Cikk már létezik"}), 400
-        db.init_news(
-            connection,
-            "manual" if not api_key else "api",
-            url,
-            url,
-            content["newspaper_name"],
-            content["newspaper_id"],
-            user_id,
-            None,
-        )
-        return jsonify({}), 200
+    url: str = content["url"]
+    if db.check_url_exists(url):
+        return jsonify({"error": "Cikk már létezik"}), 400
+    db.init_news(
+        "manual" if not api_key else "api",
+        url,
+        url,
+        content["newspaper_name"],
+        content["newspaper_id"],
+        user_id,
+        None,
+    )
+    return jsonify({}), 200
 
 
 @api.route("/all_labels", methods=["GET"])
 def all_labels():
     session_id: Optional[str] = get_session_id(request)
-    with db.connection_pool.get_connection() as connection:
-        if not db.validate_session(connection, session_id):
-            return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+    if not db.validate_session(session_id):
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
 
     return (
         jsonify(
@@ -477,17 +467,10 @@ def login():
     if not username or not password:
         return jsonify({"error": "Username and password required"}), 400
     
-    with db.connection_pool.get_connection() as connection:
-        # Validate credentials
-        user_id = db.validate_user_credentials(connection, username, password)
-        
-        if not user_id:
-            return jsonify({"error": "Invalid credentials"}), 401
-        
-        # Create session
-        session_id = db.create_user_session(connection, user_id)
-        
-        # Create response
-        response = jsonify({"success": True, "message": "Login successful", "session_id": session_id})
-        
-        return response, 200
+    user_id = db.validate_user_credentials(username, password)
+    if not user_id:
+        return jsonify({"error": "Invalid credentials"}), 401
+
+    session_id = db.create_user_session(user_id)
+    response = jsonify({"success": True, "message": "Login successful", "session_id": session_id})
+    return response, 200

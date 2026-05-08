@@ -1,5 +1,5 @@
 <template>
-  <UButton class="h-fit my-1" :icon="sortIcon" size="sm" color="primary" square variant="solid" @click="toggleSort" />
+  <UButton class="h-fit my-1 mx-1" :icon="sortIcon" :label="sortLabel" size="sm" color="primary" variant="outline" @click="toggleSort" />
 </template>
 
 <script setup>
@@ -13,6 +13,10 @@ const emit = defineEmits(['update:reverseSort', 'refresh']);
 
 const sortIcon = computed(() =>
   props.reverseSort ? 'i-heroicons-arrow-up' : 'i-heroicons-arrow-down'
+);
+
+const sortLabel = computed(() =>
+  props.reverseSort ? 'Legrégebbi elől' : 'Legújabb elől'
 );
 
 function toggleSort() {

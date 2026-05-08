@@ -1,147 +1,209 @@
 <template>
-  <div class="p-4" color="gray">
-    <div class="max-w-2xl w-full rounded overflow-hidden shadow-lg mb-4 p-4">
-      <p class="inline">
-        <UBadge class="m-1 inline p-2" color="gray">
-          <UTooltip v-if="article.skip_reason == 2" :text="'átvett cikk'">
-            <Icon size="1.2em" name="mdi:alert-circle-outline" color="orange" />
-          </UTooltip>
-          <UTooltip v-else-if="article.skip_reason == 3" :text="'letöltési hiba'">
-            <Icon size="1.2em" name="mdi:alert-circle-outline" class="text-orange-500" />
-          </UTooltip>
-          <UTooltip v-else-if="article.skip_reason == 4" :text="'feldolgozási hiba'">
-            <Icon size="1.2em" name="mdi:alert-circle-outline" color="orange" />
-          </UTooltip>
-          <UTooltip v-else-if="article.processing_step < 4" :text="'feldolgozás alatt'">
-            <Icon size="1.2em" name="mdi:database-clock-outline" class="text-gray-500" />
-          </UTooltip>
-          <UTooltip v-else-if="
-            article.annotation_label == null &&
-            article.classification_label == 0
-          " :text="'nem illik az adatbázisba'">
-            <Icon size="1.2em" name="mdi:window-close" class="text-gray-500" />
-          </UTooltip>
-          <UTooltip v-else-if="
-            article.annotation_label == null &&
-            article.classification_label == 1
-          " :text="article.mod_name ? ('ellenőrizendő, hozzáadta: ' + article.mod_name) : 'ellenőrizendő'">
-            <Icon size="1.2em" name="mdi:question-mark" class="text-gray-500" />
-          </UTooltip>
-          <UTooltip v-else-if="article.annotation_label == 0"
-            :text="'elutasított : ' + (article.mod_name ?? '') + ' : ' + reasons[String(article.negative_reason)]">
-            <Icon size="1.2em" name="mdi:database-remove-outline" class="text-red-500" />
-          </UTooltip>
-          <UTooltip v-else-if="article.annotation_label == 1" :text="'elfogadott : ' + (article.mod_name ?? '')">
-            <Icon size="1.2em" name="mdi:database-check-outline" class="text-green-500" />
-          </UTooltip>
+  <div :class="is_small ? 'py-1' : 'p-4'">
+    <!-- Compact (similar article) layout -->
+    <div
+      v-if="is_small"
+      :class="['flex items-center gap-2 px-3 py-2 rounded border', borderColorClass]"
+    >
+      <UTooltip :text="statusInfo.text">
+        <Icon :name="statusInfo.icon" :class="statusInfo.cls" size="1em" />
+      </UTooltip>
+      <div class="flex items-center gap-1 flex-shrink-0">
+        <img v-if="favicon" :src="favicon" class="w-4 h-4" alt="" @error="onFaviconError" />
+      </div>
+      <a
+        :href="article.url"
+        target="_blank"
+        class="font-medium text-sm flex-1 min-w-0 truncate hover:underline"
+        :style="article.group_id && article.annotation_label != null ? 'color: #888' : ''"
+        :title="article.title"
+      >{{ article.title }}</a>
+      <span class="text-xs text-gray-500 flex-shrink-0" :title="article.date">{{ formattedTime }}</span>
+      <div class="flex items-center gap-1 flex-shrink-0">
+        <UBadge
+          v-if="article.pending_negative_reason != null"
+          color="red"
+          variant="soft"
+          class="flex items-center gap-1"
+        >
+          {{ negativeReasonLabel(article.pending_negative_reason) }}
+          <Icon
+            name="mdi:close"
+            size="14"
+            class="cursor-pointer opacity-80 hover:opacity-100"
+            title="Megjelölés törlése"
+            @click.stop="clearPendingNegative"
+          />
         </UBadge>
-        <UButton class="m-1 px-2 py-1 inline" color="blue"
-          @click="() => $emit('update:filter_newspaper', { name: article.newspaper_name, id: article.newspaper_id })">
-          {{
-            article.newspaper_name }} </UButton>
-        <a :href="article.url" target="_blank" class="font-bold text-xl mb-2 ml-1"
-          :style="article.group_id && article.annotation_label != null ? 'color: #888' : ''">{{
-            article.title
-          }}</a>
+        <template v-if="!(article.annotation_label == 0)">
+          <UButton v-if="!in_search_result" size="xs" color="red" @click="toPool">
+            Hasonló tartalom
+          </UButton>
+          <UButton
+            v-else
+            size="xs"
+            color="red"
+            @click="annoteNegative(1)"
+            :label="article.annotation_label == null ? 'Hasonló tartalom' : 'Mégis elutasít'"
+          />
+        </template>
+        <UButton size="xs" color="green" @click="pickOut">Mégis elfogad</UButton>
+      </div>
+    </div>
 
-      </p>
-      <UBadge v-if="article.source == 1" class="m-1" color="orange">
-        manuálisan hozzáadott
-      </UBadge>
-      <p v-if="!is_small" class="text-base text-pretty">{{ article.description }}</p>
-      <p class="text-base text-right py-1">{{ article.date }}</p>
+    <!-- Full card layout -->
+    <div
+      v-else
+      :class="['max-w-3xl w-full rounded-lg overflow-hidden shadow-lg p-4 border-2', borderColorClass]"
+    >
+      <!-- Top meta row -->
+      <div class="flex flex-wrap items-center gap-2 mb-2">
+        <UTooltip :text="statusInfo.text">
+          <Icon :name="statusInfo.icon" :class="statusInfo.cls" size="1.2em" />
+        </UTooltip>
+        <UButton
+          size="xs"
+          color="blue"
+          variant="soft"
+          @click="() => $emit('update:filter_newspaper', { name: article.newspaper_name, id: article.newspaper_id })"
+        >
+          <img v-if="favicon" :src="favicon" class="w-4 h-4 mr-1" alt="" @error="onFaviconError" />
+          <span>{{ article.newspaper_name }}</span>
+        </UButton>
+        <UBadge v-if="article.source == 1" color="orange" variant="soft" size="xs" :ui="{ color: { orange: { soft: 'text-orange-800 dark:text-orange-200 bg-orange-50 dark:bg-orange-400/10 ring-1 ring-inset ring-orange-500/25 dark:ring-orange-400/25' } } }">
+          manuálisan hozzáadott
+        </UBadge>
+        <UBadge v-if="similarCount > 0" color="green" variant="soft" size="xs">
+          +{{ similarCount }} hasonló
+        </UBadge>
+      </div>
 
-      <UContainer v-if="
-        article.processing_step >= 4 && article.skip_reason == null && !is_small
-      " class="flex justify-between px-0 sm:px-0 lg:px-0">
-        <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }" v-if="article.annotation_label != null">
-          <UButton color="red"
-            :label="article.annotation_label == null ? 'Elutasít' : article.annotation_label == 1 ? 'Mégis elutasít' : reasons[String(article.negative_reason)]"
-            trailing-icon="i-heroicons-chevron-down-20-solid" />
-          <template #item="{ item }">
-            <span class="">{{ item.label }}</span>
-          </template>
+      <!-- Title -->
+      <a
+        :href="article.url"
+        target="_blank"
+        class="font-bold text-lg block mb-1 hover:underline"
+        :style="article.group_id && article.annotation_label != null ? 'color: #888' : ''"
+      >{{ article.title }}</a>
+
+      <!-- Description -->
+      <p class="text-sm text-gray-700 mb-2 text-pretty">{{ article.description }}</p>
+
+      <!-- Recommended tags -->
+      <div
+        v-if="recommendedPersons.length > 0 || recommendedInstitutions.length > 0"
+        class="flex flex-wrap items-center gap-x-2 gap-y-1 mb-3 text-sm"
+      >
+        <span class="text-gray-600 font-medium">Ajánlott címkék:</span>
+        <UBadge
+          v-for="(p, i) in recommendedPersons"
+          :key="'p-' + (p.db_id ?? p.name) + '-' + i"
+          color="red"
+          variant="soft"
+          size="xs"
+        >{{ p.name }}</UBadge>
+        <UBadge
+          v-for="(inst, i) in recommendedInstitutions"
+          :key="'i-' + (inst.db_id ?? inst.name) + '-' + i"
+          color="blue"
+          variant="soft"
+          size="xs"
+        >{{ inst.name }}</UBadge>
+      </div>
+
+      <!-- Action row for processed, non-skipped articles -->
+      <div
+        v-if="article.processing_step >= 4 && article.skip_reason == null"
+        class="flex flex-wrap items-center gap-2"
+      >
+        <span class="text-sm text-gray-500">{{ article.date }}</span>
+        <div class="flex-grow"></div>
+
+        <UDropdown
+          v-if="article.annotation_label != null"
+          :items="items"
+          :popper="{ placement: 'bottom-end' }"
+        >
+          <UButton
+            size="sm"
+            color="red"
+            :label="article.annotation_label == 1 ? 'Mégis elutasít' : reasons[String(article.negative_reason)]"
+            trailing-icon="i-heroicons-chevron-down-20-solid"
+          />
+          <template #item="{ item }"><span>{{ item.label }}</span></template>
         </UDropdown>
-        <div class="flex gap-2" v-if="!in_search_result">
-          <UDropdown
-            v-if="article.annotation_label == null"
-            :items="negativeItems"
-            :popper="{ placement: 'bottom-end' }"
-          >
-            <UButton
-              color="red"
-              label="Megjelöl"
-              trailing-icon="i-heroicons-chevron-down-20-solid"
-            />
-            <template #item="{ item }">
-              <span class="">{{ item.label }}</span>
-            </template>
-          </UDropdown>
-          <UBadge v-if="article.pending_negative_reason != null" color="red" variant="soft" class="flex items-center gap-1">
-            {{ negativeReasonLabel(article.pending_negative_reason) }}
-            <Icon
-              name="mdi:close"
-              size="14"
-              class="cursor-pointer opacity-80 hover:opacity-100"
-              title="Megjelölés törlése"
-              @click.stop="clearPendingNegative"
-            />
-          </UBadge>
-        </div>
-        <div v-else class="flex items-center">
-          <UDropdown label="Elutasít" :items="items" :popper="{ placement: 'bottom-end' }"
-            v-if="article.annotation_label != 0">
-            <UButton color="red" :label="article.annotation_label == null ? 'Elutasít' : 'Mégis elutasít'"
-              trailing-icon="i-heroicons-chevron-down-20-solid" />
-            <template #item="{ item }">
-              <span class="">{{ item.label }}</span>
-            </template>
-          </UDropdown>
-        </div>
-        <p class="items-center p-2 ml-auto"
-          title="Teszt: ez a szám azt mutatja, algoritmusaink szerint mennyire illik a cikk a módszertanba (100% - nagyon, 0% - kevésbé)">
+        <UDropdown
+          v-else-if="!in_search_result"
+          :items="negativeItems"
+          :popper="{ placement: 'bottom-end' }"
+        >
+          <UButton
+            size="sm"
+            color="red"
+            label="Megjelöl"
+            trailing-icon="i-heroicons-chevron-down-20-solid"
+          />
+          <template #item="{ item }"><span>{{ item.label }}</span></template>
+        </UDropdown>
+
+        <UBadge
+          v-if="article.annotation_label == null && article.pending_negative_reason != null"
+          color="red"
+          variant="soft"
+          class="flex items-center gap-1"
+        >
+          {{ negativeReasonLabel(article.pending_negative_reason) }}
+          <Icon
+            name="mdi:close"
+            size="14"
+            class="cursor-pointer opacity-80 hover:opacity-100"
+            title="Megjelölés törlése"
+            @click.stop="clearPendingNegative"
+          />
+        </UBadge>
+
+        <span
+          class="text-sm flex items-center gap-1 text-gray-700"
+          title="Teszt: ez a szám azt mutatja, algoritmusaink szerint mennyire illik a cikk a módszertanba (100% - nagyon, 0% - kevésbé)"
+        >
+          <Icon name="mdi:star" class="text-green-500" size="1em" />
           {{ Math.round(article.classification_score * 100) }}%
-        </p>
-        <UButton v-if="article.annotation_label == null && article.classification_label == 0" @click="processAndAccept"
-          :loading="accepting" class="" :disabled="allLabels == null">Feldolgoz és átsorol</UButton>
-        <UButton v-if="article.annotation_label == null && article.classification_label == 1" @click="openModal"
-          :loading="isOpening" class="" :disabled="allLabels == null">Szerkesztés</UButton>
-        <UButton v-if="article.annotation_label == 1" @click="openModal" :loading="isOpening" :disabled="allLabels == null" class="">Szerkesztés
-        </UButton>
-        <UButton v-if="article.annotation_label == 0" @click="openModal" :loading="isOpening" :disabled="allLabels == null" class="">Mégis elfogad
-        </UButton>
-      </UContainer>
-      <div class="flex justify-between" v-if="!is_small">
-        <UButton v-if="article.skip_reason >= 1" color="orange" @click="retryArticle">Újra feldolgoz</UButton>
-        <UButton v-if="(article.skip_reason >= 1)" @click="forceAccept" class="ml-auto r-0" color="purple">{{
-          "Szerkesztésre küld" }}</UButton>
-      </div>
-      <div class="flex justify-between" v-else>
+        </span>
 
-        <div v-if="!(article.negative_reason == 1 && article.annotation_label == 0)">
-        <UButton v-if="!in_search_result" color="red" @click="toPool">
-          Hasonló tartalom
-        </UButton>
-        <div v-else class="flex items-center">
-            <UButton @click="annoteNegative(1)" color="red" :label="article.annotation_label == null ? 'Hasonló tartalom' : 'Mégis elutasít'" />
-        </div>
-        </div>
-
-        <div class="flex items-center gap-2 ml-auto">
-          <UBadge v-if="article.pending_negative_reason != null" color="red" variant="soft" class="flex items-center gap-1">
-            {{ negativeReasonLabel(article.pending_negative_reason) }}
-            <Icon
-              name="mdi:close"
-              size="14"
-              class="cursor-pointer opacity-80 hover:opacity-100"
-              title="Megjelölés törlése"
-              @click.stop="clearPendingNegative"
-            />
-          </UBadge>
-          <UButton @click="pickOut" class="ml-auto r-0" color="green">Mégis elfogad</UButton>
-        </div>
+        <UButton
+          v-if="article.annotation_label == null && article.classification_label == 0"
+          size="sm"
+          color="green"
+          @click="processAndAccept"
+          :loading="accepting"
+          :disabled="allLabels == null"
+        >Feldolgoz és átsorol</UButton>
+        <UButton
+          v-else-if="article.annotation_label == 0"
+          size="sm"
+          color="green"
+          @click="openModal"
+          :loading="isOpening"
+          :disabled="allLabels == null"
+        >Mégis elfogad</UButton>
+        <UButton
+          v-else
+          size="sm"
+          color="green"
+          @click="openModal"
+          :loading="isOpening"
+          :disabled="allLabels == null"
+        >Szerkesztés</UButton>
       </div>
-      <div v-if="!is_small">
+
+      <!-- Action row for skipped articles -->
+      <div v-if="article.skip_reason >= 1" class="flex justify-between mt-2">
+        <UButton color="orange" @click="retryArticle">Újra feldolgoz</UButton>
+        <UButton color="purple" @click="forceAccept" :loading="accepting">Szerkesztésre küld</UButton>
+      </div>
+
+      <!-- Compact list of similar articles -->
+      <div v-if="similarCount > 0" class="mt-3 pt-3 border-t border-gray-200 space-y-1">
         <Card
           v-for="gArticle in article.groupedArticles"
           :is_small="true"
@@ -152,7 +214,6 @@
           :allFiles="allFiles"
           :refresh="refresh"
           :in_search_result="in_search_result"
-          class="w-full max-w-2xl pr-0 pl-8"
         />
       </div>
     </div>
@@ -240,6 +301,7 @@ import { $authFetch } from "~/auth_fetch";
 
 const config = useRuntimeConfig();
 const baseUrl = config.public.baseUrl;
+const toast = useToast();
 
 function formatDate(apiDateString: string): string {
   const date = new Date(apiDateString);
@@ -326,6 +388,15 @@ async function pickOut() {
     method: "POST",
     body: { id: article.value.id },
   });
+  if (is_small) {
+    const toastPayload = {
+      title: "A cikk feldolgozás alá került, hamarosan megjelenik a Kiemelt hírek között.",
+    };
+    toast.add(toastPayload);
+    try {
+      sessionStorage.setItem("pendingToast", JSON.stringify(toastPayload));
+    } catch {}
+  }
   refresh();
 }
 
@@ -486,6 +557,7 @@ function openModal() {
         let original = article.value;
         article.value = response._data;
         article.value.original = original;
+        article.value.recommended_tags = original.recommended_tags;
         allPersons.value = article.value.mapped_persons;
         allInstitutions.value = article.value.mapped_institutions;
         allPlaces.value = article.value.mapped_places;
@@ -590,8 +662,67 @@ let submitted = ref(false);
 let errorText = ref("");
 let articleLength = computed(() => (article.value.text ?? "").length)
 
+const faviconError = ref(false);
+const favicon = computed(() => {
+  if (faviconError.value) return null;
+  try {
+    const domain = new URL(article.value.url).hostname;
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=32`;
+  } catch {
+    return null;
+  }
+});
+function onFaviconError() {
+  faviconError.value = true;
+}
+
+const similarCount = computed(() => article.value.groupedArticles?.length ?? 0);
+
+const recommendedPersons = computed(
+  () => article.value.recommended_tags?.persons ?? []
+);
+const recommendedInstitutions = computed(
+  () => article.value.recommended_tags?.institutions ?? []
+);
+
+const formattedTime = computed(() => {
+  const m = String(article.value.date ?? "").match(/(\d{2}):(\d{2})/);
+  return m ? `${m[1]}:${m[2]}` : "";
+});
+
+const borderColorClass = computed(() => {
+  const a = article.value;
+  if (a.skip_reason) return "border-orange-300";
+  if (a.processing_step < 4) return "border-gray-200";
+  if (a.annotation_label == 1) return "border-green-400";
+  if (a.annotation_label == 0) return "border-red-300";
+  if (a.classification_label == 1) return "border-blue-300";
+  return "border-gray-200";
+});
+
+const statusInfo = computed(() => {
+  const a = article.value;
+  if (a.skip_reason == 2) return { icon: "mdi:alert-circle-outline", cls: "text-orange-500", text: "átvett cikk" };
+  if (a.skip_reason == 3) return { icon: "mdi:alert-circle-outline", cls: "text-orange-500", text: "letöltési hiba" };
+  if (a.skip_reason == 4) return { icon: "mdi:alert-circle-outline", cls: "text-orange-500", text: "feldolgozási hiba" };
+  if (a.processing_step < 4) return { icon: "mdi:database-clock-outline", cls: "text-gray-500", text: "feldolgozás alatt" };
+  if (a.annotation_label == null && a.classification_label == 0)
+    return { icon: "mdi:window-close", cls: "text-gray-500", text: "nem illik az adatbázisba" };
+  if (a.annotation_label == null && a.classification_label == 1)
+    return { icon: "mdi:question-mark", cls: "text-gray-500", text: a.mod_name ? "ellenőrizendő, hozzáadta: " + a.mod_name : "ellenőrizendő" };
+  if (a.annotation_label == 0)
+    return { icon: "mdi:database-remove-outline", cls: "text-red-500", text: "elutasított : " + (a.mod_name ?? "") + " : " + reasons[String(a.negative_reason)] };
+  if (a.annotation_label == 1)
+    return { icon: "mdi:database-check-outline", cls: "text-green-500", text: "elfogadott : " + (a.mod_name ?? "") };
+  return { icon: "mdi:help", cls: "text-gray-500", text: "" };
+});
+
 async function retryArticle() {
-  // TODO
+  await postUrl(baseUrl + "/api/retry_article", {
+    method: "POST",
+    body: { id: article.value.id },
+  });
+  refresh();
 }
 
 function getMethod() {

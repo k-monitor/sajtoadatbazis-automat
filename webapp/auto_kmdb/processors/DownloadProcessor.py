@@ -152,7 +152,16 @@ def process_article(
             description = article_lines[:400]
 
     date: Optional[datetime] = None
-    if article.publish_date:
+    meta_date_tag = BeautifulSoup(article.html, "lxml").find(
+        "meta", attrs={"property": "article:published_time"}
+    )
+    if meta_date_tag and meta_date_tag.get("content"):
+        try:
+            content = meta_date_tag["content"].replace("Z", "+00:00")
+            date = datetime.fromisoformat(content).astimezone(timezone.utc)
+        except ValueError:
+            pass
+    if date is None and article.publish_date:
         date = article.publish_date.astimezone(timezone.utc)
 
     same_news_id: Optional[int] = same_news(title, description, text)
@@ -192,29 +201,25 @@ def save_article(
         and article_download.same_news_id != newspaper_id
         and source != 1
     ):
-        with db.connection_pool.get_connection() as connection:
-            db.skip_same_news(
-                connection,
-                news_id,
-                article_download.text,
-                article_download.title,
-                article_download.description,
-                article_download.authors,
-                str_date,
-                article_download.is_paywalled,
-            )
+        db.skip_same_news(
+            news_id,
+            article_download.text,
+            article_download.title,
+            article_download.description,
+            article_download.authors,
+            str_date,
+            article_download.is_paywalled,
+        )
     else:
-        with db.connection_pool.get_connection() as connection:
-            db.save_download_step(
-                connection,
-                news_id,
-                article_download.text,
-                article_download.title,
-                article_download.description,
-                article_download.authors,
-                str_date,
-                article_download.is_paywalled,
-            )
+        db.save_download_step(
+            news_id,
+            article_download.text,
+            article_download.title,
+            article_download.description,
+            article_download.authors,
+            str_date,
+            article_download.is_paywalled,
+        )
 
 
 def login_24(username: str, password: str) -> dict[str, str]:
@@ -461,8 +466,7 @@ def do_retries(app_context: AppContext, cookies: dict[str, str] = {}) -> None:
     new_date: datetime = current_date - timedelta(days=7)
     formatted_date: str = new_date.strftime("%Y-%m-%d")
 
-    with db.connection_pool.get_connection() as connection:
-        rows = db.get_retries_from(connection, formatted_date)
+    rows = db.get_retries_from(formatted_date)
     for row in rows:
         logging.info("retrying: " + row["url"])
         try:
@@ -548,8 +552,7 @@ class DownloadProcessor(Processor):
         logging.info("initialized download processor")
 
     def process_next(self) -> None:
-        with db.connection_pool.get_connection() as connection:
-            next_rows: list = db.get_download_queue(connection)
+        next_rows: list = db.get_download_queue()
         if type(next_rows) is not list:
             next_rows = [next_rows]
         for next_row in next_rows:
@@ -560,6 +563,14 @@ class DownloadProcessor(Processor):
             not (article.title or article.text or article.description)
             or len(article.title + article.text + article.description) < 100
         )
+
+    def download_url(self, url: str) -> Optional[ArticleDownload]:
+        domain: str = url.split("/")[2]
+        cookies = self.cookies.get(domain, {})
+        html: str = get_html(url, cookies if domain not in ["444.hu", "qubit.hu"] else {})
+        if cookies:
+            logging.info("using cookies for domain: " + domain)
+        return process_article(url, html, cookies)
 
     def process_row(self, next_row):
         if next_row is None:
@@ -589,6 +600,5 @@ class DownloadProcessor(Processor):
             )
         except Exception as e:
             logging.error(e)
-            with db.connection_pool.get_connection() as connection:
-                db.skip_download_error(connection, next_row["id"])
+            db.skip_download_error(next_row["id"])
             sleep(2)
