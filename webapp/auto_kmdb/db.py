@@ -723,9 +723,10 @@ def find_article_by_url_with_group(source_url: str) -> Optional[dict[str, Any]]:
         SELECT {_ARTICLE_BASE_COLUMNS}
         FROM autokmdb_news n
         LEFT JOIN users u ON n.mod_id = u.user_id
-        WHERE n.source_url = :source_url
+        WHERE n.source_url IN (:source_url, :source_url_slash)
         LIMIT 1
     """
+    stripped_url = source_url.rstrip('/')
     group_query = f"""
         SELECT {_ARTICLE_BASE_COLUMNS}, ang.is_main
         FROM autokmdb_news n
@@ -737,7 +738,8 @@ def find_article_by_url_with_group(source_url: str) -> Optional[dict[str, Any]]:
 
     with engine.connect() as conn:
         main_row = conn.execute(
-            text(find_query), {"source_url": source_url}
+            text(find_query),
+            {"source_url": stripped_url, "source_url_slash": stripped_url + "/"},
         ).mappings().first()
         if not main_row:
             return None
