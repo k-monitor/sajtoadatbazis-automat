@@ -1278,9 +1278,16 @@ def get_articles(
         # COALESCE(group_id, -id) gives ungrouped rows their own singleton
         # group; MAX() of the sort columns picks any value (within a group
         # they are typically equal), and serves as the sort key.
+        # Pick the is_main=TRUE article from autokmdb_news_groups as the
+        # group's representative, regardless of whether it matches the filter.
+        # The WHERE filter only decides whether the group APPEARS (any
+        # article in the group matching qualifies it). Falls back to MIN(id)
+        # for ungrouped articles or when no is_main row exists.
         page_query = f"""
-            SELECT MIN(main.id) AS id
+            SELECT COALESCE(MAX(ang.autokmdb_news_id), MIN(main.id)) AS id
             FROM autokmdb_news main
+            LEFT JOIN autokmdb_news_groups ang
+              ON ang.group_id = main.group_id AND ang.is_main = TRUE
             WHERE {where_main}
             GROUP BY COALESCE(main.group_id, -main.id)
             ORDER BY {order_by_agg}
