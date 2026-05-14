@@ -263,10 +263,13 @@
                   <span class="w-2 h-2 rounded-full inline-block" style="background-color:#aaffaa"></span>
                   egyéb
                 </span>
-                <div class="flex items-center">
-                  <p>szerkeszt:</p>
-                  <UToggle class="m-2" size="md" color="primary" v-model="edit" />
-                </div>
+                <UButton
+                  :color="edit ? 'primary' : 'gray'"
+                  variant="solid"
+                  icon="i-heroicons-pencil-square"
+                  :title="edit ? 'Szerkesztés befejezése' : 'Szerkesztés'"
+                  @click="edit = !edit"
+                />
               </div>
             </div>
             <UTextarea v-if="edit" class="my-2" v-model="article.text" :rows="20" />
