@@ -226,7 +226,17 @@
             <p class="font-bold">Cím:</p>
             <UTextarea class="my-2 min-h-0" :rows="1" autoresize v-model="article.title" />
             <p class="font-bold">URL:</p>
-            <UInput class="my-2" v-model="article.url" />
+            <div class="my-2 flex gap-2">
+              <UInput class="flex-grow" v-model="article.url" />
+              <UButton
+                icon="i-heroicons-arrow-top-right-on-square"
+                color="gray"
+                variant="solid"
+                :to="article.url"
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            </div>
             <p class="font-bold">Leírás:</p>
             <UTextarea class="my-2" resize v-model="article.description" />
             <div class="flex justify-between">
