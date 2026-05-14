@@ -221,6 +221,10 @@
 
     <UModal v-model="isOpen" :ui="{ padding: 'p-0 sm:p-4', width: 'sm:max-w-7xl' }">
       <div class="p-4 w-full">
+        <div class="flex items-center gap-2 mx-4 mb-2 pb-2 border-b border-gray-200">
+          <img v-if="favicon" :src="favicon" class="w-5 h-5" alt="" @error="onFaviconError" />
+          <span class="font-semibold">{{ article.newspaper_name }}</span>
+        </div>
         <div class="my-2 flex justify-center px-0 sm:px-0 lg:px-0 flex-col md:flex-row">
           <div class="max-w-2xl mx-4 flex-grow">
             <p class="font-bold">Cím:</p>
