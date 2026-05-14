@@ -221,19 +221,55 @@
 
     <UModal v-model="isOpen" :ui="{ padding: 'p-0 sm:p-4', width: 'sm:max-w-7xl' }">
       <div class="p-4 w-full">
+        <div class="flex items-center gap-2 mx-4 mb-2 pb-2 border-b border-gray-200">
+          <img v-if="favicon" :src="favicon" class="w-5 h-5" alt="" @error="onFaviconError" />
+          <span class="font-semibold">{{ article.newspaper_name }}</span>
+          <span class="text-sm text-gray-500 ml-auto">publikálás: {{ article.article_date }}</span>
+        </div>
         <div class="my-2 flex justify-center px-0 sm:px-0 lg:px-0 flex-col md:flex-row">
           <div class="max-w-2xl mx-4 flex-grow">
             <p class="font-bold">Cím:</p>
             <UTextarea class="my-2 min-h-0" :rows="1" autoresize v-model="article.title" />
             <p class="font-bold">URL:</p>
-            <UInput class="my-2" v-model="article.url" />
+            <div class="my-2 flex gap-2">
+              <UInput class="flex-grow" v-model="article.url" />
+              <UButton
+                icon="i-heroicons-arrow-top-right-on-square"
+                color="gray"
+                variant="solid"
+                :to="article.url"
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            </div>
             <p class="font-bold">Leírás:</p>
             <UTextarea class="my-2" resize v-model="article.description" />
-            <div class="flex justify-between">
+            <div class="flex justify-between items-center flex-wrap gap-2">
               <p class="font-bold">Szöveg ({{ articleLength }}):</p>
-              <div class="flex items-center">
-                <p>szerkeszt:</p>
-                <UToggle class="m-2" size="md" color="primary" v-model="edit" />
+              <div class="flex items-center gap-3 text-xs">
+                <span class="flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-red-500 inline-block"></span>
+                  személy
+                </span>
+                <span class="flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>
+                  intézmény
+                </span>
+                <span class="flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full bg-purple-500 inline-block"></span>
+                  helyszín
+                </span>
+                <span class="flex items-center gap-1">
+                  <span class="w-2 h-2 rounded-full inline-block" style="background-color:#aaffaa"></span>
+                  egyéb
+                </span>
+                <UButton
+                  :color="edit ? 'primary' : 'gray'"
+                  variant="solid"
+                  icon="i-heroicons-pencil-square"
+                  :title="edit ? 'Szerkesztés befejezése' : 'Szerkesztés'"
+                  @click="edit = !edit"
+                />
               </div>
             </div>
             <UTextarea v-if="edit" class="my-2" v-model="article.text" :rows="20" />
@@ -260,7 +296,6 @@
               value-attribute="id" />
             <SelectMenu :list="allFiles" type="akta" :creatable="false" :positive-list="positiveFiles"
               @update:positiveList="updatePositiveFiles" :labels="allLabels['files']" />
-            <p>publikálás: {{ article.article_date }}</p>
             <p>{{ errorText }}</p>
             <UButton class="my-5" v-if="article.annotation_label == 1" target="_blank"
               :to="`${config.public.adminUrl}?mod=news&action=news&do=news&news_id=${article.news_id}`">
