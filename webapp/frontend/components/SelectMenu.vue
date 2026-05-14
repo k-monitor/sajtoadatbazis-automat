@@ -1,23 +1,28 @@
 <template>
   <div>
-    <p class="font-bold" style="text-transform: capitalize">{{ type }}:</p>
+    <div class="flex items-center justify-between">
+      <p class="font-bold" style="text-transform: capitalize">{{ type }}:</p>
+      <span v-if="localPositiveList.length" class="text-sm text-gray-500">
+        {{ localPositiveList.length }} kiválasztva
+      </span>
+    </div>
     <USelectMenu @close="() => $emit('update:positiveList', localPositiveList)" :searchable="search"
       searchable-placeholder="Keresés..." class="my-2" v-model="localPositiveList" :options="list"
       option-attribute="label" show-create-option-when="always" :creatable="creatable" multiple v-model:query="query"
       @update:model-value="handleUpdate" @keyup="onPress">
       <template #label>
-        <span v-if="localPositiveList.length">{{
-          localPositiveList
-            .slice(0, 10)
-            .map((item) =>
-              item.db_name != null && item.db_name
-                ? item.db_name
-                : item.name != null
-                  ? item.name
-                  : item.label
-            )
-            .join(", ")
-        }}{{ localPositiveList.length > 10 ? ', ...' : '' }}</span>
+        <span v-if="localPositiveList.length" class="flex items-center gap-1 flex-wrap min-w-0">
+          <span
+            v-for="(item, idx) in localPositiveList.slice(0, 5)"
+            :key="idx"
+            :class="['inline-block rounded px-1.5 py-0.5 text-xs truncate max-w-[10rem]', typeColors.chip]"
+          >
+            {{ itemName(item) }}
+          </span>
+          <span v-if="localPositiveList.length > 5" class="text-xs text-gray-500 flex-shrink-0">
+            +{{ localPositiveList.length - 5 }}
+          </span>
+        </span>
         <span v-else>Válassz ki elemeket</span>
       </template>
       <template #option-create="{ option }">
@@ -151,4 +156,24 @@ const { list, creatable, positiveList, labels, type } = defineProps([
 const query = ref("");
 // Local state
 const localPositiveList = ref(positiveList);
+
+const typeColorMap: Record<string, { badge: string; chip: string }> = {
+  "személy":   { badge: "bg-red-500 text-white",     chip: "bg-red-100 text-red-700" },
+  "intézmény": { badge: "bg-blue-500 text-white",    chip: "bg-blue-100 text-blue-700" },
+  "helyszín":  { badge: "bg-purple-500 text-white",  chip: "bg-purple-100 text-purple-700" },
+  "egyéb":     { badge: "bg-green-500 text-white",   chip: "bg-green-100 text-green-800" },
+  "akta":      { badge: "bg-orange-500 text-white",  chip: "bg-orange-100 text-orange-700" },
+};
+
+const typeColors = computed(
+  () => typeColorMap[type] ?? { badge: "bg-gray-500 text-white", chip: "bg-gray-100 text-gray-700" }
+);
+
+function itemName(item: any) {
+  return item.db_name != null && item.db_name
+    ? item.db_name
+    : item.name != null
+      ? item.name
+      : item.label;
+}
 </script>
