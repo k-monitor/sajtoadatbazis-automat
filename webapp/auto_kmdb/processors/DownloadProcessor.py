@@ -85,6 +85,11 @@ def get_html(url: str, cookies: dict[str, str]) -> str:
             url,
             response.headers,
         )
+    # requests defaults to ISO-8859-1 for text/* responses that don't declare a
+    # charset, which mangles UTF-8 pages (e.g. valaszonline.hu -> mojibake).
+    # Fall back to the detected encoding when the server omits the charset.
+    if "charset" not in response.headers.get("content-type", "").lower():
+        response.encoding = response.apparent_encoding
     return str(response.text)
 
 
