@@ -97,7 +97,7 @@ def get_atv():
 def get_rss(rssurl, dont_convert: bool = False):
     try:
         response = scraper.get(rssurl)
-        feed = feedparser.parse(response.content)
+        feed = feedparser.parse(response.text)
     except Exception as e:
         logging.error(f"Error fetching RSS feed {rssurl}: {str(e)}")
         return []
