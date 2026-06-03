@@ -36,18 +36,30 @@
           />
         </UBadge>
         <template v-if="!(article.annotation_label == 0)">
-          <UButton v-if="!in_search_result" size="xs" color="red" @click="toPool">
-            Hasonló tartalom
-          </UButton>
-          <UButton
+          <UTooltip v-if="!in_search_result" text="Hasonló tartalom">
+            <UButton size="xs" color="red" icon="i-heroicons-document-duplicate" @click="toPool">
+              <span class="hidden sm:inline">Hasonló tartalom</span>
+            </UButton>
+          </UTooltip>
+          <UTooltip
             v-else
-            size="xs"
-            color="red"
-            @click="annoteNegative(1)"
-            :label="article.annotation_label == null ? 'Hasonló tartalom' : 'Mégis elutasít'"
-          />
+            :text="article.annotation_label == null ? 'Hasonló tartalom' : 'Mégis elutasít'"
+          >
+            <UButton
+              size="xs"
+              color="red"
+              :icon="article.annotation_label == null ? 'i-heroicons-document-duplicate' : 'i-heroicons-x-mark'"
+              @click="annoteNegative(1)"
+            >
+              <span class="hidden sm:inline">{{ article.annotation_label == null ? 'Hasonló tartalom' : 'Mégis elutasít' }}</span>
+            </UButton>
+          </UTooltip>
         </template>
-        <UButton size="xs" color="green" @click="pickOut">Mégis elfogad</UButton>
+        <UTooltip text="Mégis elfogad">
+          <UButton size="xs" color="green" icon="i-heroicons-check" @click="pickOut">
+            <span class="hidden sm:inline">Mégis elfogad</span>
+          </UButton>
+        </UTooltip>
       </div>
     </div>
 
