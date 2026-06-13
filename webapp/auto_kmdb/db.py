@@ -22,6 +22,12 @@ connection_pool: MySQLConnectionPool = MySQLConnectionPool(
     password=os.environ["MYSQL_PASS"],
     database=os.environ["MYSQL_DB"],
     use_pure=True,
+    # Force buffered cursors so every result set is fully read on execute.
+    # This eliminates the "Unread result found" class of errors that arise
+    # when a lazy/unbuffered result is iterated while new queries run on the
+    # same connection, which otherwise leaves the pooled connection broken and
+    # poisons unrelated callers (e.g. the background processors).
+    buffered=True,
 )
 
 engine: Engine = create_engine(
@@ -750,10 +756,15 @@ def find_article_by_url_with_group(source_url: str) -> Optional[dict[str, Any]]:
 
         grouped_articles: list[dict] = []
         if group_id is not None:
-            rows = conn.execute(
+            # Fully materialize the result before running the per-row entity
+            # queries below. Iterating a lazy (unbuffered) result while issuing
+            # new queries on the same connection raises mysql.connector's
+            # "Unread result found" and leaves the pooled connection in a broken
+            # state, which then poisons unrelated callers (e.g. the processors).
+            rows = list(conn.execute(
                 text(group_query),
                 {"group_id": group_id, "main_id": main_article["id"]},
-            ).mappings()
+            ).mappings())
             for row in rows:
                 article = dict(row)
                 _attach_article_entities(conn, article)
