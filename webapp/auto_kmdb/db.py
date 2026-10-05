@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, text, bindparam, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
 import time
+from auto_kmdb.utils.similar_entities import SimilarEntityIndex
 
 connection_pool: MySQLConnectionPool = MySQLConnectionPool(
     pool_name="cnx_pool",
@@ -226,6 +227,31 @@ def get_all_institutions_freq() -> list[dict]:
         'count' occurrances of the given label.
     """
     return get_all_freq("news_institutions", "institution_id", "name")
+
+
+@cached(cache=TTLCache(maxsize=1, ttl=1800))
+def get_similar_institutions_index() -> SimilarEntityIndex:
+    """
+    Index of all institutions for finding the existing ones that are written differently than a
+    new name. Institutions created on the UI are added to it right away.
+    """
+    counts = {i["id"]: i["count"] for i in get_all_institutions_freq()}
+    return SimilarEntityIndex(
+        {"id": i["id"], "name": i["name"], "count": counts.get(i["id"], 0)}
+        for i in get_all_institutions()
+    )
+
+
+def find_similar_institutions(name: str, limit: int = 3, min_score: float = 0.75) -> list[dict]:
+    """
+    Finds existing institutions that are probably the same as the given name, e.g.
+    'Magyar Fejlesztési Bank (MFB)' for 'MFB Zrt.'. These are only suggestions to be confirmed by
+    the user.
+
+    Returns:
+        List of dicts containing the 'id', 'name', 'count' and similarity 'score' of institutions.
+    """
+    return get_similar_institutions_index().find(name, limit=limit, min_score=min_score)
 
 
 def get_all_places_freq() -> list[dict]:
@@ -1073,8 +1099,26 @@ def get_article(id: int) -> dict[str, Any]:
     article["mapped_places"] = map_entities(places)
     article["others"] = others
     article["files"] = files
+    _attach_similar_institutions(article["mapped_institutions"])
 
     return article
+
+
+def _attach_similar_institutions(mapped_institutions: list[dict]) -> None:
+    """
+    Adds the 'similar' existing institutions to the institutions not linked to the db, so the user
+    can pick one of them instead of creating a duplicate.
+    """
+    linked_ids = {e["db_id"] for e in mapped_institutions if e.get("db_id")}
+    for entity in mapped_institutions:
+        if entity.get("db_id") or not entity.get("name"):
+            continue
+        similar = find_similar_institutions(entity["name"], limit=2)
+        # most probably a variant of an institution already linked to the article, e.g. 'MFB Zrt.'
+        # next to 'Magyar Fejlesztési Bank (MFB)', no need to suggest anything else
+        if similar and similar[0]["id"] in linked_ids:
+            continue
+        entity["similar"] = [s for s in similar if s["id"] not in linked_ids]
 
 
 def group_articles(articles):
@@ -1581,6 +1625,9 @@ def annote_positive(
             else:
                 institution["db_id"] = create_institution(institution["name"], user_id)
                 all_institutions_by_id[institution["db_id"]] = institution["name"]
+                get_similar_institutions_index().add(
+                    {"id": institution["db_id"], "name": institution["name"], "count": 0}
+                )
 
     with engine.begin() as conn:
         news_id = conn.execute(
@@ -1770,6 +1817,21 @@ def annote_positive(
         _set_labels_one("autokmdb_files", [
             fid for fid in file_ids if isinstance(fid, int)
         ])
+
+        # Remember the institution chosen for a detection that was not linked to the db (e.g. a
+        # suggested similar one), otherwise it would show up unlinked again when re-editing.
+        institution_links = [
+            {"id": i["id"], "db_id": i["db_id"], "db_name": i.get("db_name") or i.get("name")}
+            for i in institutions
+            if isinstance(i.get("id"), int) and i.get("db_id")
+        ]
+        if institution_links:
+            conn.execute(
+                text("""UPDATE autokmdb_institutions
+                        SET institution_id = :db_id, institution_name = :db_name
+                        WHERE id = :id AND (institution_id IS NULL OR institution_id = 0)"""),
+                institution_links,
+            )
 
         setTags(conn, news_id, persons, newspaper_name, institutions, places, others)
 

@@ -298,7 +298,8 @@
             <SelectMenu :list="allPersons" type="személy" :creatable="true" :positive-list="positivePersons"
               @update:positiveList="updatePositivePersons" :labels="allLabels['person']" />
             <SelectMenu :list="allInstitutions" type="intézmény" :creatable="true" :positive-list="positiveInstitutions"
-              @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']" />
+              @update:positiveList="updatePositiveInstitutions" :labels="allLabels['institution']"
+              :find-similar="findSimilarInstitutions" />
             <SelectMenu :list="allPlaces" type="helyszín" :creatable="false" :positive-list="positivePlaces"
               @update:positiveList="updatePositivePlaces" :labels="allLabels['place']" />
             <SelectMenu :list="allOthers" type="egyéb" :creatable="false" :positive-list="positiveOthers"
@@ -559,6 +560,32 @@ function mapEntities(entities: any[]) {
   return mappedEntities.flatMap((e) => (e.db_id == null ? e.list : [e]));
 }
 
+// Lists the existing, similarly written db entries right after the detected entities not linked
+// to the db, so the user can pick them instead of creating duplicates.
+function withSimilarSuggestions(entities: any[]) {
+  return entities.flatMap((entity) => [
+    entity,
+    ...(entity.similar ?? []).map((similar: any) => ({
+      id: "similar_" + similar.id + "_" + entity.name,
+      db_id: similar.id,
+      name: similar.name,
+      db_name: similar.name,
+      count: similar.count,
+      similar_to: entity.name,
+      occurences: (entity.occurences ?? [entity]).map((occurence: any) => ({
+        ...occurence,
+        db_id: similar.id,
+        db_name: similar.name,
+        name: similar.name,
+      })),
+    })),
+  ]);
+}
+
+async function findSimilarInstitutions(name: string) {
+  return await $authFetch(baseUrl + "/api/similar_institutions", { query: { name } });
+}
+
 function getKeywords(text: string) {
   function escapeRegExp(str: string) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
@@ -606,7 +633,7 @@ function openModal() {
         article.value.original = original;
         article.value.recommended_tags = original.recommended_tags;
         allPersons.value = article.value.mapped_persons;
-        allInstitutions.value = article.value.mapped_institutions;
+        allInstitutions.value = withSimilarSuggestions(article.value.mapped_institutions);
         allPlaces.value = article.value.mapped_places;
         const keywords = getKeywords(article.value.text);
         kwOthers.value = mapEntities(keywords);

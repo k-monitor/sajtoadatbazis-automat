@@ -430,6 +430,18 @@ def all_labels():
     )
 
 
+@api.route("/similar_institutions", methods=["GET"])
+def similar_institutions():
+    session_id: Optional[str] = get_session_id(request)
+    if not db.validate_session(session_id):
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    name: str = request.args.get("name", "").strip()
+    if len(name) < 3:
+        return jsonify([]), 200
+    return jsonify(db.find_similar_institutions(name, limit=5, min_score=0.7)), 200
+
+
 @api.route("/domains", methods=["GET"])
 def domains():
     session_id: Optional[str] = get_session_id(request)

@@ -30,7 +30,13 @@
         <span class="block truncate">{{ option.label }}</span>
       </template>
       <template #option="{ option }">
-        <span class="block truncate">
+        <span v-if="option.similar_to != null" class="block truncate"
+          :title="`Már létező, hasonló ${type}. Válaszd ezt új létrehozása helyett, ha ugyanarról van szó.`">
+          <Icon name="mdi:approximately-equal" class="text-amber-500" />
+          {{ option.db_name }}
+          <span class="text-xs text-gray-500">(hasonló: {{ option.similar_to }})</span>
+        </span>
+        <span v-else class="block truncate">
           <Icon v-if="option.db_id" name="mdi:database-outline" class="text-green-500" />
           {{
             option.db_name != null
@@ -74,7 +80,7 @@ const onPress = (e) => {
   query.value = e.key; // add the pressed key to the search query
 };
 
-function search(q: string) {
+async function search(q: string) {
   if (q === "") {
     return list
       .concat(localPositiveList.value)
@@ -95,7 +101,7 @@ function search(q: string) {
       );
   }
 
-  return list
+  const results = list
     .concat(localPositiveList.value)
     .filter(
       (obj1, i, arr) =>
@@ -144,14 +150,39 @@ function search(q: string) {
       );
     })
     .slice(0, 5);
+
+  if (!findSimilar || q.trim().length < 3) return results;
+  return results.concat(await similarOptions(q, results));
 }
 
-const { list, creatable, positiveList, labels, type } = defineProps([
+// Existing entries written differently than the query, e.g. 'Magyar Fejlesztési Bank (MFB)' for 'MFB Zrt.'
+async function similarOptions(q: string, shown: any[]) {
+  const shownIds = new Set(shown.map((item) => item.db_id).filter(Boolean));
+  try {
+    const similar = await findSimilar(q);
+    return similar
+      .filter((item: any) => !shownIds.has(item.id))
+      .map((item: any) => ({
+        id: "db_" + item.id,
+        db_id: item.id,
+        name: item.name,
+        db_name: item.name,
+        count: item.count,
+        similar_to: q,
+      }));
+  } catch (error) {
+    console.log(error);
+    return [];
+  }
+}
+
+const { list, creatable, positiveList, labels, type, findSimilar } = defineProps([
   "list",
   "creatable",
   "positiveList",
   "labels",
   "type",
+  "findSimilar",
 ]);
 const query = ref("");
 // Local state
