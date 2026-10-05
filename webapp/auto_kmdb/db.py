@@ -10,6 +10,7 @@ from cachetools import cached, LRUCache, TTLCache
 from sqlalchemy import create_engine, text, bindparam, event
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
+import re
 import time
 from auto_kmdb.utils.similar_entities import SimilarEntityIndex
 
@@ -1469,10 +1470,18 @@ def annote_negative(id: int, reason: int, user_id: int) -> None:
                 conn.execute(text(query), {"news_id": news_id})
 
 
+def clean_entity_name(name: str) -> str:
+    """
+    The KMDB admin splits tag lists on commas when an article is saved there, so a
+    name containing a comma would be broken up into several new persons/institutions.
+    """
+    return re.sub(r"\s*,\s*", " ", name).strip()
+
+
 def _create_tag(
     table: str, id_column: str, tag_type: str, name: str, user_id: int
 ) -> int:
-    name = name.strip()
+    name = clean_entity_name(name)
     cre_time = int(datetime.now().timestamp())
     with engine.begin() as conn:
         existing = conn.execute(
@@ -1587,10 +1596,11 @@ def annote_positive(
     status_flag = "Y" if is_active else "N"
 
     # Leading/trailing whitespace in user-entered names would create duplicates
-    # of existing persons/institutions, so normalize before lookup.
+    # of existing persons/institutions, and commas get split by the KMDB admin,
+    # so normalize before lookup.
     for entity in persons + institutions:
         if isinstance(entity.get("name"), str):
-            entity["name"] = entity["name"].strip()
+            entity["name"] = clean_entity_name(entity["name"])
 
     persons_to_create = [
         p for p in persons
