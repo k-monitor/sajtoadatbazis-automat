@@ -16,6 +16,8 @@ python-dotenv==1.1.0
 hu_core_news_lg@https://huggingface.co/huspacy/hu_core_news_lg/resolve/e31b9bec2d558a24bbcbd12cd059fa34ada54a8d/hu_core_news_lg-any-py3-none-any.whl
 typing==3.7.4.3
 pandas==2.2.3
+# spacy<3.8 (from hu_core_news_lg) needs thinc 8.2.x, which is built against numpy 1.x
+numpy==1.26.4
 playwright==1.52.0
 requests[socks]
 cachetools==5.5.2
