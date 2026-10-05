@@ -1416,6 +1416,7 @@ def annote_negative(id: int, reason: int, user_id: int) -> None:
 def _create_tag(
     table: str, id_column: str, tag_type: str, name: str, user_id: int
 ) -> int:
+    name = name.strip()
     cre_time = int(datetime.now().timestamp())
     with engine.begin() as conn:
         existing = conn.execute(
@@ -1528,6 +1529,12 @@ def annote_positive(
     processed_text = text_content.replace("\n", "<br>")
     pub_timestamp = int(pub_date.timestamp())
     status_flag = "Y" if is_active else "N"
+
+    # Leading/trailing whitespace in user-entered names would create duplicates
+    # of existing persons/institutions, so normalize before lookup.
+    for entity in persons + institutions:
+        if isinstance(entity.get("name"), str):
+            entity["name"] = entity["name"].strip()
 
     persons_to_create = [
         p for p in persons
