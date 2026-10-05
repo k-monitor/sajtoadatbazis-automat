@@ -270,6 +270,18 @@ def get_all_others_freq() -> list[dict]:
     return get_all_freq("news_others", "other_id", "name_hu")
 
 
+def get_all_files_freq() -> list[dict]:
+    """
+    Queries file id-name pairs and counts the number of times the given file has been used on an
+    article.
+
+    Returns:
+        List of dicts, each dict containing the 'name' and 'id' of a file, as well as the 'count'
+        occurrances of the given file.
+    """
+    return get_all_freq("news_files", "file_id", "name_hu")
+
+
 def get_places_alias() -> list[dict]:
     query = """
     SELECT

@@ -423,7 +423,7 @@ def all_labels():
                 "place": db.get_all_places_freq(),
                 "keywords": db.get_all_others_freq(),
                 "domains": db.get_all_newspapers(),
-                "files": db.get_all_files(),
+                "files": db.get_all_files_freq(),
             }
         ),
         200,
