@@ -9,6 +9,7 @@
     <USelectMenu @close="() => $emit('update:positiveList', localPositiveList)" :searchable="search"
       searchable-placeholder="Keresés..." class="my-2" v-model="localPositiveList" :options="list"
       option-attribute="label" show-create-option-when="always" :creatable="creatable" multiple v-model:query="query"
+      :ui-menu="{ option: { container: 'flex-1' } }"
       @update:model-value="handleUpdate" @keyup="onPress">
       <template #label>
         <span v-if="localPositiveList.length" class="flex items-center gap-1 flex-wrap min-w-0">
@@ -29,7 +30,7 @@
         <span class="flex-shrink-0">Új {{ type }}:</span>
         <span class="block truncate">{{ option.label }}</span>
       </template>
-      <template #option="{ option }">
+      <template #option="{ option, selected }">
         <span v-if="option.similar_to != null" class="block truncate"
           :title="`Már létező, hasonló ${type}. Válaszd ezt új létrehozása helyett, ha ugyanarról van szó.`">
           <Icon name="mdi:approximately-equal" class="text-amber-500" />
@@ -57,7 +58,8 @@
           <Icon v-else-if="option.classification_score != null" name="mdi:account-cowboy-hat" class="text-yellow-500" />
           {{ option.classification_score != null ? ")" : "" }}
         </span>
-        <span class="right-8 absolute">
+        <!-- selected rows already get pe-7 for the check icon; reserve the same space otherwise to keep counts aligned -->
+        <span class="ms-auto flex-shrink-0 ps-2 tabular-nums" :class="{ 'me-[1.375rem]': !selected }">
           {{ option.count ?? '' }}
         </span>
       </template>
