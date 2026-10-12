@@ -1,6 +1,12 @@
 from typing import Optional
 from flask import Response, jsonify, Blueprint, request
-from auto_kmdb import db
+from auto_kmdb import chatgpt, db
+from auto_kmdb.processors.DescriptionProcessor import (
+    DESCRIPTION_CHATGPT_MODEL,
+    DESCRIPTION_CHATGPT_WEB_SEARCH,
+    DESCRIPTION_PROVIDER,
+    build_prompt,
+)
 from auto_kmdb.utils.preprocess import clear_url
 from math import ceil
 import logging
@@ -486,3 +492,196 @@ def login():
     session_id = db.create_user_session(user_id)
     response = jsonify({"success": True, "message": "Login successful", "session_id": session_id})
     return response, 200
+
+
+@api.route("/descriptions", methods=["GET"])
+def api_descriptions():
+    session_id: Optional[str] = get_session_id(request)
+    if not db.validate_session(session_id):
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    status: str = request.args.get("status", "review")
+    page: int = request.args.get("page", 1, type=int)
+    if status not in db.DESCRIPTION_LIST_STATUSES:
+        return jsonify({"error": "Ismeretlen státusz!"}), 400
+
+    length, descriptions = db.get_descriptions(status, page)
+    return jsonify(
+        {
+            "pages": ceil(length / db.DESCRIPTIONS_PAGE_SIZE),
+            "descriptions": descriptions,
+            "counts": db.get_description_counts(),
+        }
+    ), 200
+
+
+@api.route("/descriptions", methods=["POST"])
+def api_add_description():
+    session_id: Optional[str] = get_session_id(request)
+    user_id = db.validate_session(session_id)
+    if not user_id:
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    content: Optional[dict] = request.json
+
+    if not content:
+        return jsonify({}), 400
+
+    entity_type: str = content.get("entity_type", "")
+    entity_id: int = content.get("entity_id", 0)
+    if entity_type not in db.DESCRIPTION_ENTITY_TABLES:
+        return jsonify({"error": "Ismeretlen entitás típus!"}), 400
+
+    entity = db.get_description_entity(entity_type, entity_id)
+    if entity is None:
+        return jsonify({"error": "Nem található az entitás!"}), 404
+
+    id = db.add_description_request(entity_type, entity_id, entity["name"], user_id)
+    if id is None:
+        return jsonify({"error": "Ehhez már van feldolgozás alatt álló vagy ellenőrizendő leírás!"}), 409
+    return jsonify({"id": id}), 200
+
+
+@api.route("/descriptions/prompt", methods=["GET"])
+def api_description_prompt():
+    """Prompt that would be sent to the model for the entity, without sending it."""
+    session_id: Optional[str] = get_session_id(request)
+    if not db.validate_session(session_id):
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    entity_type: str = request.args.get("entity_type", "")
+    entity_id: int = request.args.get("entity_id", 0, type=int)
+    if entity_type not in db.DESCRIPTION_ENTITY_TABLES:
+        return jsonify({"error": "Ismeretlen entitás típus!"}), 400
+
+    try:
+        built = build_prompt(entity_type, entity_id)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 404
+    return jsonify(
+        {
+            "system_instruction": built["system_instruction"],
+            "prompt": built["prompt"],
+            "web_search": built["web_search"],
+            "article_count": len(built["sources"]),
+        }
+    ), 200
+
+
+@api.route("/descriptions/<int:id>", methods=["GET"])
+def api_description(id):
+    session_id: Optional[str] = get_session_id(request)
+    if not db.validate_session(session_id):
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    description = db.get_description(id)
+    if description is None:
+        return jsonify({"error": "Nem található a leírás!"}), 404
+
+    # Accepting overwrites what is in the KMDB now, not what the suggestion was generated from.
+    entity = db.get_description_entity(description["entity_type"], description["entity_id"])
+    description["current_teaser"] = entity["teaser"] if entity else ""
+    description["current_bodytext"] = entity["bodytext"] if entity else ""
+    description["url"] = entity["url"] if entity else None
+    return jsonify(description), 200
+
+
+@api.route("/descriptions/<int:id>/accept", methods=["POST"])
+def api_accept_description(id):
+    session_id: Optional[str] = get_session_id(request)
+    user_id = db.validate_session(session_id)
+    if not user_id:
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    content: Optional[dict] = request.json
+
+    # The edited HTML, an empty editor still sends an empty paragraph.
+    if not content or not db.html_to_text(content.get("description", "")):
+        return jsonify({"error": "Üres leírás!"}), 400
+
+    if not db.accept_description(id, content["description"], user_id):
+        return jsonify({"error": "A leírás már nem ellenőrizendő, vagy az entitás már nem létezik. Töltsd újra az oldalt!"}), 409
+    return jsonify({}), 200
+
+
+@api.route("/descriptions/<int:id>/reject", methods=["POST"])
+def api_reject_description(id):
+    session_id: Optional[str] = get_session_id(request)
+    user_id = db.validate_session(session_id)
+    if not user_id:
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    if not db.reject_description(id, user_id):
+        return jsonify({"error": "A leírás már nem ellenőrizendő. Töltsd újra az oldalt!"}), 409
+    return jsonify({}), 200
+
+
+@api.route("/descriptions/<int:id>/retry", methods=["POST"])
+def api_retry_description(id):
+    session_id: Optional[str] = get_session_id(request)
+    user_id = db.validate_session(session_id)
+    if not user_id:
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    if not db.requeue_description(id, user_id):
+        return jsonify({"error": "Ez a leírás nem generálható újra. Töltsd újra az oldalt!"}), 409
+    return jsonify({}), 200
+
+
+def chatgpt_status() -> dict:
+    status = {
+        "provider": DESCRIPTION_PROVIDER,
+        "web_search": DESCRIPTION_CHATGPT_WEB_SEARCH,
+        "model": DESCRIPTION_CHATGPT_MODEL or None,
+        "models": None,
+        **chatgpt.status(),
+    }
+    if status["connected"] and status["plan_usage"]:
+        try:
+            status["models"] = chatgpt.list_models()
+            status["model"] = status["model"] or chatgpt.default_model()
+        except Exception as e:
+            logging.warning(f"Could not list the ChatGPT models: {e}")
+    return status
+
+
+@api.route("/chatgpt", methods=["GET"])
+def api_chatgpt_status():
+    session_id: Optional[str] = get_session_id(request)
+    if not db.validate_session(session_id):
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+    return jsonify(chatgpt_status()), 200
+
+
+@api.route("/chatgpt/login", methods=["POST"])
+def api_chatgpt_login():
+    session_id: Optional[str] = get_session_id(request)
+    if not db.validate_session(session_id):
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    content: dict = request.json or {}
+    return jsonify({"url": chatgpt.start_login(bool(content.get("new_account")))}), 200
+
+
+@api.route("/chatgpt/callback", methods=["POST"])
+def api_chatgpt_callback():
+    session_id: Optional[str] = get_session_id(request)
+    if not db.validate_session(session_id):
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    content: dict = request.json or {}
+    try:
+        chatgpt.finish_login(content.get("url", ""))
+    except chatgpt.LoginError as e:
+        return jsonify({"error": str(e)}), 400
+    return jsonify(chatgpt_status()), 200
+
+
+@api.route("/chatgpt/logout", methods=["POST"])
+def api_chatgpt_logout():
+    session_id: Optional[str] = get_session_id(request)
+    if not db.validate_session(session_id):
+        return jsonify({"error": "Nem vagy bejelentkezve!"}), 401
+
+    revoked = chatgpt.logout()
+    return jsonify({**chatgpt_status(), "revoked": revoked}), 200

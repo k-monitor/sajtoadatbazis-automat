@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-load_dotenv("data/.env")
+load_dotenv("data/.env", override=True)
 
 from flask import Flask
 from threading import Thread
@@ -13,6 +13,7 @@ from auto_kmdb.processors import (
     DownloadProcessor,
     NERProcessor,
     KeywordProcessor,
+    DescriptionProcessor,
 )
 from auto_kmdb.rss_watcher import rss_watcher
 import logging
@@ -54,6 +55,7 @@ def create_app() -> Flask:
         ClassificationProcessor(),
         NERProcessor(),
         KeywordProcessor(),
+        DescriptionProcessor(),
     ]
     for processor in processors:
         Thread(target=processor.process_loop, args=(), daemon=True).start()

@@ -11,6 +11,8 @@ python-slugify[unidecode]
 joblib==1.5.1
 scikit-learn==1.6.1
 beautifulsoup4==4.13.4
+markdown-it-py==3.0.0
+nh3==0.3.7
 typing-extensions
 python-dotenv==1.1.0
 hu_core_news_lg@https://huggingface.co/huspacy/hu_core_news_lg/resolve/e31b9bec2d558a24bbcbd12cd059fa34ada54a8d/hu_core_news_lg-any-py3-none-any.whl
@@ -25,4 +27,5 @@ cloudscraper==1.2.71
 chromadb==1.0.10
 datasets==3.1.0
 google-genai==1.16.1
+PyJWT[crypto]==2.10.1
 datasketch==1.6.5

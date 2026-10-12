@@ -2,7 +2,7 @@ from transformers import pipeline, AutoTokenizer
 from transformers import BertForSequenceClassification, BertTokenizer
 from dotenv import load_dotenv
 
-load_dotenv("data/.env")
+load_dotenv("data/.env", override=True)
 
 classifier = pipeline(
     "ner",

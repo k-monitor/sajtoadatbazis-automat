@@ -12,6 +12,11 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.pool import NullPool
 import re
 import time
+import json
+from urllib.parse import urlparse
+import nh3
+from bs4 import BeautifulSoup
+from markdown_it import MarkdownIt
 from auto_kmdb.utils.similar_entities import SimilarEntityIndex
 
 connection_pool: MySQLConnectionPool = MySQLConnectionPool(
@@ -1948,3 +1953,461 @@ def create_user_session(user_id: int) -> str:
         {"session_id": session_id, "user_id": user_id, "expires": expires_time},
     )
     return session_id
+
+
+# Entity descriptions
+
+KMDB_URL = os.environ.get("KMDB_URL", "https://adatbazis.k-monitor.hu")
+
+# KMDB tables of the entity types that can get a generated description. Each has HTML teaser and
+# bodytext columns and a <table>_link table to news_news, and every tag page is at
+# /adatbazis/cimkek/<seo_name> from tags_seo_data.
+DESCRIPTION_ENTITY_TABLES: dict[str, dict[str, str]] = {
+    "person": {
+        "table": "news_persons",
+        "id": "person_id",
+        "name": "name",
+        "tag_type": "persons",
+    },
+    "institution": {
+        "table": "news_institutions",
+        "id": "institution_id",
+        "name": "name",
+        "tag_type": "institutions",
+    },
+    "file": {
+        "table": "news_files",
+        "id": "file_id",
+        "name": "name_hu",
+        "tag_type": "files",
+    },
+    "newspaper": {
+        "table": "news_newspapers",
+        "id": "newspaper_id",
+        "name": "name",
+        "tag_type": "newspapers",
+    },
+}
+
+# Statuses of the autokmdb_entity_descriptions rows shown on each tab of the descriptions page.
+DESCRIPTION_LIST_STATUSES: dict[str, Optional[list[str]]] = {
+    "review": ["review"],
+    "processing": ["queued"],
+    "all": None,
+}
+DESCRIPTIONS_PAGE_SIZE = 20
+
+
+def _execute_rowcount(query: str, params: Optional[dict] = None) -> int:
+    """Execute an UPDATE/DELETE in a transaction and return the number of affected rows."""
+    with engine.begin() as conn:
+        return conn.execute(text(query), params or {}).rowcount
+
+
+def html_to_text(html: Optional[str]) -> str:
+    """Plain text of the HTML stored in the KMDB (teasers, bodytexts), keeping line breaks."""
+    if not html:
+        return ""
+    if "<" not in html:
+        return html.strip()
+    soup = BeautifulSoup(html, "html.parser")
+    for br in soup.find_all("br"):
+        br.replace_with("\n")
+    for block in soup.find_all(["p", "div", "li", "h1", "h2", "h3", "h4", "tr"]):
+        block.append("\n\n")
+    return re.sub(r"\n\s*\n+", "\n\n", soup.get_text()).strip()
+
+
+# Raw HTML in the markdown is escaped, the descriptions are shown on the public KMDB site.
+_markdown = MarkdownIt("js-default")
+# [url] source citations with the spaces before them, sometimes with several comma separated URLs,
+# but not markdown links.
+_CITATION = re.compile(r"[ \t]*\[(\s*https?://[^\s\]]+(?:\s*,\s*https?://[^\s\]]+)*\s*)\](?!\()")
+
+
+# Formatting kept from the HTML edited on the descriptions page, the same as its editor allows.
+_DESCRIPTION_TAGS = {"p", "br", "strong", "b", "em", "i", "u", "s", "a", "ul", "ol", "li"}
+
+
+def is_kmdb_url(url: str) -> bool:
+    """The KMDB is not a source of its own descriptions."""
+    return urlparse(url).hostname == urlparse(KMDB_URL).hostname
+
+
+def _citation_link(url: str) -> str:
+    """Markdown link of a source shown as [domain], e.g. [atlatszo.hu]."""
+    domain = (urlparse(url).hostname or url).removeprefix("www.")
+    return f"[\\[{domain}\\]](<{url}>)"
+
+
+def markdown_to_html(markdown: str) -> str:
+    """
+    HTML of a generated markdown description. Each [url] citation becomes a link shown as [domain],
+    also when the model put several URLs in one bracket, and the citations of the KMDB are dropped.
+    """
+
+    def link_citation(match: re.Match) -> str:
+        urls = re.split(r"\s*,\s*(?=https?://)", match.group(1).strip())
+        return "".join(f" {_citation_link(url)}" for url in urls if not is_kmdb_url(url))
+
+    return _markdown.render(_CITATION.sub(link_citation, markdown)).strip()
+
+
+def sanitize_description_html(html: str) -> str:
+    """The reviewed HTML is published on the KMDB site, so only the formatting of the editor is kept."""
+    cleaned = nh3.clean(
+        html,
+        tags=_DESCRIPTION_TAGS,
+        attributes={"a": {"href", "target"}},
+        url_schemes={"http", "https", "mailto"},
+    )
+    # The editor wraps the content of list items in paragraphs and can leave empty paragraphs.
+    soup = BeautifulSoup(cleaned, "html.parser")
+    for item in soup.find_all("li"):
+        children = [c for c in item.contents if not (isinstance(c, str) and not c.strip())]
+        if len(children) == 1 and children[0].name == "p":
+            children[0].unwrap()
+    for paragraph in soup.find_all("p"):
+        if not paragraph.get_text(strip=True):
+            paragraph.decompose()
+    return str(soup).strip()
+
+
+def _combined_description(teaser: str, bodytext: str) -> str:
+    """
+    Both the teaser and the bodytext are overwritten by the new description, so both are kept for
+    the prompt, unless the teaser is just repeated in the bodytext.
+    """
+    if not teaser or " ".join(teaser.split()) in " ".join(bodytext.split()):
+        return bodytext
+    if not bodytext:
+        return teaser
+    return f"{teaser}\n\n{bodytext}"
+
+
+def get_description_entity(entity_type: str, entity_id: int) -> Optional[dict]:
+    """
+    Returns:
+        Dict with the 'id', 'name', 'teaser' and 'bodytext' (plain text), the two combined as the
+        current 'description' and the KMDB 'url' of the entity, or None if it does not exist.
+    """
+    tables = DESCRIPTION_ENTITY_TABLES[entity_type]
+    row = _fetch_one_dict(
+        f"""SELECT e.{tables['id']} AS id, e.{tables['name']} AS name, e.teaser, e.bodytext,
+                   tsd.seo_name
+            FROM {tables['table']} e
+            LEFT JOIN tags_seo_data tsd
+                ON tsd.item_id = e.{tables['id']} AND tsd.tag_type = :tag_type
+            WHERE e.{tables['id']} = :id
+            LIMIT 1""",
+        {"id": entity_id, "tag_type": tables["tag_type"]},
+    )
+    if row is None:
+        return None
+    seo_name = row.pop("seo_name")
+    row["url"] = f"{KMDB_URL}/adatbazis/cimkek/{seo_name}" if seo_name else None
+    row["teaser"] = html_to_text(row["teaser"])
+    row["bodytext"] = html_to_text(row["bodytext"])
+    row["description"] = _combined_description(row["teaser"], row["bodytext"])
+    return row
+
+
+_DESCRIPTION_ARTICLE_COLUMNS = """
+    n.news_id,
+    nl.name AS title,
+    nl.teaser,
+    n.source_url,
+    FROM_UNIXTIME(n.pub_time) AS date,
+    MAX(nn.name) AS newspaper
+"""
+_DESCRIPTION_ARTICLE_JOINS = """
+    JOIN news_lang nl ON nl.news_id = n.news_id AND nl.lang = 'hu'
+    LEFT JOIN news_newspapers_link nnl ON nnl.news_id = n.news_id
+    LEFT JOIN news_newspapers nn ON nn.newspaper_id = nnl.newspaper_id
+"""
+
+
+def _description_articles(rows: list[dict]) -> list[dict]:
+    """Converts the article rows to plain text, oldest first."""
+    articles = [
+        {
+            "news_id": r["news_id"],
+            "title": " ".join(html_to_text(r["title"]).split()),
+            "teaser": " ".join(html_to_text(r["teaser"]).split()),
+            "url": r["source_url"],
+            "date": r["date"].strftime("%Y-%m-%d") if r["date"] else "",
+            "newspaper": r["newspaper"] or "",
+        }
+        for r in rows
+    ]
+    articles.sort(key=lambda a: a["date"])
+    return articles
+
+
+def get_description_articles(entity_type: str, entity_id: int, limit: int) -> list[dict]:
+    """
+    Returns:
+        The latest (at most limit) active KMDB articles tagged with the entity, oldest first.
+    """
+    tables = DESCRIPTION_ENTITY_TABLES[entity_type]
+    rows = _fetch_all_dicts(
+        f"""SELECT {_DESCRIPTION_ARTICLE_COLUMNS}
+            FROM {tables['table']}_link l
+            JOIN news_news n ON n.news_id = l.news_id
+            {_DESCRIPTION_ARTICLE_JOINS}
+            WHERE l.{tables['id']} = :id AND n.status = 'Y'
+            GROUP BY n.news_id
+            ORDER BY n.pub_time DESC
+            LIMIT {int(limit)}""",
+        {"id": entity_id},
+    )
+    return _description_articles(rows)
+
+
+def get_articles_mentioning(name: str, limit: int) -> list[dict]:
+    """
+    Newspapers are only linked to the articles they published, so the articles about them are
+    found by their name in the title or the teaser.
+
+    Returns:
+        The latest (at most limit) active KMDB articles mentioning the name, oldest first.
+    """
+    rows = _fetch_all_dicts(
+        f"""SELECT {_DESCRIPTION_ARTICLE_COLUMNS}
+            FROM news_news n
+            {_DESCRIPTION_ARTICLE_JOINS}
+            WHERE n.status = 'Y' AND (nl.name LIKE :pattern OR nl.teaser LIKE :pattern)
+            GROUP BY n.news_id
+            ORDER BY n.pub_time DESC
+            LIMIT {int(limit)}""",
+        {"pattern": f"%{name}%"},
+    )
+    return _description_articles(rows)
+
+
+def get_description_related(
+    entity_type: str, entity_id: int, related_type: str, limit: int = 15
+) -> list[dict]:
+    """
+    Returns:
+        List of dicts with the 'name' and the number of common articles ('count') of the entities
+        of related_type that are most often tagged together with the entity.
+    """
+    tables = DESCRIPTION_ENTITY_TABLES[entity_type]
+    related = DESCRIPTION_ENTITY_TABLES[related_type]
+    return _fetch_all_dicts(
+        f"""SELECT r.{related['name']} AS name, COUNT(DISTINCT l.news_id) AS count
+            FROM {tables['table']}_link l
+            JOIN news_news n ON n.news_id = l.news_id AND n.status = 'Y'
+            JOIN {related['table']}_link rl ON rl.news_id = l.news_id
+            JOIN {related['table']} r ON r.{related['id']} = rl.{related['id']}
+            WHERE l.{tables['id']} = :id AND r.status = 'Y'
+            GROUP BY r.{related['id']}
+            ORDER BY count DESC
+            LIMIT {int(limit)}""",
+        {"id": entity_id},
+    )
+
+
+def add_description_request(
+    entity_type: str, entity_id: int, entity_name: str, user_id: int
+) -> Optional[int]:
+    """
+    Queues the entity for description generation.
+
+    Returns:
+        Id of the new request, or None if the entity already has one that is queued or waiting
+        for review.
+    """
+    with engine.begin() as conn:
+        existing = conn.execute(
+            text("""SELECT id FROM autokmdb_entity_descriptions
+                    WHERE entity_type = :type AND entity_id = :id
+                        AND status IN ('queued', 'review')
+                    LIMIT 1"""),
+            {"type": entity_type, "id": entity_id},
+        ).scalar()
+        if existing:
+            return None
+        return conn.execute(
+            text("""INSERT INTO autokmdb_entity_descriptions
+                        (entity_type, entity_id, entity_name, status, cre_id, mod_id, cre_time)
+                    VALUES (:type, :id, :name, 'queued', :user_id, :user_id, NOW())"""),
+            {"type": entity_type, "id": entity_id, "name": entity_name, "user_id": user_id},
+        ).lastrowid
+
+
+def get_next_description_request() -> Optional[dict]:
+    return _fetch_one_dict(
+        """SELECT id, entity_type, entity_id, entity_name FROM autokmdb_entity_descriptions
+           WHERE status = 'queued'
+           ORDER BY cre_time, id
+           LIMIT 1"""
+    )
+
+
+def save_description_suggestion(
+    id: int,
+    suggestion: str,
+    sources: list[dict],
+    prompt: str,
+    model: str,
+    token_counts: dict,
+) -> None:
+    _execute(
+        """UPDATE autokmdb_entity_descriptions
+           SET status = 'review', suggestion = :suggestion, final_description = NULL, sources = :sources,
+               prompt = :prompt, model = :model, error = NULL, prompt_tokens = :prompt_tokens,
+               response_tokens = :response_tokens, thinking_tokens = :thinking_tokens
+           WHERE id = :id""",
+        {
+            "id": id,
+            "suggestion": suggestion,
+            "sources": json.dumps(sources, ensure_ascii=False),
+            "prompt": prompt,
+            "model": model,
+            "prompt_tokens": token_counts.get("prompt"),
+            "response_tokens": token_counts.get("response"),
+            "thinking_tokens": token_counts.get("thinking"),
+        },
+    )
+
+
+def save_description_error(id: int, error: str) -> None:
+    _execute(
+        "UPDATE autokmdb_entity_descriptions SET status = 'error', error = :error WHERE id = :id",
+        {"id": id, "error": error},
+    )
+
+
+def get_description_counts() -> dict[str, int]:
+    rows = _fetch_all_dicts(
+        "SELECT status, COUNT(*) AS count FROM autokmdb_entity_descriptions GROUP BY status"
+    )
+    by_status = {r["status"]: r["count"] for r in rows}
+    return {
+        key: sum(by_status.values()) if statuses is None
+        else sum(by_status.get(s, 0) for s in statuses)
+        for key, statuses in DESCRIPTION_LIST_STATUSES.items()
+    }
+
+
+def get_descriptions(status_key: str, page: int) -> tuple[int, list[dict]]:
+    """
+    Returns:
+        Number of all rows with the statuses of the tab, and the rows of the given page, newest
+        first.
+    """
+    statuses = DESCRIPTION_LIST_STATUSES[status_key]
+    where = "WHERE d.status IN :statuses" if statuses else ""
+    params = {"statuses": statuses} if statuses else {}
+    offset = (max(page, 1) - 1) * DESCRIPTIONS_PAGE_SIZE
+
+    count_stmt = text(f"SELECT COUNT(*) FROM autokmdb_entity_descriptions d {where}")
+    list_stmt = text(
+        f"""SELECT d.id, d.entity_type, d.entity_id, d.entity_name, d.status, d.error,
+                   LEFT(d.final_description, 2000) AS final_preview,
+                   LEFT(d.suggestion, 2000) AS suggestion_preview,
+                   d.cre_time, d.mod_time, u.name AS mod_name
+            FROM autokmdb_entity_descriptions d
+            LEFT JOIN users u ON d.mod_id = u.user_id
+            {where}
+            ORDER BY d.id DESC
+            LIMIT {DESCRIPTIONS_PAGE_SIZE} OFFSET {int(offset)}"""
+    )
+    if statuses:
+        count_stmt = count_stmt.bindparams(bindparam("statuses", expanding=True))
+        list_stmt = list_stmt.bindparams(bindparam("statuses", expanding=True))
+    with engine.connect() as conn:
+        length = conn.execute(count_stmt, params).scalar()
+        rows = [dict(r) for r in conn.execute(list_stmt, params).mappings()]
+    for row in rows:
+        final_preview, suggestion_preview = row.pop("final_preview"), row.pop("suggestion_preview")
+        if final_preview:
+            preview = html_to_text(final_preview)
+        else:
+            preview = html_to_text(markdown_to_html(suggestion_preview or ""))
+        row["preview"] = " ".join(preview.split())[:300]
+    return length, rows
+
+
+def get_description(id: int) -> Optional[dict]:
+    row = _fetch_one_dict(
+        """SELECT d.*, u.name AS mod_name
+           FROM autokmdb_entity_descriptions d
+           LEFT JOIN users u ON d.mod_id = u.user_id
+           WHERE d.id = :id""",
+        {"id": id},
+    )
+    if row is not None:
+        row["sources"] = json.loads(row["sources"]) if row["sources"] else []
+        row["suggestion_html"] = markdown_to_html(row["suggestion"]) if row["suggestion"] else ""
+    return row
+
+
+def accept_description(id: int, description_html: str, user_id: int) -> bool:
+    """
+    Writes the reviewed HTML of a suggestion, sanitized, to both the teaser and the bodytext of the
+    entity in the KMDB, and keeps their previous HTML in the request as a backup.
+
+    Returns:
+        False if the request was not waiting for review or the entity no longer exists.
+    """
+    with engine.begin() as conn:
+        request = conn.execute(
+            text("""SELECT entity_type, entity_id FROM autokmdb_entity_descriptions
+                    WHERE id = :id AND status = 'review'
+                    FOR UPDATE"""),
+            {"id": id},
+        ).mappings().first()
+        if request is None:
+            return False
+
+        tables = DESCRIPTION_ENTITY_TABLES[request["entity_type"]]
+        old = conn.execute(
+            text(f"""SELECT teaser, bodytext FROM {tables['table']}
+                     WHERE {tables['id']} = :entity_id
+                     FOR UPDATE"""),
+            {"entity_id": request["entity_id"]},
+        ).mappings().first()
+        if old is None:
+            return False
+
+        description_html = sanitize_description_html(description_html)
+        conn.execute(
+            text(f"""UPDATE {tables['table']} SET teaser = :html, bodytext = :html
+                     WHERE {tables['id']} = :entity_id"""),
+            {"html": description_html, "entity_id": request["entity_id"]},
+        )
+        conn.execute(
+            text("""UPDATE autokmdb_entity_descriptions
+                    SET status = 'accepted', final_description = :text,
+                        old_teaser = :old_teaser, old_bodytext = :old_bodytext, mod_id = :user_id
+                    WHERE id = :id"""),
+            {
+                "id": id,
+                "text": description_html,
+                "old_teaser": old["teaser"],
+                "old_bodytext": old["bodytext"],
+                "user_id": user_id,
+            },
+        )
+    return True
+
+
+def reject_description(id: int, user_id: int) -> bool:
+    return _execute_rowcount(
+        """UPDATE autokmdb_entity_descriptions SET status = 'rejected', mod_id = :user_id
+           WHERE id = :id AND status = 'review'""",
+        {"id": id, "user_id": user_id},
+    ) > 0
+
+
+def requeue_description(id: int, user_id: int) -> bool:
+    """Queues a request again to regenerate its suggestion."""
+    return _execute_rowcount(
+        """UPDATE autokmdb_entity_descriptions
+           SET status = 'queued', error = NULL, mod_id = :user_id
+           WHERE id = :id AND status IN ('review', 'rejected', 'error')""",
+        {"id": id, "user_id": user_id},
+    ) > 0

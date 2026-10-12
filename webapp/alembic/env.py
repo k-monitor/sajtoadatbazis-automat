@@ -15,7 +15,7 @@ from urllib.parse import quote_plus
 from dotenv import load_dotenv
 
 # Load env vars from webapp/data/.env regardless of where alembic is invoked from.
-load_dotenv(Path(__file__).resolve().parent.parent / "data" / ".env")
+load_dotenv(Path(__file__).resolve().parent.parent / "data" / ".env", override=True)
 
 # When tunneling, override host/port to point at the local tunnel.
 # Set MYSQL_HOST=127.0.0.1 and MYSQL_PORT=3307 in your shell when running alembic.

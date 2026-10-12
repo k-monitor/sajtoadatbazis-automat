@@ -3,3 +3,4 @@ from .ClassificationProcessor import ClassificationProcessor
 from .DownloadProcessor import DownloadProcessor
 from .KeywordProcessor import KeywordProcessor
 from .NERProcessor import NERProcessor
+from .DescriptionProcessor import DescriptionProcessor
