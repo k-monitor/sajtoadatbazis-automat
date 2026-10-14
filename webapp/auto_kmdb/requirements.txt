@@ -20,6 +20,8 @@ typing==3.7.4.3
 pandas==2.2.3
 # spacy<3.8 (from hu_core_news_lg) needs thinc 8.2.x, which is built against numpy 1.x
 numpy==1.26.4
+# pyarrow (from datasets) >=26 requires numpy>=2
+pyarrow==25.0.1
 playwright==1.52.0
 requests[socks]
 cachetools==5.5.2
