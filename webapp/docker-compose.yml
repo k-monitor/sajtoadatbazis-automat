@@ -8,6 +8,9 @@ services:
       - type: bind
         source: ./secrets
         target: /secrets
+      - type: bind
+        source: /var/log/auto_kmdb
+        target: /var/log/auto_kmdb
     hostname: ssh_tunnel
 
   frontend:
@@ -16,13 +19,20 @@ services:
       - "127.0.0.1:8082:3000"
 
   auto_kmdb:
-    build: './auto_kmdb'
+    build:
+      context: '.'
+      dockerfile: './auto_kmdb/Dockerfile'
     volumes:
       - type: bind
         source: ./data
         target: /usr/src/app/data
+      - type: bind
+        source: /var/log/auto_kmdb
+        target: /var/log/auto_kmdb
     ports:
       - "8083:8000"
+    environment:
+      - LOG_PATH=/var/log/auto_kmdb/auto_kmdb.log
     env_file:
       - auto_kmdb.env
 

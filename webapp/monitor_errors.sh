@@ -2,7 +2,16 @@
 
 check_for_errors() {
     result=$(podman-compose logs 2>&1)
-    if [[ "${result}" == *"ERROR"* ]] || [[ "${result}" == *"CRITICAL"* ]] || [[ "${result}" == *"mysql.connector.errors.OperationalError"* ]]; then
+    if [[ "${result}" == *"ERROR"* ]] || [[ "${result}" == *"CRITICAL"* ]] || [[ "${result}" == *"mysql.connector.errors.OperationalError"* ]] || [[ "${result}" == *"mysql.connector.errors.PoolError"* ]] || [[ "${result}" == *"mysql.connector.errors.DatabaseError"* ]] || [[ "${result}" == *"mysql.connector.errors.InterfaceError"* ]]; then
+        # Get the current date and time in the desired format
+        current_time=$(date +"%Y-%m-%d_%H-%M-%S")
+
+        # Define the output file name
+        output_file="podman_logs_$current_time.txt"
+
+        # Execute podman-compose logs and redirect the output to the file
+        echo "${result}" > "$output_file"
+
         return 0 # Return true
     else
         return 1 # Return false

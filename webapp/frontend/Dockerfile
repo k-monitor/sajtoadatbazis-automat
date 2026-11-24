@@ -1,12 +1,10 @@
-FROM alpine
-
-RUN apk add --update nodejs yarn
+FROM node
 
 WORKDIR /app
 
 COPY . .
 
-RUN yarn install && yarn build
+RUN npm install && npm run build
 
 EXPOSE 3000
 

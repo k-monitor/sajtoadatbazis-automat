@@ -1,0 +1,13 @@
+datasets
+sentence_transformers
+bertopic
+scikit-learn
+spacy
+./hu_core_news_trf-3.7.0-py3-none-any.whl
+./hu_core_news_lg-3.7.0-py3-none-any.whl
+./hu_core_news_md-3.7.0-py3-none-any.whl
+ipykernel
+huggingface_hub==0.25.2
+numpy==1.26.4 
+nbformat
+huspacy

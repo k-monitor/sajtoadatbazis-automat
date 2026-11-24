@@ -1,119 +1,127 @@
-import time
+import re
+from typing import Any, Optional
 import feedparser
-from auto_kmdb.options import skip_url_patterns
-from auto_kmdb.db import check_url_exists, init_news, connection_pool, get_rss_urls
-from auto_kmdb.preprocess import clear_url
+from auto_kmdb import db
+from auto_kmdb.utils.preprocess import clear_url
 import logging
 import requests
 from datetime import date
 from datetime import datetime
 from zoneinfo import ZoneInfo
+import json
+import os
+import cloudscraper
+
+
+scraper = cloudscraper.create_scraper(browser="chrome")
+proxy_host: str = os.environ["MYSQL_HOST"]
+request_proxies: dict[str, str] = {
+    "http": "socks5h://" + proxy_host + ":1080",
+    "https": "socks5h://" + proxy_host + ":1080",
+}
+scraper.proxies.update(request_proxies)
+
+
+def load_json_from_file(filename: str) -> dict:
+    with open(filename) as f:
+        try:
+            return json.load(f)
+        except json.JSONDecodeError:
+            return {}
+
+
+skip_url_patterns = load_json_from_file("data/skip_url_patterns.json")
 
 
 def rss_watcher(app_context):
     logging.info("Started RSS watcher")
     app_context.push()
-    with connection_pool.get_connection() as connection:
-        newspapers = get_rss_urls(connection)
+    newspapers: list[dict] = db.get_rss_urls()
     while True:
-        logging.info("checking feeds")
+        articles = []
         for newspaper in newspapers:
             if newspaper["rss_url"]:
-                get_new_from_rss(newspaper)
-        time.sleep(5 * 60)
+                dont_convert: bool = False
+                if newspaper["name"] in ["Pécsi Stop"]:
+                    dont_convert = True
+                try:
+                    articles += get_new_from_rss(newspaper, newspapers, dont_convert)
+                except requests.exceptions.JSONDecodeError:
+                    logging.error("JSONDecodeError for " + newspaper["name"])
+                except Exception as e:
+                    logging.error("Error for " + newspaper["name"] + ": " + str(e))
+
+        articles.sort(key=lambda x: x["release_date"] or "")
+        for article in articles:
+            logging.info(article)
+            if not db.check_url_exists(article["clean_url"]) and not skip_url(
+                article["clean_url"]
+            ) and not re.fullmatch(r'.*\/\d{4}\/\d{2}', article["clean_url"]):
+                db.init_news(
+                    "rss",
+                    article["url"],
+                    article["clean_url"],
+                    article["newspaper"],
+                    article["newspaper_id"],
+                    1,
+                    article["release_date"],
+                )
 
 
-def skip_url(url):
+def skip_url(url) -> bool:
     return any(url.startswith(url_pattern) for url_pattern in skip_url_patterns)
 
 
-def get_new_from_rss(newspaper):
-    articles_found = 0
-    feed = feedparser.parse(newspaper["rss_url"])
-
-    if newspaper["rss_url"] == "atv":
-        logging.info("checking atv")
-        response = requests.get(f"https://api.atv.hu/cms/layout-version/published")
-        if (
-            "generator"
-            not in [
-                slot
-                for slot in response.json()["__boxes__"]
-                if slot["name"] == "Itthon"
-            ][0]["slotContents"][0]
-        ):
-            return
-        items = [
+def get_atv():
+    logging.info("checking atv")
+    response: requests.Response = scraper.get(
+        f"https://api.atv.hu/cms/layout-version/published"
+    )
+    if (
+        "generator"
+        not in [
             slot for slot in response.json()["__boxes__"] if slot["name"] == "Itthon"
-        ][0]["slotContents"][0]["generator"]["items"]
-        urls_dates = [
-            ("https://www.atv.hu/" + article["slug"], article["published_at"])
-            for article in items
-        ]
-        for url, published_at in urls_dates:
-            # parsed_date = datetime.strptime(published_at, '%Y-%m-%dT%H:%M:%S.%fZ')
-            # pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
-            clean_url = clear_url(url)
-            with connection_pool.get_connection() as connection:
-                if not check_url_exists(connection, clean_url) and not skip_url(
-                    clean_url
-                ):
-                    init_news(
-                        connection,
-                        "rss",
-                        url,
-                        clean_url,
-                        newspaper["name"],
-                        newspaper["id"],
-                        None,
-                        None,
-                    )
-                    articles_found += 1
-    elif newspaper["rss_url"] == "hvg360":
-        logging.info("checking hvg360")
-        now = date.today().strftime("%Y-%m-%d")
-        response = requests.get(
-            f"https://hvg.hu/cms-control/latest/{now}?skip=0&limit=20"
-        )
-        urls_dates = [
-            ("https://hvg.hu" + article["url"], article["releaseDateIso"])
-            for article in response.json()
-            if article["url"].startswith("/360/")
-        ]
-        for url, release_date in urls_dates:
-            # parsed_date = datetime.strptime(release_date, '%Y-%m-%dT%H:%M:%S.%f%z')
-            # pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
-            clean_url = clear_url(url)
-            with connection_pool.get_connection() as connection:
-                if not check_url_exists(connection, clean_url) and not skip_url(
-                    clean_url
-                ):
-                    init_news(
-                        connection,
-                        "rss",
-                        url,
-                        clean_url,
-                        newspaper["name"],
-                        newspaper["id"],
-                        None,
-                        None,
-                    )
-                    articles_found += 1
-    else:
-        for entry in feed.entries:
-            clean_url = clear_url(entry.link)
-            pub_time = None
-            try:
-                parsed_date = datetime.strptime(
-                    entry.published, "%a, %d %b %Y %H:%M:%S %z"
-                )
+        ][0]["slotContents"][0]
+    ):
+        return []
+    items: list[dict] = [
+        slot for slot in response.json()["__boxes__"] if slot["name"] == "Itthon"
+    ][0]["slotContents"][0]["generator"]["items"]
+    urls_dates = [
+        ("https://www.atv.hu/" + article["slug"], article["published_at"])
+        for article in items
+    ]
+    return urls_dates
+
+
+def get_rss(rssurl, dont_convert: bool = False):
+    try:
+        response = scraper.get(rssurl)
+        feed = feedparser.parse(response.text)
+    except Exception as e:
+        logging.error(f"Error fetching RSS feed {rssurl}: {str(e)}")
+        return []
+
+    urls_dates = []
+    for entry in feed.entries:
+        clean_url = clear_url(entry.link)
+        pub_time: Optional[datetime] = None
+        try:
+            parsed_date: datetime = datetime.strptime(
+                entry.published, "%a, %d %b %Y %H:%M:%S %z"
+            )
+            if not dont_convert:
                 pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
-            except ValueError:
+            else:
+                pub_time = parsed_date
+        except ValueError:
+            try:
                 if entry.published.endswith("GMT"):
                     parsed_date = datetime.strptime(
                         entry.published, "%a, %d %b %Y %H:%M:%S GMT"
                     )
                     pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
+
                 elif entry.published.endswith("Europe/Budapest"):
                     parsed_date = datetime.strptime(
                         entry.published, "%a, %d %b %Y %H:%M:%S Europe/Budapest"
@@ -122,25 +130,71 @@ def get_new_from_rss(newspaper):
                         tzinfo=ZoneInfo("Europe/Budapest")
                     )
                     pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
+
                 else:
-                    logging.warning("No parsing for: " + str(entry.published))
-            except Exception:
+                    # NEW: Handle ISO 8601 format (e.g., "2025-01-29T13:41:38.414+01:00")
+                    parsed_date = datetime.fromisoformat(entry.published)
+                    pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
+
+            except ValueError:
+                logging.warning("No parsing for: " + str(entry.published))
                 pub_time = None
-            with connection_pool.get_connection() as connection:
-                if not check_url_exists(connection, clean_url) and not skip_url(
-                    clean_url
-                ):
-                    init_news(
-                        connection,
-                        "rss",
-                        entry.link,
-                        clean_url,
-                        newspaper["name"],
-                        newspaper["id"],
-                        None,
-                        pub_time,
-                    )
-                    articles_found += 1
+
+        except Exception:
+            pub_time = None
+
+        urls_dates.append((clean_url, pub_time))
+
+    return urls_dates
+
+
+def get_new_from_rss(newspaper, newspapers, dont_convert: bool = False):
+    articles_found = 0
+    articles = []
+
+    urls_dates: list[tuple[str, Optional[str]]] = []
+    if newspaper["rss_url"] == "hvg360":
+        return []
+    if newspaper["rss_url"] == "atv":
+        urls_dates = get_atv()
+    else:
+        urls_dates = get_rss(newspaper["rss_url"], dont_convert)
+    for url, release_date in urls_dates:
+        if '/360/' in url:
+            newspaper360 = next((
+                n for n in newspapers if n["name"] == "HVG360"
+            ), None)
+            if newspaper360:
+                newspaper = newspaper360
+        if '://telex.hu/' in url:
+            newspaper_telex = next((
+                n for n in newspapers if n["name"] == "Telex"
+            ), None)
+            if newspaper_telex:
+                newspaper = newspaper_telex
+        if '://telex.hu/g7/' in url:
+            newspaper_g7 = next((
+                n for n in newspapers if n["name"] == "G7"
+            ), None)
+            if newspaper_g7:
+                newspaper = newspaper_g7
+        # parsed_date = datetime.strptime(release_date, '%Y-%m-%dT%H:%M:%S.%f%z')
+        # pub_time = parsed_date.astimezone(ZoneInfo("Europe/Budapest"))
+        clean_url: str = clear_url(url)
+        if not db.check_url_exists(clean_url) and not skip_url(
+            clean_url
+        ) and not re.fullmatch(r'.*\/\d{4}\/\d{2}', clean_url):
+            article = {
+                "url": url.strip().rstrip('/'),
+                "clean_url": clean_url,
+                "newspaper": newspaper["name"],
+                "newspaper_id": newspaper["id"],
+                "release_date": release_date.isoformat() if release_date else None
+            }
+            articles.append(article)
+            articles_found += 1
 
     if articles_found > 0:
         logging.info(newspaper["name"] + " found " + str(articles_found) + " articles")
+
+    return articles

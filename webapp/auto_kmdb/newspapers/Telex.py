@@ -1,20 +1,28 @@
+from typing import LiteralString
+from bs4.element import Tag
 from auto_kmdb.newspapers.Newspaper import Newspaper
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, ResultSet
 from urllib.parse import urlparse
 
 
 class Telex(Newspaper):
-    def is_url_this(self, url, html):
-        return urlparse(url).netloc == 'telex.hu'
+    ignored_tags = ["<strong>", "</strong>"]
 
-    def get_text(this, url, html):
-        soup = BeautifulSoup(html, 'html.parser')
-        paragraphs = soup.select('div.article-html-content p, div.article-html-content li')
+    def is_url_this(self, url: str, html: str) -> bool:
+        return urlparse(url).netloc == "telex.hu"
 
-        parsed_text = []
+    def get_text(self, url: str, html: str) -> str:
+        for tag in self.ignored_tags:
+            html = html.replace(tag, " ").replace("  ", " ")
+        soup = BeautifulSoup(html, "html.parser")
+        paragraphs: ResultSet[Tag] = soup.select(
+            "div.article-html-content p, div.article-html-content li"
+        )
+
+        parsed_text: list[str] = []
         for p in paragraphs:
-            text = p.get_text(strip=True)
+            text: str = p.get_text().strip()
             if text:
                 parsed_text.append(text)
 
-        return '\n'.join(parsed_text)
+        return "\n".join(parsed_text)
