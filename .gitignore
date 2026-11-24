@@ -19,3 +19,4 @@ webapp/data/data.jsonl.gz
 .env.prod
 webapp/data/screenshot_login*
 .yarn/*
+webapp/data/chatgpt_auth.json*
